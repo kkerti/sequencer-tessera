@@ -17,4 +17,14 @@ assert(Utils.clamp(5,   0, 10) == 5)
 assert(Utils.clamp(-1,  0, 10) == 0)
 assert(Utils.clamp(11,  0, 10) == 10)
 
+assert(Utils.pitchToName(60) == "C4")
+assert(Utils.pitchToName(48) == "C3")
+assert(Utils.pitchToName(51) == "Eb3")
+assert(Utils.pitchToName(69) == "A4")
+assert(Utils.pitchToName(0) == "C-1")
+
+assert(Utils.quantizePitch(61, 0, Utils.SCALES.major) == 60)
+assert(Utils.quantizePitch(63, 0, Utils.SCALES.major) == 62)
+assert(Utils.quantizePitch(70, 0, Utils.SCALES.minorPentatonic) == 70)
+
 print("utils: all tests passed")

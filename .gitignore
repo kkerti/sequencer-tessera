@@ -1,0 +1,9 @@
+# WASM test environment (downloaded binaries)
+grid-wasm/index.js
+grid-wasm/index.wasm
+grid-wasm/node_modules/
+grid-wasm/package-lock.json
+grid-wasm/*.png
+
+# Python cache
+__pycache__/

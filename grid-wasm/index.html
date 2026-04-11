@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Grid Screen Test - Sequencer UI</title>
+    <style>
+      body { font-family: monospace; background: #1a1a1a; color: #ccc; margin: 20px; }
+      .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+      textarea.emscripten { font-family: monospace; width: 80%; background: #2a2a2a; color: #eee; border: 1px solid #555; padding: 8px; }
+      div.emscripten { text-align: center; }
+      div.emscripten_border { border: 2px solid #555; display: inline-block; }
+      canvas.emscripten { border: 0px none; background-color: black; }
+
+      .spinner {
+        height: 50px; width: 50px; margin: 0px auto;
+        animation: rotation 0.8s linear infinite;
+        border-left: 10px solid rgb(0,150,240); border-right: 10px solid rgb(0,150,240);
+        border-bottom: 10px solid rgb(0,150,240); border-top: 10px solid rgb(100,0,200);
+        border-radius: 100%; background-color: rgb(200,100,250);
+      }
+      @keyframes rotation { from {transform: rotate(0deg);} to {transform: rotate(360deg);} }
+
+      .controls { margin: 10px 0; text-align: center; }
+      .controls button { background: #444; color: #eee; border: 1px solid #666; padding: 6px 16px;
+                         cursor: pointer; font-family: monospace; margin: 0 4px; }
+      .controls button:hover { background: #555; }
+      .controls button.active { background: #336; border-color: #66a; }
+      .controls select { background: #444; color: #eee; border: 1px solid #666; padding: 6px;
+                         font-family: monospace; }
+      .slider-row { text-align: center; margin: 10px 0; }
+      .slider-row label { margin-right: 10px; }
+      .slider-row input[type=range] { width: 300px; vertical-align: middle; }
+      .slider-row span { margin-left: 10px; min-width: 40px; display: inline-block; }
+      h3 { color: #888; margin: 15px 0 5px 0; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <figure style="overflow:visible;" id="spinner"><div class="spinner"></div><center style="margin-top:0.5em"><strong>emscripten</strong></center></figure>
+    <div class="emscripten" id="status">Downloading...</div>
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+
+    <div style="text-align:center;">
+      <div class="emscripten_border">
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label for="screenFile">Screen file:</label>
+      <select id="screenFile">
+        <option value="">-- default demo --</option>
+      </select>
+      <button id="loadFileButton">Load .lua file</button>
+      <button id="loadScriptButton">Load from textareas</button>
+      <button id="reloadButton">Reload current</button>
+    </div>
+
+    <div class="slider-row">
+      <label for="slider">Encoder sim (sliderValue 0-255):</label>
+      <input type="range" id="slider" min="0" max="255" value="50">
+      <span id="sliderDisplay">50</span>
+    </div>
+
+    <h3>Log output</h3>
+    <textarea class="emscripten" id="output" rows="6"></textarea>
+
+    <h3>Init script</h3>
+    <textarea class="emscripten" id="init_script" rows="10">
+loopcounter = 0
+print('init completed')
+print('slider'..sliderValue)
+    </textarea>
+
+    <h3>Loop script</h3>
+    <textarea class="emscripten" id="loop_script" rows="10">
+loopcounter = loopcounter+1
+ggdrf(0,0,0,320,240,{0,0,0})
+ggdd(0,loopcounter)
+ggdft(0,'hello '..loopcounter, 10, 10, 8, {255,255,255})
+ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
+    </textarea>
+
+    <script type='text/javascript'>
+      // --- Query param persistence ---
+      function getQueryParam(param) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(param);
+      }
+      function updateQueryParam(param, value) {
+          const url = new URL(window.location.href);
+          url.searchParams.set(param, value);
+          window.history.replaceState(null, '', url);
+      }
+
+      const init_textarea = document.getElementById('init_script');
+      const loop_textarea = document.getElementById('loop_script');
+
+      const init_qp = getQueryParam('init');
+      if (init_qp) init_textarea.value = decodeURIComponent(init_qp);
+      const loop_qp = getQueryParam('loop');
+      if (loop_qp) loop_textarea.value = decodeURIComponent(loop_qp);
+
+      init_textarea.addEventListener('input', () => updateQueryParam('init', encodeURIComponent(init_textarea.value)));
+      loop_textarea.addEventListener('input', () => updateQueryParam('loop', encodeURIComponent(loop_textarea.value)));
+
+      // --- Slider ---
+      var sliderElement = document.getElementById('slider');
+      var sliderDisplay = document.getElementById('sliderDisplay');
+      var slider_script = "sliderValue = 50\n";
+
+      sliderElement.addEventListener('input', function () {
+        var val = sliderElement.value;
+        slider_script = 'sliderValue = ' + val + '\n';
+        sliderDisplay.textContent = val;
+        // Re-run init+loop with new slider value
+        loadCurrentScript();
+      });
+
+      // --- Screen file loading ---
+      // Discover available .lua files in screens/ directory
+      async function discoverScreenFiles() {
+        const select = document.getElementById('screenFile');
+        try {
+          // Try to fetch the file listing from the manifest
+          const resp = await fetch('../screens/manifest.json');
+          if (resp.ok) {
+            const files = await resp.json();
+            files.forEach(f => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              select.appendChild(opt);
+            });
+          }
+        } catch(e) {
+          console.log('No manifest.json found, manual file entry available');
+        }
+      }
+      discoverScreenFiles();
+
+      // Load a .lua file, split on -- INIT / -- LOOP markers
+      async function loadLuaFile(filename) {
+        try {
+          const resp = await fetch('../screens/' + filename);
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const code = await resp.text();
+
+          // Split on section markers
+          var initCode = '';
+          var loopCode = '';
+
+          const initMatch = code.match(/-- INIT START\n([\s\S]*?)-- INIT END/);
+          const loopMatch = code.match(/-- LOOP START\n([\s\S]*?)-- LOOP END/);
+
+          if (initMatch && loopMatch) {
+            initCode = initMatch[1].trim();
+            loopCode = loopMatch[1].trim();
+          } else {
+            // Fallback: everything before "-- LOOP" is init, everything after is loop
+            const parts = code.split(/^-- LOOP\s*$/m);
+            if (parts.length >= 2) {
+              initCode = parts[0].trim();
+              loopCode = parts.slice(1).join('\n').trim();
+            } else {
+              // No markers: put everything in loop
+              loopCode = code.trim();
+            }
+          }
+
+          init_textarea.value = initCode;
+          loop_textarea.value = loopCode;
+          loadCurrentScript();
+          console.log('Loaded: ' + filename);
+        } catch(e) {
+          console.error('Failed to load ' + filename + ': ' + e.message);
+        }
+      }
+
+      document.getElementById('loadFileButton').addEventListener('click', function() {
+        const sel = document.getElementById('screenFile');
+        if (sel.value) {
+          loadLuaFile(sel.value);
+        } else {
+          // Prompt for manual filename
+          const name = prompt('Enter .lua filename (relative to screens/):', 'pattern.lua');
+          if (name) loadLuaFile(name);
+        }
+      });
+
+      document.getElementById('reloadButton').addEventListener('click', function() {
+        const sel = document.getElementById('screenFile');
+        if (sel.value) {
+          loadLuaFile(sel.value);
+        } else {
+          loadCurrentScript();
+        }
+      });
+
+      function loadCurrentScript() {
+        if (typeof Module !== 'undefined' && Module.ccall) {
+          Module.ccall('loadScript', 'void', ['string', 'string'],
+            [slider_script + init_textarea.value, loop_textarea.value]);
+        }
+      }
+
+      document.getElementById('loadScriptButton').addEventListener('click', loadCurrentScript);
+
+      // --- Emscripten Module ---
+      var statusElement = document.getElementById('status');
+      var progressElement = document.getElementById('progress');
+      var spinnerElement = document.getElementById('spinner');
+
+      var Module = {
+        print: (function() {
+          var element = document.getElementById('output');
+          if (element) element.value = '';
+          return (...args) => {
+            var text = args.join(' ');
+            console.log(text);
+            if (element) {
+              // Keep log size manageable: trim if over 200 lines
+              var lines = element.value.split('\n');
+              if (lines.length > 200) {
+                element.value = lines.slice(-100).join('\n');
+              }
+              element.value += text + "\n";
+              element.scrollTop = element.scrollHeight;
+            }
+          };
+        })(),
+        canvas: (() => {
+          var canvas = document.getElementById('canvas');
+          canvas.addEventListener("webglcontextlost", (e) => {
+            alert('WebGL context lost. You will need to reload the page.');
+            e.preventDefault();
+          }, false);
+          return canvas;
+        })(),
+        setStatus: (text) => {
+          if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.last.text) return;
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return;
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+            progressElement.value = parseInt(m[2])*100;
+            progressElement.max = parseInt(m[4])*100;
+            progressElement.hidden = false;
+            spinnerElement.hidden = false;
+          } else {
+            progressElement.value = null;
+            progressElement.max = null;
+            progressElement.hidden = true;
+            if (!text) spinnerElement.hidden = true;
+          }
+          statusElement.innerHTML = text;
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: (left) => {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = () => {
+        Module.setStatus('Exception thrown, see JavaScript console');
+        spinnerElement.style.display = 'none';
+        Module.setStatus = (text) => {
+          if (text) console.error('[post-exception status] ' + text);
+        };
+      };
+    </script>
+    <script async type="text/javascript" src="index.js"></script>
+  </body>
+</html>

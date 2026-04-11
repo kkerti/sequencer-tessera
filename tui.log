@@ -1,0 +1,3366 @@
+[BEAT:1 PULSE:4 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:2 steps:16
+PAT 1 [1-8]  Bb3---- *G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:2 PULSE:8 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:3 steps:16
+PAT 1 [1-8]  Bb3----  G3----  *F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:3 PULSE:12 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:4 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----  *Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:4 PULSE:16 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:5 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3---- *C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:5 PULSE:20 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:6 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----  *Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:6 PULSE:24 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:7 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3---- *F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:7 PULSE:28 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:8 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----  *G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:8 PULSE:32 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:9 PULSE:36 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:10 PULSE:40 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:11 PULSE:44 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:12 PULSE:48 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:13 PULSE:52 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:14 PULSE:56 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:15 PULSE:60 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:16 PULSE:64 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:17 PULSE:68 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:18 PULSE:72 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:19 PULSE:76 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:20 PULSE:80 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:21 PULSE:84 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:22 PULSE:88 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:23 PULSE:92 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:24 PULSE:96 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:25 PULSE:100 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:26 PULSE:104 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:27 PULSE:108 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:28 PULSE:112 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:29 PULSE:116 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:30 PULSE:120 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:31 PULSE:124 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:32 PULSE:128 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:33 PULSE:132 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:34 PULSE:136 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:35 PULSE:140 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:36 PULSE:144 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:37 PULSE:148 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:38 PULSE:152 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:39 PULSE:156 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:40 PULSE:160 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:41 PULSE:164 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:42 PULSE:168 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:43 PULSE:172 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:44 PULSE:176 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:45 PULSE:180 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:46 PULSE:184 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:47 PULSE:188 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:48 PULSE:192 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:49 PULSE:196 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:50 PULSE:200 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:51 PULSE:204 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:52 PULSE:208 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:53 PULSE:212 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:54 PULSE:216 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:55 PULSE:220 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:56 PULSE:224 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:57 PULSE:228 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:58 PULSE:232 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:59 PULSE:236 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:60 PULSE:240 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:61 PULSE:244 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:62 PULSE:248 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:63 PULSE:252 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:64 PULSE:256 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:65 PULSE:260 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:66 PULSE:264 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:67 PULSE:268 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:68 PULSE:272 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:69 PULSE:276 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:70 PULSE:280 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:71 PULSE:284 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:72 PULSE:288 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:73 PULSE:292 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:74 PULSE:296 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:75 PULSE:300 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:76 PULSE:304 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:77 PULSE:308 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:78 PULSE:312 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:79 PULSE:316 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:80 PULSE:320 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:81 PULSE:324 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:82 PULSE:328 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:83 PULSE:332 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:84 PULSE:336 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:85 PULSE:340 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:86 PULSE:344 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:87 PULSE:348 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:88 PULSE:352 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:89 PULSE:356 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:90 PULSE:360 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:91 PULSE:364 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:92 PULSE:368 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:93 PULSE:372 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:94 PULSE:376 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:95 PULSE:380 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:96 PULSE:384 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:97 PULSE:388 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:98 PULSE:392 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:99 PULSE:396 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:100 PULSE:400 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:101 PULSE:404 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:102 PULSE:408 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:103 PULSE:412 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:104 PULSE:416 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:105 PULSE:420 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:106 PULSE:424 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:107 PULSE:428 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:108 PULSE:432 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:109 PULSE:436 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:110 PULSE:440 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:111 PULSE:444 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:112 PULSE:448 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:113 PULSE:452 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:114 PULSE:456 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:115 PULSE:460 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:116 PULSE:464 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:117 PULSE:468 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:118 PULSE:472 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:119 PULSE:476 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:120 PULSE:480 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:121 PULSE:484 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:122 PULSE:488 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:123 PULSE:492 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:124 PULSE:496 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:125 PULSE:500 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:126 PULSE:504 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:127 PULSE:508 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:128 PULSE:512 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:129 PULSE:516 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:130 PULSE:520 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:131 PULSE:524 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:132 PULSE:528 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:133 PULSE:532 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:134 PULSE:536 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:135 PULSE:540 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:136 PULSE:544 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:137 PULSE:548 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:138 PULSE:552 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:139 PULSE:556 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:140 PULSE:560 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:141 PULSE:564 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:142 PULSE:568 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:143 PULSE:572 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:144 PULSE:576 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:145 PULSE:580 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:146 PULSE:584 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:147 PULSE:588 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:148 PULSE:592 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:149 PULSE:596 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:150 PULSE:600 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:151 PULSE:604 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:152 PULSE:608 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:153 PULSE:612 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:154 PULSE:616 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:155 PULSE:620 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:156 PULSE:624 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:157 PULSE:628 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:158 PULSE:632 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:159 PULSE:636 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:160 PULSE:640 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:161 PULSE:644 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:162 PULSE:648 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:163 PULSE:652 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:164 PULSE:656 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:165 PULSE:660 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:166 PULSE:664 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:167 PULSE:668 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:168 PULSE:672 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:169 PULSE:676 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:170 PULSE:680 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:171 PULSE:684 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:172 PULSE:688 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:173 PULSE:692 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:174 PULSE:696 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:175 PULSE:700 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:176 PULSE:704 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:177 PULSE:708 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:178 PULSE:712 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:179 PULSE:716 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:180 PULSE:720 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:181 PULSE:724 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:182 PULSE:728 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:183 PULSE:732 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:184 PULSE:736 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:185 PULSE:740 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:186 PULSE:744 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:187 PULSE:748 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:188 PULSE:752 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:189 PULSE:756 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:190 PULSE:760 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:191 PULSE:764 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:192 PULSE:768 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:193 PULSE:772 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:194 PULSE:776 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:195 PULSE:780 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:196 PULSE:784 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:197 PULSE:788 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:198 PULSE:792 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:199 PULSE:796 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:200 PULSE:800 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:201 PULSE:804 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:202 PULSE:808 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:203 PULSE:812 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:204 PULSE:816 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:205 PULSE:820 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:206 PULSE:824 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:207 PULSE:828 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:208 PULSE:832 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:209 PULSE:836 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:210 PULSE:840 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:211 PULSE:844 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:212 PULSE:848 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:213 PULSE:852 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:214 PULSE:856 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:215 PULSE:860 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:216 PULSE:864 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:217 PULSE:868 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:218 PULSE:872 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:219 PULSE:876 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:220 PULSE:880 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:221 PULSE:884 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:222 PULSE:888 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:223 PULSE:892 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:224 PULSE:896 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:225 PULSE:900 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:226 PULSE:904 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:227 PULSE:908 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:228 PULSE:912 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:229 PULSE:916 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:230 PULSE:920 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:231 PULSE:924 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:232 PULSE:928 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:233 PULSE:932 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:234 PULSE:936 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:235 PULSE:940 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:236 PULSE:944 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:237 PULSE:948 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:238 PULSE:952 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:239 PULSE:956 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:240 PULSE:960 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:241 PULSE:964 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:242 PULSE:968 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:243 PULSE:972 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:244 PULSE:976 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:245 PULSE:980 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:246 PULSE:984 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:247 PULSE:988 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:248 PULSE:992 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:249 PULSE:996 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:250 PULSE:1000 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:251 PULSE:1004 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:252 PULSE:1008 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:253 PULSE:1012 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:254 PULSE:1016 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:255 PULSE:1020 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:256 PULSE:1024 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:257 PULSE:1028 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:258 PULSE:1032 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:259 PULSE:1036 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:260 PULSE:1040 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:261 PULSE:1044 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:262 PULSE:1048 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:263 PULSE:1052 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:264 PULSE:1056 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:265 PULSE:1060 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:266 PULSE:1064 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:267 PULSE:1068 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:268 PULSE:1072 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:269 PULSE:1076 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:270 PULSE:1080 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:271 PULSE:1084 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:272 PULSE:1088 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:273 PULSE:1092 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:274 PULSE:1096 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:275 PULSE:1100 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:276 PULSE:1104 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:277 PULSE:1108 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:278 PULSE:1112 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:279 PULSE:1116 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:280 PULSE:1120 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:281 PULSE:1124 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:282 PULSE:1128 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:283 PULSE:1132 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:284 PULSE:1136 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:285 PULSE:1140 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:286 PULSE:1144 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:287 PULSE:1148 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:288 PULSE:1152 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:289 PULSE:1156 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:290 PULSE:1160 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:291 PULSE:1164 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:292 PULSE:1168 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:293 PULSE:1172 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:294 PULSE:1176 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:295 PULSE:1180 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:296 PULSE:1184 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:297 PULSE:1188 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:298 PULSE:1192 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:299 PULSE:1196 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:300 PULSE:1200 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:301 PULSE:1204 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:302 PULSE:1208 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:303 PULSE:1212 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:304 PULSE:1216 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:305 PULSE:1220 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:306 PULSE:1224 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:307 PULSE:1228 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:308 PULSE:1232 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:309 PULSE:1236 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:310 PULSE:1240 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:311 PULSE:1244 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:312 PULSE:1248 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:313 PULSE:1252 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:314 PULSE:1256 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:315 PULSE:1260 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:316 PULSE:1264 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:317 PULSE:1268 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:318 PULSE:1272 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:319 PULSE:1276 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:320 PULSE:1280 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:321 PULSE:1284 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:322 PULSE:1288 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:323 PULSE:1292 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:324 PULSE:1296 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:325 PULSE:1300 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:326 PULSE:1304 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:327 PULSE:1308 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:328 PULSE:1312 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:329 PULSE:1316 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:330 PULSE:1320 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:331 PULSE:1324 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:332 PULSE:1328 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:333 PULSE:1332 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:334 PULSE:1336 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:335 PULSE:1340 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:336 PULSE:1344 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:337 PULSE:1348 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:338 PULSE:1352 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:339 PULSE:1356 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:340 PULSE:1360 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:341 PULSE:1364 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:342 PULSE:1368 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:343 PULSE:1372 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:344 PULSE:1376 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:345 PULSE:1380 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:346 PULSE:1384 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:347 PULSE:1388 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:348 PULSE:1392 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:349 PULSE:1396 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:350 PULSE:1400 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:351 PULSE:1404 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:352 PULSE:1408 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:353 PULSE:1412 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:354 PULSE:1416 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:355 PULSE:1420 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:356 PULSE:1424 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:357 PULSE:1428 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:358 PULSE:1432 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:359 PULSE:1436 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:360 PULSE:1440 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:361 PULSE:1444 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:362 PULSE:1448 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:363 PULSE:1452 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:364 PULSE:1456 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:365 PULSE:1460 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:366 PULSE:1464 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:367 PULSE:1468 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:368 PULSE:1472 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:369 PULSE:1476 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:370 PULSE:1480 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:371 PULSE:1484 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:372 PULSE:1488 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:373 PULSE:1492 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:374 PULSE:1496 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:375 PULSE:1500 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:376 PULSE:1504 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:377 PULSE:1508 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:378 PULSE:1512 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:379 PULSE:1516 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:380 PULSE:1520 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:381 PULSE:1524 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:382 PULSE:1528 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:383 PULSE:1532 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:384 PULSE:1536 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:385 PULSE:1540 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:386 PULSE:1544 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:387 PULSE:1548 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:388 PULSE:1552 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:389 PULSE:1556 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:390 PULSE:1560 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:391 PULSE:1564 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:392 PULSE:1568 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:393 PULSE:1572 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:394 PULSE:1576 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:395 PULSE:1580 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:396 PULSE:1584 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:397 PULSE:1588 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:398 PULSE:1592 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:399 PULSE:1596 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:400 PULSE:1600 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:401 PULSE:1604 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:402 PULSE:1608 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:403 PULSE:1612 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:404 PULSE:1616 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:405 PULSE:1620 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:406 PULSE:1624 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:407 PULSE:1628 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:408 PULSE:1632 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:409 PULSE:1636 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:410 PULSE:1640 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:411 PULSE:1644 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:412 PULSE:1648 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:413 PULSE:1652 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:414 PULSE:1656 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:415 PULSE:1660 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:416 PULSE:1664 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:417 PULSE:1668 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:418 PULSE:1672 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:419 PULSE:1676 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:420 PULSE:1680 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:421 PULSE:1684 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:422 PULSE:1688 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:423 PULSE:1692 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:424 PULSE:1696 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:425 PULSE:1700 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:426 PULSE:1704 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:427 PULSE:1708 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:428 PULSE:1712 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:429 PULSE:1716 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:430 PULSE:1720 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:431 PULSE:1724 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:432 PULSE:1728 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:433 PULSE:1732 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:434 PULSE:1736 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:435 PULSE:1740 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:436 PULSE:1744 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:437 PULSE:1748 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:438 PULSE:1752 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:439 PULSE:1756 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:440 PULSE:1760 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:441 PULSE:1764 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:442 PULSE:1768 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:443 PULSE:1772 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:444 PULSE:1776 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:445 PULSE:1780 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:446 PULSE:1784 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:447 PULSE:1788 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:448 PULSE:1792 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:449 PULSE:1796 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:450 PULSE:1800 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:451 PULSE:1804 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:452 PULSE:1808 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:453 PULSE:1812 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:454 PULSE:1816 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:455 PULSE:1820 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:456 PULSE:1824 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:457 PULSE:1828 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:458 PULSE:1832 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:459 PULSE:1836 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:460 PULSE:1840 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:461 PULSE:1844 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:462 PULSE:1848 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:463 PULSE:1852 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:464 PULSE:1856 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:465 PULSE:1860 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:466 PULSE:1864 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:467 PULSE:1868 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:468 PULSE:1872 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:469 PULSE:1876 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:4 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----  *Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:470 PULSE:1880 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:5 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8] *C4--     Eb4--    G4----   Bb4.   
+[BEAT:471 PULSE:1884 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:6 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--    *Eb4--    G4----   Bb4.   
+[BEAT:472 PULSE:1888 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:473 PULSE:1892 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:7 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--   *G4----   Bb4.   
+[BEAT:474 PULSE:1896 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:475 PULSE:1900 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:8 steps:8
+PAT 1 [1-4]  C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----  *Bb4.   
+[BEAT:476 PULSE:1904 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:14 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--   *F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:477 PULSE:1908 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:15 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----   F3--     Eb3--    F3----  *C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:1 steps:8
+PAT 1 [1-4] *C4----   C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:478 PULSE:1912 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:9 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16] *C3--     C3--     G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:479 PULSE:1916 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:11 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--    *G3----   F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:2 steps:8
+PAT 1 [1-4]  C4----  *C4----   G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+[BEAT:480 PULSE:1920 BPM:120 PPB:4]
+TRK 1 div:1 mult:1 loop:[9..16] cursor:12 steps:16
+PAT 1 [1-8]  Bb3----  G3----   F3----   Eb3----  C3----   Eb3----  F3----   G3.    
+PAT 2 [9-16]  C3--     C3--     G3----  *F3--     Eb3--    F3----   C3--     C3.    
+TRK 2 div:2 mult:1 loop:none cursor:3 steps:8
+PAT 1 [1-4]  C4----   C4----  *G4----   Eb4----
+PAT 2 [5-8]  C4--     Eb4--    G4----   Bb4.   
+Uncaught Error: interrupted!
+stack traceback:
+	main.lua:109: in function <main.lua:108>
+	[C]: in field 'run'
+	main.lua:126: in main chunk
+	[C]: in ?

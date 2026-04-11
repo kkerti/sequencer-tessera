@@ -40,4 +40,9 @@ try:
 except KeyboardInterrupt:
     pass
 finally:
+    # Send CC#123 (All Notes Off) on all 16 MIDI channels as a safety net.
+    # This catches any notes the Lua side failed to turn off (race conditions,
+    # short-gate timers that didn't fire before exit, etc.).
+    for ch in range(16):
+        midiOut.send_message([0xB0 | ch, 123, 0])  # CC#123 All Notes Off
     del midiOut

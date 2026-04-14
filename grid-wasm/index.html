@@ -28,10 +28,17 @@
       .controls button.active { background: #336; border-color: #66a; }
       .controls select { background: #444; color: #eee; border: 1px solid #666; padding: 6px;
                          font-family: monospace; }
-      .slider-row { text-align: center; margin: 10px 0; }
-      .slider-row label { margin-right: 10px; }
-      .slider-row input[type=range] { width: 300px; vertical-align: middle; }
-      .slider-row span { margin-left: 10px; min-width: 40px; display: inline-block; }
+      .input-panel { margin: 12px auto; text-align: center; max-width: 640px; }
+      .input-row { margin: 8px 0; }
+      .input-row label { display: inline-block; margin-bottom: 6px; color: #aaa; }
+      .input-row input[type=number] { width: 90px; background: #444; color: #eee; border: 1px solid #666;
+                                     padding: 6px; font-family: monospace; }
+      .input-meta { margin-left: 8px; color: #8aa; }
+      .button-grid { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+      .button-grid.two-rows { width: 340px; }
+      .input-button { width: 74px; height: 38px; background: #3f3f3f; color: #eee; border: 1px solid #666;
+                      cursor: pointer; font-family: monospace; }
+      .input-button.pressed { background: #2a5577; border-color: #5da0d6; }
       h3 { color: #888; margin: 15px 0 5px 0; text-align: center; }
     </style>
   </head>
@@ -58,10 +65,36 @@
       <button id="reloadButton">Reload current</button>
     </div>
 
-    <div class="slider-row">
-      <label for="slider">Encoder sim (sliderValue 0-255):</label>
-      <input type="range" id="slider" min="0" max="255" value="50">
-      <span id="sliderDisplay">50</span>
+    <div class="input-panel">
+      <div class="input-row">
+        <label for="encoderInput">Endless encoder [8]</label><br>
+        <input type="number" id="encoderInput" step="1" value="0">
+        <span class="input-meta" id="encoderDisplay">delta +0 | sliderValue 50</span>
+      </div>
+
+      <div class="input-row">
+        <label>Small buttons [9-12]</label><br>
+        <div class="button-grid">
+          <button type="button" class="input-button" data-index="9">BTN 9</button>
+          <button type="button" class="input-button" data-index="10">BTN 10</button>
+          <button type="button" class="input-button" data-index="11">BTN 11</button>
+          <button type="button" class="input-button" data-index="12">BTN 12</button>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <label>Keyswitches [0-7]</label><br>
+        <div class="button-grid two-rows">
+          <button type="button" class="input-button" data-index="0">KEY 0</button>
+          <button type="button" class="input-button" data-index="1">KEY 1</button>
+          <button type="button" class="input-button" data-index="2">KEY 2</button>
+          <button type="button" class="input-button" data-index="3">KEY 3</button>
+          <button type="button" class="input-button" data-index="4">KEY 4</button>
+          <button type="button" class="input-button" data-index="5">KEY 5</button>
+          <button type="button" class="input-button" data-index="6">KEY 6</button>
+          <button type="button" class="input-button" data-index="7">KEY 7</button>
+        </div>
+      </div>
     </div>
 
     <h3>Log output</h3>
@@ -106,34 +139,142 @@ ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
       init_textarea.addEventListener('input', () => updateQueryParam('init', encodeURIComponent(init_textarea.value)));
       loop_textarea.addEventListener('input', () => updateQueryParam('loop', encodeURIComponent(loop_textarea.value)));
 
-      // --- Slider ---
-      var sliderElement = document.getElementById('slider');
-      var sliderDisplay = document.getElementById('sliderDisplay');
-      var slider_script = "sliderValue = 50\n";
+      // --- VSN1 control simulation ---
+      var uiControlDown = new Array(13).fill(0);
+      var uiControlPressed = new Array(13).fill(0);
+      var uiControlReleased = new Array(13).fill(0);
+      var uiEncoderDelta = 0;
+      var uiEncoderTicks = 0;
+      var uiEncoderPosition = 50; // 0-255 compatibility value for existing screens
+      var uiLastEventIndex = -1;
+      var uiLastEventDelta = 0;
 
-      sliderElement.addEventListener('input', function () {
-        var val = sliderElement.value;
-        slider_script = 'sliderValue = ' + val + '\n';
-        sliderDisplay.textContent = val;
-        // Re-run init+loop with new slider value
+      var encoderInputElement = document.getElementById('encoderInput');
+      var encoderDisplayElement = document.getElementById('encoderDisplay');
+      var encoderInputLastValue = parseInt(encoderInputElement.value, 10) || 0;
+
+      function clampValue(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function tableToLuaIndexedArray(values) {
+        var parts = [];
+        for (var i = 0; i < values.length; i++) {
+          parts.push('[' + i + ']=' + values[i]);
+        }
+        return '{' + parts.join(',') + '}';
+      }
+
+      function clearTransientControlState() {
+        uiEncoderDelta = 0;
+        uiLastEventIndex = -1;
+        uiLastEventDelta = 0;
+        uiControlPressed.fill(0);
+      }
+
+      function buildControlScript() {
+        var script = '';
+        script += 'sliderValue = ' + uiEncoderPosition + '\n';
+        script += 'uiEncoderIndex = 8\n';
+        script += 'uiEncoderDelta = ' + uiEncoderDelta + '\n';
+        script += 'uiEncoderTicks = ' + uiEncoderTicks + '\n';
+        script += 'uiLastEventIndex = ' + uiLastEventIndex + '\n';
+        script += 'uiLastEventDelta = ' + uiLastEventDelta + '\n';
+        script += 'uiControlDown = ' + tableToLuaIndexedArray(uiControlDown) + '\n';
+        script += 'uiControlPressed = ' + tableToLuaIndexedArray(uiControlPressed) + '\n';
+        script += 'uiControlReleased = ' + tableToLuaIndexedArray(uiControlReleased) + '\n';
+        return script;
+      }
+
+      function updateControlDisplays() {
+        var deltaLabel = uiEncoderDelta >= 0 ? ('+' + uiEncoderDelta) : String(uiEncoderDelta);
+        encoderDisplayElement.textContent = 'delta ' + deltaLabel + ' | sliderValue ' + uiEncoderPosition;
+      }
+
+      function applyEncoderDelta(delta) {
+        if (!delta) return;
+        uiEncoderDelta = delta > 0 ? 1 : -1;
+        uiEncoderTicks += uiEncoderDelta;
+        uiEncoderPosition = clampValue(uiEncoderPosition + uiEncoderDelta, 0, 255);
+        uiLastEventIndex = 8;
+        uiLastEventDelta = uiEncoderDelta;
+        updateControlDisplays();
         loadCurrentScript();
+      }
+
+      encoderInputElement.addEventListener('input', function () {
+        var currentValue = parseInt(encoderInputElement.value, 10);
+        if (Number.isNaN(currentValue) || currentValue === encoderInputLastValue) return;
+        var deltaDirection = currentValue > encoderInputLastValue ? 1 : -1;
+        encoderInputLastValue = currentValue;
+        applyEncoderDelta(deltaDirection);
       });
+
+      function wireMomentaryControlButton(buttonElement) {
+        var controlIndex = parseInt(buttonElement.dataset.index, 10);
+
+        function pressControl(event) {
+          event.preventDefault();
+          if (uiControlDown[controlIndex] === 1) return;
+          uiControlDown[controlIndex] = 1;
+          uiControlPressed[controlIndex] = 1;
+          uiControlReleased[controlIndex] = 0;
+          uiLastEventIndex = controlIndex;
+          uiLastEventDelta = 1;
+          buttonElement.classList.add('pressed');
+          loadCurrentScript();
+        }
+
+        function releaseControl(event) {
+          event.preventDefault();
+          if (uiControlDown[controlIndex] === 0) return;
+          uiControlDown[controlIndex] = 0;
+          buttonElement.classList.remove('pressed');
+        }
+
+        buttonElement.addEventListener('pointerdown', pressControl);
+        buttonElement.addEventListener('pointerup', releaseControl);
+        buttonElement.addEventListener('pointercancel', releaseControl);
+        buttonElement.addEventListener('pointerleave', releaseControl);
+      }
+
+      document.querySelectorAll('.input-button').forEach(wireMomentaryControlButton);
+      updateControlDisplays();
 
       // --- Screen file loading ---
       // Discover available .lua files in screens/ directory
       async function discoverScreenFiles() {
         const select = document.getElementById('screenFile');
+        select.innerHTML = '<option value="">-- default demo --</option>';
         try {
           // Try to fetch the file listing from the manifest
-          const resp = await fetch('../screens/manifest.json');
+          const manifestUrl = '../screens/manifest.json?v=' + Date.now();
+          const resp = await fetch(manifestUrl, { cache: 'no-store' });
           if (resp.ok) {
             const files = await resp.json();
             files.forEach(f => {
               const opt = document.createElement('option');
               opt.value = f;
-              opt.textContent = f;
+              opt.textContent = f.replace('.lua', '');
               select.appendChild(opt);
             });
+            console.log('Loaded screen manifest:', files);
+            // Auto-select overview.lua if available, otherwise first file
+            const defaultFile = files.includes('overview.lua') ? 'overview.lua' : files[0];
+            if (defaultFile) {
+              select.value = defaultFile;
+              // Wait for WASM to be ready, then auto-load (skip if automated/headless)
+              if (!navigator.webdriver) {
+                const waitAndLoad = () => {
+                  if (typeof Module !== 'undefined' && Module.ccall) {
+                    loadLuaFile(defaultFile);
+                  } else {
+                    setTimeout(waitAndLoad, 200);
+                  }
+                };
+                setTimeout(waitAndLoad, 500);
+              }
+            }
           }
         } catch(e) {
           console.log('No manifest.json found, manual file entry available');
@@ -179,6 +320,11 @@ ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
         }
       }
 
+      // Auto-load on dropdown change
+      document.getElementById('screenFile').addEventListener('change', function() {
+        if (this.value) loadLuaFile(this.value);
+      });
+
       document.getElementById('loadFileButton').addEventListener('click', function() {
         const sel = document.getElementById('screenFile');
         if (sel.value) {
@@ -202,7 +348,9 @@ ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
       function loadCurrentScript() {
         if (typeof Module !== 'undefined' && Module.ccall) {
           Module.ccall('loadScript', 'void', ['string', 'string'],
-            [slider_script + init_textarea.value, loop_textarea.value]);
+            [buildControlScript() + init_textarea.value, loop_textarea.value]);
+          clearTransientControlState();
+          updateControlDisplays();
         }
       }
 

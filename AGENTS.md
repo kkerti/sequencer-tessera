@@ -54,7 +54,7 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - **`lua-rtmidi` does not build on this machine** (Lua 5.5 ABI mismatch) — use the Python bridge instead
 - MIDI bridge: `python3 bridge.py` — reads the line protocol from stdin, opens a virtual port named `"Sequencer"`
 - Run the full stack: `lua main.lua | python3 bridge.py`
-- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/tui.lua`
+- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/tui.lua && lua tests/probability.lua`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
 - `python-rtmidi` installed system-wide via `pip3 install python-rtmidi --break-system-packages`
 
@@ -76,7 +76,7 @@ In Ableton: Preferences → MIDI → enable **"Sequencer"** as a MIDI input sour
 
 ## Testing
 
-- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/performance.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/tui.lua`
+- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/performance.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/tui.lua`, `tests/probability.lua`
 - Feature scenario files live in `tests/sequences/` and are executed via `tests/sequence_runner.lua`
 - Run a test file directly: `lua tests/track.lua` — asserts fire and print `OK` on success
 - Module files contain **input validation `assert()` guards only** (wrong type, out-of-range) — no behavioural tests in module files
@@ -91,7 +91,7 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 | Level    | Max count                        | Notes |
 |----------|----------------------------------|-------|
 | Snapshot | 16                               | Full state save; saving blocks ~0.75s — never save mid-performance |
-| Track    | 4 per snapshot                   | Independent clock div/mult and loop points per track |
+| Track    | 8 per snapshot                   | Independent clock div/mult and loop points per track |
 | Pattern  | 100 per track                    | Contiguous named slice of a track's step list; purely organisational |
 | Step     | 2000 total across all tracks     | Shared pool |
 
@@ -101,6 +101,7 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 - `duration` — step length in clock pulses (0 = skip this step)
 - `gate`     — note-on length in clock pulses (0 = rest; `gate >= duration` = legato)
 - `ratchet`  — repeat count per step (1–4, Metropolis-style)
+- `probability` — chance this step fires (0–100, 100 = always; Blackbox-style, non-destructive)
 - `active`   — boolean mute without deleting the step
 
 **Pitch is stored as direct MIDI note number and can be quantized live at engine output time.** `Step.resolvePitch(step, scaleTable, rootNote)` is the hook used by the engine.
@@ -121,6 +122,9 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 | Swing (global percentage, Metropolis-style) | Done |
 | Math operations (add/jitter/random on params) | Done |
 | Snapshots (serialize full state via `io`) | Done |
+| Scene chain (automated loop-point sequencing) | Done |
+| Pattern copy/paste/duplicate/delete/insert/swap | Done |
+| Per-step probability (non-destructive, Blackbox-style) | Done |
 
 ## File layout
 
@@ -137,6 +141,8 @@ sequencer/
   performance.lua           -- swing pulse-delay helper for playback timing
   mathops.lua               -- transpose/jitter/random operations on step params
   snapshot.lua              -- save/load full engine state via io
+  scene.lua                 -- Scene chain: automated loop-point sequencing
+  probability.lua           -- non-destructive per-step probability evaluation
 tests/
   utils.lua                 -- behavioural tests for utils
   step.lua                  -- behavioural tests for step
@@ -147,6 +153,7 @@ tests/
   mathops.lua               -- behavioural tests for parameter math operations
   snapshot.lua              -- behavioural tests for snapshot serialization
   tui.lua                   -- behavioural tests for terminal renderer
+  probability.lua           -- behavioural tests for per-step probability
 docs/
   2026-03-09-init-goal.md   -- project goal and architecture decisions
   manuals/er-101.md         -- ER-101 feature reference (engine architecture)

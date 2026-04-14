@@ -18,8 +18,8 @@ do
     Track.addPattern(t1, 2)
     Track.setStep(t1, 1, Step.new(60, 100, 4, 2, 2))
     Track.setStep(t1, 2, Step.new(62, 90, 4, 2, 1))
-    Track.setStep(t1, 3, Step.new(64, 80, 4, 0, 1))
-    Track.setStep(t1, 4, Step.new(65, 70, 0, 0, 1))
+    Track.setStep(t1, 3, Step.new(64, 80, 4, 0, 1, 50))  -- probability = 50
+    Track.setStep(t1, 4, Step.new(65, 70, 0, 0, 1, 0))   -- probability = 0
     Track.setLoopStart(t1, 2)
     Track.setLoopEnd(t1, 4)
     Track.setDirection(t1, "pingpong")
@@ -44,11 +44,15 @@ do
     assert(Track.getDirection(lt1) == "pingpong")
     assert(Track.getMidiChannel(lt1) == 9)
     assert(Track.getStep(lt1, 1).ratchet == 2)
+    assert(Track.getStep(lt1, 1).probability == 100)  -- default
+    assert(Track.getStep(lt1, 3).probability == 50)    -- explicit 50
+    assert(Track.getStep(lt1, 4).probability == 0)     -- explicit 0
     assert(Track.getStep(lt1, 4).duration == 0)
 
     local lt2 = Engine.getTrack(loaded, 2)
     assert(Track.getPatternCount(lt2) == 1)
     assert(Track.getStep(lt2, 1).pitch == 48)
+    assert(Track.getStep(lt2, 1).probability == 100)   -- default
 end
 
 os.remove(filePath)

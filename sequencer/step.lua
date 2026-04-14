@@ -6,6 +6,8 @@
 -- gate     : note-on length in clock pulses 0-99
 --              0              = rest (note never fires)
 --              gate >= duration = legato (note held through full step)
+-- ratchet  : repeat count per step (1-4, Metropolis-style)
+-- probability : chance this step fires (0-100, 100 = always; Blackbox-style)
 -- active   : boolean, false mutes the step without removing it
 
 local Utils        = require("utils")
@@ -22,14 +24,17 @@ local GATE_MIN     = 0
 local GATE_MAX     = 99
 local RATCHET_MIN  = 1
 local RATCHET_MAX  = 4
+local PROB_MIN     = 0
+local PROB_MAX     = 100
 
 -- Constructor. All parameters are optional; defaults shown above.
-function Step.new(pitch, velocity, duration, gate, ratchet)
-    pitch    = pitch or 60
-    velocity = velocity or 100
-    duration = duration or 4
-    gate     = gate or 2
-    ratchet  = ratchet or 1
+function Step.new(pitch, velocity, duration, gate, ratchet, probability)
+    pitch       = pitch or 60
+    velocity    = velocity or 100
+    duration    = duration or 4
+    gate        = gate or 2
+    ratchet     = ratchet or 1
+    probability = probability or 100
 
     assert(type(pitch) == "number" and pitch >= PITCH_MIN and pitch <= PITCH_MAX, "stepNew: pitch out of range 0-127")
     assert(type(velocity) == "number" and velocity >= VELOCITY_MIN and velocity <= VELOCITY_MAX,
@@ -39,14 +44,17 @@ function Step.new(pitch, velocity, duration, gate, ratchet)
     assert(type(gate) == "number" and gate >= GATE_MIN and gate <= GATE_MAX, "stepNew: gate out of range 0-99")
     assert(type(ratchet) == "number" and ratchet >= RATCHET_MIN and ratchet <= RATCHET_MAX,
         "stepNew: ratchet out of range 1-4")
+    assert(type(probability) == "number" and probability >= PROB_MIN and probability <= PROB_MAX,
+        "stepNew: probability out of range 0-100")
 
     return {
-        pitch    = pitch,
-        velocity = velocity,
-        duration = duration,
-        gate     = gate,
-        ratchet  = ratchet,
-        active   = true,
+        pitch       = pitch,
+        velocity    = velocity,
+        duration    = duration,
+        gate        = gate,
+        ratchet     = ratchet,
+        probability = probability,
+        active      = true,
     }
 end
 
@@ -104,6 +112,17 @@ function Step.setRatchet(step, value)
     step.ratchet = value
 end
 
+-- Probability
+function Step.getProbability(step)
+    return step.probability
+end
+
+function Step.setProbability(step, value)
+    assert(type(value) == "number" and value >= PROB_MIN and value <= PROB_MAX,
+        "stepSetProbability: value out of range 0-100")
+    step.probability = value
+end
+
 -- Active
 function Step.getActive(step)
     return step.active
@@ -117,6 +136,42 @@ end
 -- Returns true if this step should fire a note-on (active and not a rest).
 function Step.isPlayable(step)
     return step.active and step.duration > 0 and step.gate > 0
+end
+
+-- Checks if any ratchet sub-division starts at this pulse (NOTE_ON boundary).
+local function stepIsRatchetOnPulse(step, pulseCounter)
+    for i = 0, step.ratchet - 1 do
+        local startPulse = math.floor((i * step.duration) / step.ratchet)
+        if pulseCounter == startPulse then
+            return true
+        end
+    end
+    return false
+end
+
+-- Checks if any ratchet sub-division ends at this pulse (NOTE_OFF boundary).
+local function stepIsRatchetOffPulse(step, pulseCounter)
+    for i = 0, step.ratchet - 1 do
+        local startPulse = math.floor((i * step.duration) / step.ratchet)
+        local nextStartPulse = math.floor(((i + 1) * step.duration) / step.ratchet)
+        local subDuration = nextStartPulse - startPulse
+        if subDuration < 1 then
+            subDuration = 1
+        end
+
+        local offPulse = startPulse + step.gate
+        if offPulse > startPulse + subDuration then
+            offPulse = startPulse + subDuration
+        end
+        if offPulse >= step.duration then
+            offPulse = step.duration - 1
+        end
+
+        if pulseCounter == offPulse then
+            return true
+        end
+    end
+    return false
 end
 
 -- Returns NOTE_ON / NOTE_OFF / nil for this pulse inside the step.
@@ -138,35 +193,13 @@ function Step.getPulseEvent(step, pulseCounter)
         return nil
     end
 
-    local ratchet = step.ratchet
-
     -- Priority rule: NOTE_ON wins if on/off boundaries collide.
-    for i = 0, ratchet - 1 do
-        local startPulse = math.floor((i * step.duration) / ratchet)
-        if pulseCounter == startPulse then
-            return "NOTE_ON"
-        end
+    if stepIsRatchetOnPulse(step, pulseCounter) then
+        return "NOTE_ON"
     end
 
-    for i = 0, ratchet - 1 do
-        local startPulse = math.floor((i * step.duration) / ratchet)
-        local nextStartPulse = math.floor(((i + 1) * step.duration) / ratchet)
-        local subDuration = nextStartPulse - startPulse
-        if subDuration < 1 then
-            subDuration = 1
-        end
-
-        local offPulse = startPulse + step.gate
-        if offPulse > startPulse + subDuration then
-            offPulse = startPulse + subDuration
-        end
-        if offPulse >= step.duration then
-            offPulse = step.duration - 1
-        end
-
-        if pulseCounter == offPulse then
-            return "NOTE_OFF"
-        end
+    if stepIsRatchetOffPulse(step, pulseCounter) then
+        return "NOTE_OFF"
     end
 
     return nil

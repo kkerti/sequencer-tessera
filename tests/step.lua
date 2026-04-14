@@ -6,13 +6,14 @@ local Step = require("sequencer/step")
 
 -- Defaults
 local s = Step.new()
-assert(Step.getPitch(s)    == 60)
-assert(Step.getVelocity(s) == 100)
-assert(Step.getDuration(s) == 4)
-assert(Step.getGate(s)     == 2)
-assert(Step.getRatchet(s)  == 1)
-assert(Step.getActive(s)   == true)
-assert(Step.isPlayable(s)  == true)
+assert(Step.getPitch(s)       == 60)
+assert(Step.getVelocity(s)    == 100)
+assert(Step.getDuration(s)    == 4)
+assert(Step.getGate(s)        == 2)
+assert(Step.getRatchet(s)     == 1)
+assert(Step.getProbability(s) == 100)
+assert(Step.getActive(s)      == true)
+assert(Step.isPlayable(s)     == true)
 
 -- Setters
 Step.setPitch(s, 72)

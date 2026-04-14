@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # WASM test environment (downloaded binaries)
 grid-wasm/index.js
 grid-wasm/index.wasm
@@ -7,3 +10,10 @@ grid-wasm/*.png
 
 # Python cache
 __pycache__/
+
+# Logs
+tui.log
+
+# Reference manuals (large binaries)
+docs/manuals/*.pdf
+docs/manuals/*/

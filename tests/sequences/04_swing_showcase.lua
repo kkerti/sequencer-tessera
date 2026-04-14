@@ -14,7 +14,7 @@ function Scenario.build(helpers)
 
     Track.addPattern(track, 8)
 
-    -- Straight 16th-grid phrase first, then global swing shifts odd pulses.
+    -- Straight 16th-grid phrase first, then global swing delays off-beat pulses.
     -- We keep gates short so the timing feel is easy to hear.
     Track.setStep(track, 1, Step.new(48, 100, 1, 1))
     Track.setStep(track, 2, Step.new(55, 95, 1, 1))
@@ -32,20 +32,20 @@ function Scenario.build(helpers)
 end
 
 function Scenario.assert(helpers, result)
-    local heldOddThenEvenRelease = 0
+    local heldEvenAfterOdd = 0
 
     for pulse = 1, #result.eventsPerPulse - 1 do
         if pulse % 2 == 1 then
             local oddEvents = result.eventsPerPulse[pulse]
             local evenEvents = result.eventsPerPulse[pulse + 1]
-            if #oddEvents == 0 and #evenEvents > 0 then
-                heldOddThenEvenRelease = heldOddThenEvenRelease + 1
+            if #oddEvents > 0 and #evenEvents == 0 then
+                heldEvenAfterOdd = heldEvenAfterOdd + 1
             end
         end
     end
 
-    assert(heldOddThenEvenRelease >= 2,
-        "swing should create at least two odd-pulse holds followed by even-pulse releases")
+    assert(heldEvenAfterOdd >= 2,
+        "swing should create at least two delayed off-beat pulses")
 
     local unique = {}
     for i = 1, #result.noteOnPitches do

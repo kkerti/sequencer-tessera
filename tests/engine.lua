@@ -123,9 +123,9 @@ local tSwing = Engine.getTrack(eSwing, 1)
 Track.setStep(tSwing, 1, Step.new(60, 100, 1, 1))
 Engine.setSwing(eSwing, 72)
 local s1 = Engine.tick(eSwing)
-assert(#s1 == 0, "high swing should hold first odd pulse")
+assert(#s1 == 1 and s1[1].pitch == 60, "first pulse should pass through")
 local s2 = Engine.tick(eSwing)
-assert(#s2 == 1 and s2[1].pitch == 60, "event should appear after swing hold")
+assert(#s2 == 0, "high swing should hold first off-beat pulse")
 
 -- ── Active note tracking ────────────────────────────────────────────────────
 
@@ -228,5 +228,88 @@ assert(eMulti.activeNotes["60:1"] == true, "track 1 note should be tracked")
 assert(eMulti.activeNotes["72:2"] == true, "track 2 note should be tracked")
 local multiOff = Engine.allNotesOff(eMulti)
 assert(#multiOff == 2, "allNotesOff should return 2 events for 2 sounding notes")
+
+-- ── Scene chain integration ─────────────────────────────────────────────────
+
+local Scene = require("sequencer/scene")
+
+-- Scene chain changes loop points after the scene's beats elapse.
+do
+    local e = Engine.new(120, 4, 1, 0)
+    local trk = Engine.getTrack(e, 1)
+    Track.addPattern(trk, 4)  -- pattern 1: steps 1-4
+    Track.addPattern(trk, 4)  -- pattern 2: steps 5-8
+    for i = 1, 8 do
+        Track.setStep(trk, i, Step.new(60 + i - 1, 100, 1, 1))
+    end
+
+    -- Scene A: loop over pattern 1 (steps 1-4) for 2 beats.
+    local sceneA = Scene.new(1, 2, "A")
+    Scene.setTrackLoop(sceneA, 1, 1, 4)
+
+    -- Scene B: loop over pattern 2 (steps 5-8) for 2 beats.
+    local sceneB = Scene.new(1, 2, "B")
+    Scene.setTrackLoop(sceneB, 1, 5, 8)
+
+    local chain = Scene.newChain()
+    Scene.chainAppend(chain, sceneA)
+    Scene.chainAppend(chain, sceneB)
+
+    Engine.setSceneChain(e, chain)
+    Engine.activateSceneChain(e)
+
+    -- Verify scene A's loop points are applied.
+    assert(Track.getLoopStart(trk) == 1, "scene A should set loopStart to 1")
+    assert(Track.getLoopEnd(trk) == 4, "scene A should set loopEnd to 4")
+
+    -- Tick through 2 beats (8 pulses at 4 ppb).
+    for _ = 1, 8 do
+        Engine.tick(e)
+    end
+
+    -- After 2 beats, scene should advance to B.
+    assert(Track.getLoopStart(trk) == 5, "scene B should set loopStart to 5")
+    assert(Track.getLoopEnd(trk) == 8, "scene B should set loopEnd to 8")
+
+    -- Tick through 2 more beats.
+    for _ = 1, 8 do
+        Engine.tick(e)
+    end
+
+    -- Should wrap back to scene A.
+    assert(Track.getLoopStart(trk) == 1, "scene A (wrapped) should set loopStart to 1")
+    assert(Track.getLoopEnd(trk) == 4, "scene A (wrapped) should set loopEnd to 4")
+end
+
+-- Engine.reset with active scene chain resets to scene 1.
+do
+    local e = Engine.new(120, 4, 1, 0)
+    local trk = Engine.getTrack(e, 1)
+    Track.addPattern(trk, 4)
+    Track.addPattern(trk, 4)
+    for i = 1, 8 do
+        Track.setStep(trk, i, Step.new(60, 100, 1, 1))
+    end
+
+    local sceneA = Scene.new(1, 2, "A")
+    Scene.setTrackLoop(sceneA, 1, 1, 4)
+    local sceneB = Scene.new(1, 2, "B")
+    Scene.setTrackLoop(sceneB, 1, 5, 8)
+
+    local chain = Scene.newChain()
+    Scene.chainAppend(chain, sceneA)
+    Scene.chainAppend(chain, sceneB)
+    Engine.setSceneChain(e, chain)
+    Engine.activateSceneChain(e)
+
+    -- Advance to scene B.
+    for _ = 1, 8 do Engine.tick(e) end
+    assert(chain.cursor == 2, "should be on scene B")
+
+    -- Reset should go back to scene A.
+    Engine.reset(e)
+    assert(chain.cursor == 1, "reset should return to scene A")
+    assert(Track.getLoopStart(trk) == 1, "reset should re-apply scene A loop points")
+end
 
 print("engine: all tests passed")

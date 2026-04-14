@@ -54,67 +54,47 @@ local function trackGetStepAtFlat(track, flatIndex)
     return nil
 end
 
--- Advances the flat cursor by one step, respecting loop points.
-local function trackGetNextCursor(track, cursor)
-    local stepCount = trackComputeStepCount(track)
-    if stepCount == 0 then
-        return 1
-    end
-
-    local rangeStart = 1
-    local rangeEnd = stepCount
-    if track.loopStart ~= nil then
-        rangeStart = track.loopStart
-    end
-    if track.loopEnd ~= nil then
-        rangeEnd = track.loopEnd
-    end
-
-    if cursor < rangeStart or cursor > rangeEnd then
-        if track.direction == DIRECTION_REVERSE then
-            return rangeEnd
-        end
-        if track.direction == DIRECTION_RANDOM then
-            return math.random(rangeStart, rangeEnd)
-        end
+-- Direction handler: forward mode.
+local function trackNextForward(cursor, rangeStart, rangeEnd)
+    if cursor >= rangeEnd then
         return rangeStart
     end
+    return cursor + 1
+end
 
-    if track.direction == DIRECTION_FORWARD then
-        if cursor >= rangeEnd then
-            return rangeStart
-        end
-        return cursor + 1
+-- Direction handler: reverse mode.
+local function trackNextReverse(cursor, rangeStart, rangeEnd)
+    if cursor <= rangeStart then
+        return rangeEnd
     end
+    return cursor - 1
+end
 
-    if track.direction == DIRECTION_REVERSE then
+-- Direction handler: random mode.
+local function trackNextRandom(rangeStart, rangeEnd)
+    return math.random(rangeStart, rangeEnd)
+end
+
+-- Direction handler: brownian mode (75% forward, 25% backward or hold).
+local function trackNextBrownian(cursor, rangeStart, rangeEnd)
+    local roll = math.random(1, 4)
+    if roll == 1 then
         if cursor <= rangeStart then
             return rangeEnd
         end
         return cursor - 1
     end
-
-    if track.direction == DIRECTION_RANDOM then
-        return math.random(rangeStart, rangeEnd)
+    if roll == 2 then
+        return cursor
     end
-
-    if track.direction == DIRECTION_BROWNIAN then
-        local roll = math.random(1, 4)
-        if roll == 1 then
-            if cursor <= rangeStart then
-                return rangeEnd
-            end
-            return cursor - 1
-        end
-        if roll == 2 then
-            return cursor
-        end
-        if cursor >= rangeEnd then
-            return rangeStart
-        end
-        return cursor + 1
+    if cursor >= rangeEnd then
+        return rangeStart
     end
+    return cursor + 1
+end
 
+-- Direction handler: ping-pong mode.
+local function trackNextPingPong(track, cursor, rangeStart, rangeEnd)
     if rangeStart == rangeEnd then
         return rangeStart
     end
@@ -132,6 +112,52 @@ local function trackGetNextCursor(track, cursor)
         return cursor + 1
     end
     return cursor - 1
+end
+
+-- Resolves the cursor when it's outside the current loop range.
+-- Returns the appropriate reset position based on direction.
+local function trackResetOutOfRange(track, rangeStart, rangeEnd)
+    if track.direction == DIRECTION_REVERSE then
+        return rangeEnd
+    end
+    if track.direction == DIRECTION_RANDOM then
+        return trackNextRandom(rangeStart, rangeEnd)
+    end
+    return rangeStart
+end
+
+-- Dispatches to the appropriate direction handler for in-range cursors.
+local function trackDispatchDirection(track, cursor, rangeStart, rangeEnd)
+    if track.direction == DIRECTION_FORWARD then
+        return trackNextForward(cursor, rangeStart, rangeEnd)
+    end
+    if track.direction == DIRECTION_REVERSE then
+        return trackNextReverse(cursor, rangeStart, rangeEnd)
+    end
+    if track.direction == DIRECTION_RANDOM then
+        return trackNextRandom(rangeStart, rangeEnd)
+    end
+    if track.direction == DIRECTION_BROWNIAN then
+        return trackNextBrownian(cursor, rangeStart, rangeEnd)
+    end
+    return trackNextPingPong(track, cursor, rangeStart, rangeEnd)
+end
+
+-- Advances the flat cursor by one step, respecting loop points.
+local function trackGetNextCursor(track, cursor)
+    local stepCount = trackComputeStepCount(track)
+    if stepCount == 0 then
+        return 1
+    end
+
+    local rangeStart = track.loopStart or 1
+    local rangeEnd = track.loopEnd or stepCount
+
+    if cursor < rangeStart or cursor > rangeEnd then
+        return trackResetOutOfRange(track, rangeStart, rangeEnd)
+    end
+
+    return trackDispatchDirection(track, cursor, rangeStart, rangeEnd)
 end
 
 -- ---------------------------------------------------------------------------
@@ -208,6 +234,183 @@ function Track.patternEndIndex(track, patternIndex)
         offset = offset + Pattern.getStepCount(track.patterns[i])
     end
     return offset
+end
+
+-- Copies all steps from pattern at `srcIndex` into a new pattern appended
+-- to the track. Returns the new pattern. Step data is deep-copied so edits
+-- to the copy do not affect the source.
+function Track.copyPattern(track, srcIndex)
+    assert(type(srcIndex) == "number" and srcIndex >= 1 and srcIndex <= track.patternCount,
+        "trackCopyPattern: srcIndex out of range 1-" .. track.patternCount)
+
+    local Utils  = require("utils")
+    local src    = track.patterns[srcIndex]
+    local count  = Pattern.getStepCount(src)
+    local newPat = Pattern.new(0, Pattern.getName(src))
+
+    newPat.steps     = {}
+    newPat.stepCount = count
+    for i = 1, count do
+        newPat.steps[i] = Utils.tableCopy(src.steps[i])
+    end
+
+    track.patternCount = track.patternCount + 1
+    track.patterns[track.patternCount] = newPat
+    return newPat
+end
+
+-- Copies all steps from pattern at `srcIndex` and inserts the new pattern
+-- immediately after `srcIndex`. Returns the new pattern.
+function Track.duplicatePattern(track, srcIndex)
+    assert(type(srcIndex) == "number" and srcIndex >= 1 and srcIndex <= track.patternCount,
+        "trackDuplicatePattern: srcIndex out of range 1-" .. track.patternCount)
+
+    local Utils  = require("utils")
+    local src    = track.patterns[srcIndex]
+    local count  = Pattern.getStepCount(src)
+    local newPat = Pattern.new(0, Pattern.getName(src))
+
+    newPat.steps     = {}
+    newPat.stepCount = count
+    for i = 1, count do
+        newPat.steps[i] = Utils.tableCopy(src.steps[i])
+    end
+
+    -- Shift patterns after srcIndex forward by one slot.
+    track.patternCount = track.patternCount + 1
+    for i = track.patternCount, srcIndex + 2, -1 do
+        track.patterns[i] = track.patterns[i - 1]
+    end
+    track.patterns[srcIndex + 1] = newPat
+    return newPat
+end
+
+-- Removes the pattern at `patternIndex` and its steps from the track.
+-- Adjusts loop points: clears any that fall inside the deleted range,
+-- shifts any that fall after it. Resets cursor to 1 to avoid stale state.
+function Track.deletePattern(track, patternIndex)
+    assert(type(patternIndex) == "number" and patternIndex >= 1 and patternIndex <= track.patternCount,
+        "trackDeletePattern: patternIndex out of range 1-" .. track.patternCount)
+    assert(track.patternCount > 1, "trackDeletePattern: cannot delete the last remaining pattern")
+
+    -- Compute the flat range of the pattern being removed.
+    local delStart = Track.patternStartIndex(track, patternIndex)
+    local delEnd   = Track.patternEndIndex(track, patternIndex)
+    local delCount = delEnd - delStart + 1
+
+    -- Remove from patterns array.
+    for i = patternIndex, track.patternCount - 1 do
+        track.patterns[i] = track.patterns[i + 1]
+    end
+    track.patterns[track.patternCount] = nil
+    track.patternCount = track.patternCount - 1
+
+    -- Adjust loop points.
+    if track.loopStart ~= nil then
+        if track.loopStart >= delStart and track.loopStart <= delEnd then
+            track.loopStart = nil
+        elseif track.loopStart > delEnd then
+            track.loopStart = track.loopStart - delCount
+        end
+    end
+    if track.loopEnd ~= nil then
+        if track.loopEnd >= delStart and track.loopEnd <= delEnd then
+            track.loopEnd = nil
+        elseif track.loopEnd > delEnd then
+            track.loopEnd = track.loopEnd - delCount
+        end
+    end
+
+    -- Reset cursor to avoid stale references.
+    track.cursor       = 1
+    track.pulseCounter = 0
+end
+
+-- Adjusts loop points after a pattern insert at `patternIndex`.
+-- Any loop point at or after the insert boundary shifts forward by `stepCount`.
+local function trackAdjustLoopPointsAfterInsert(track, patternIndex, stepCount)
+    if stepCount <= 0 then
+        return
+    end
+    local insertStart = Track.patternStartIndex(track, patternIndex)
+    if track.loopStart ~= nil and track.loopStart >= insertStart then
+        track.loopStart = track.loopStart + stepCount
+    end
+    if track.loopEnd ~= nil and track.loopEnd >= insertStart then
+        track.loopEnd = track.loopEnd + stepCount
+    end
+end
+
+-- Inserts a new empty pattern with `stepCount` steps at `patternIndex`.
+-- Existing patterns at and after that index shift forward.
+-- Resets cursor to 1.
+function Track.insertPattern(track, patternIndex, stepCount)
+    stepCount = stepCount or 8
+    assert(type(patternIndex) == "number" and patternIndex >= 1 and patternIndex <= track.patternCount + 1,
+        "trackInsertPattern: patternIndex out of range 1-" .. (track.patternCount + 1))
+    assert(type(stepCount) == "number" and stepCount >= 0 and math.floor(stepCount) == stepCount,
+        "trackInsertPattern: stepCount must be a non-negative integer")
+
+    local newPat = Pattern.new(stepCount)
+
+    -- Shift patterns forward.
+    track.patternCount = track.patternCount + 1
+    for i = track.patternCount, patternIndex + 1, -1 do
+        track.patterns[i] = track.patterns[i - 1]
+    end
+    track.patterns[patternIndex] = newPat
+
+    trackAdjustLoopPointsAfterInsert(track, patternIndex, stepCount)
+
+    track.cursor       = 1
+    track.pulseCounter = 0
+    return newPat
+end
+
+-- Swaps the positions of two patterns in the track.
+-- Does not adjust loop points (they refer to flat step indices which change).
+-- Resets cursor to 1.
+function Track.swapPatterns(track, indexA, indexB)
+    assert(type(indexA) == "number" and indexA >= 1 and indexA <= track.patternCount,
+        "trackSwapPatterns: indexA out of range 1-" .. track.patternCount)
+    assert(type(indexB) == "number" and indexB >= 1 and indexB <= track.patternCount,
+        "trackSwapPatterns: indexB out of range 1-" .. track.patternCount)
+
+    if indexA == indexB then return end
+
+    track.patterns[indexA], track.patterns[indexB] = track.patterns[indexB], track.patterns[indexA]
+
+    -- Clear loop points since flat indices are now different.
+    track.loopStart    = nil
+    track.loopEnd      = nil
+    track.cursor       = 1
+    track.pulseCounter = 0
+end
+
+-- Pastes steps from a source pattern table (e.g. from a clipboard) over
+-- the pattern at `destIndex`, replacing all its steps. The source pattern
+-- is deep-copied so subsequent edits are independent.
+function Track.pastePattern(track, destIndex, srcPattern)
+    assert(type(destIndex) == "number" and destIndex >= 1 and destIndex <= track.patternCount,
+        "trackPastePattern: destIndex out of range 1-" .. track.patternCount)
+    assert(type(srcPattern) == "table" and srcPattern.steps ~= nil,
+        "trackPastePattern: srcPattern must be a pattern table")
+
+    local Utils   = require("utils")
+    local dest    = track.patterns[destIndex]
+    local count   = srcPattern.stepCount
+
+    -- Replace steps.
+    dest.steps     = {}
+    dest.stepCount = count
+    for i = 1, count do
+        dest.steps[i] = Utils.tableCopy(srcPattern.steps[i])
+    end
+    dest.name = srcPattern.name
+
+    -- Cursor reset for safety — step count may have changed.
+    track.cursor       = 1
+    track.pulseCounter = 0
 end
 
 -- ---------------------------------------------------------------------------
@@ -346,6 +549,24 @@ end
 -- Playback
 -- ---------------------------------------------------------------------------
 
+-- Skips over steps with zero duration, advancing the cursor past them.
+-- Returns the step at the final cursor position, or nil if all steps
+-- have zero duration (degenerate track).
+local function trackSkipZeroDuration(track, stepCount)
+    local step = trackGetStepAtFlat(track, track.cursor)
+    local skipGuard = 0
+    while step ~= nil and step.duration == 0 do
+        track.cursor       = trackGetNextCursor(track, track.cursor)
+        track.pulseCounter = 0
+        step               = trackGetStepAtFlat(track, track.cursor)
+        skipGuard = skipGuard + 1
+        if skipGuard > stepCount then
+            return nil
+        end
+    end
+    return step
+end
+
 -- Advances the track by one clock pulse.
 -- Returns "NOTE_ON", "NOTE_OFF", or nil.
 -- Returns nil immediately if the track has no steps.
@@ -355,20 +576,7 @@ function Track.advance(track)
         return nil
     end
 
-    local step      = trackGetStepAtFlat(track, track.cursor)
-    local skipGuard = 0
-
-    -- Skip steps with zero duration entirely.
-    while step ~= nil and step.duration == 0 do
-        track.cursor       = trackGetNextCursor(track, track.cursor)
-        track.pulseCounter = 0
-        step               = trackGetStepAtFlat(track, track.cursor)
-
-        skipGuard = skipGuard + 1
-        if skipGuard > stepCount then
-            return nil
-        end
-    end
+    local step = trackSkipZeroDuration(track, stepCount)
 
     if step == nil then
         return nil

@@ -414,4 +414,194 @@ do
     assert(Track.getMidiChannel(t) == nil, "midi channel should clear to nil")
 end
 
+-- ---------------------------------------------------------------------------
+-- copyPattern — appends a deep copy
+-- ---------------------------------------------------------------------------
+
+do
+    local t = Track.new()
+    Track.addPattern(t, 3)
+    Track.setStep(t, 1, Step.new(72, 110, 3, 2))
+    Track.setStep(t, 2, Step.new(74,  90, 2, 1))
+    Track.setStep(t, 3, Step.new(76, 100, 4, 3))
+
+    local copied = Track.copyPattern(t, 1)
+    assert(Track.getPatternCount(t) == 2, "copyPattern should append a new pattern")
+    assert(Track.getStepCount(t) == 6, "stepCount should be 6 after copying 3-step pattern")
+
+    -- Verify data is correct.
+    assert(Track.getStep(t, 4).pitch == 72, "copied step 1 pitch should be 72")
+    assert(Track.getStep(t, 5).pitch == 74, "copied step 2 pitch should be 74")
+    assert(Track.getStep(t, 6).pitch == 76, "copied step 3 pitch should be 76")
+
+    -- Verify deep copy — mutating the copy should not affect the original.
+    Step.setPitch(Track.getStep(t, 4), 48)
+    assert(Track.getStep(t, 1).pitch == 72, "original should be unaffected by copy mutation")
+end
+
+-- ---------------------------------------------------------------------------
+-- duplicatePattern — inserts right after the source
+-- ---------------------------------------------------------------------------
+
+do
+    local t = Track.new()
+    Track.addPattern(t, 2)  -- pattern 1: steps 1-2
+    Track.addPattern(t, 2)  -- pattern 2: steps 3-4
+    Track.setStep(t, 1, Step.new(60, 100, 1, 1))
+    Track.setStep(t, 2, Step.new(62, 100, 1, 1))
+    Track.setStep(t, 3, Step.new(64, 100, 1, 1))
+    Track.setStep(t, 4, Step.new(66, 100, 1, 1))
+
+    Track.duplicatePattern(t, 1)
+    assert(Track.getPatternCount(t) == 3, "duplicatePattern should insert a new pattern")
+    assert(Track.getStepCount(t) == 6, "stepCount should be 6 after duplicating 2-step pattern")
+
+    -- Pattern order should be: original(1), copy(2), old-pattern-2(3)
+    assert(Track.getStep(t, 1).pitch == 60, "pattern 1 step 1 unchanged")
+    assert(Track.getStep(t, 2).pitch == 62, "pattern 1 step 2 unchanged")
+    assert(Track.getStep(t, 3).pitch == 60, "duplicated pattern step 1 should match source")
+    assert(Track.getStep(t, 4).pitch == 62, "duplicated pattern step 2 should match source")
+    assert(Track.getStep(t, 5).pitch == 64, "old pattern 2 step 1 shifted")
+    assert(Track.getStep(t, 6).pitch == 66, "old pattern 2 step 2 shifted")
+
+    -- Deep copy verification.
+    Step.setPitch(Track.getStep(t, 3), 48)
+    assert(Track.getStep(t, 1).pitch == 60, "original unaffected by duplicated step mutation")
+end
+
+-- ---------------------------------------------------------------------------
+-- deletePattern — removes pattern and adjusts loop points
+-- ---------------------------------------------------------------------------
+
+do
+    local t = Track.new()
+    Track.addPattern(t, 4)  -- pattern 1: steps 1-4
+    Track.addPattern(t, 4)  -- pattern 2: steps 5-8
+    Track.addPattern(t, 4)  -- pattern 3: steps 9-12
+
+    -- Set loop to pattern 3.
+    Track.setLoopStart(t, 9)
+    Track.setLoopEnd(t, 12)
+
+    -- Delete pattern 1 — loop points should shift down by 4.
+    Track.deletePattern(t, 1)
+    assert(Track.getPatternCount(t) == 2, "patternCount should be 2 after delete")
+    assert(Track.getStepCount(t) == 8, "stepCount should be 8 after deleting 4-step pattern")
+    assert(Track.getLoopStart(t) == 5, "loopStart should shift from 9 to 5")
+    assert(Track.getLoopEnd(t) == 8, "loopEnd should shift from 12 to 8")
+end
+
+-- deletePattern clears loop points that fall inside the deleted range
+do
+    local t = Track.new()
+    Track.addPattern(t, 4)  -- pattern 1: steps 1-4
+    Track.addPattern(t, 4)  -- pattern 2: steps 5-8
+
+    Track.setLoopStart(t, 5)
+    Track.setLoopEnd(t, 8)
+
+    Track.deletePattern(t, 2)
+    assert(Track.getLoopStart(t) == nil, "loopStart inside deleted range should be cleared")
+    assert(Track.getLoopEnd(t) == nil, "loopEnd inside deleted range should be cleared")
+end
+
+-- deletePattern cannot remove the last pattern
+do
+    local t = Track.new()
+    Track.addPattern(t, 4)
+    local ok, _ = pcall(Track.deletePattern, t, 1)
+    assert(not ok, "deleting the last pattern should error")
+end
+
+-- ---------------------------------------------------------------------------
+-- insertPattern — inserts at a specific position
+-- ---------------------------------------------------------------------------
+
+do
+    local t = Track.new()
+    Track.addPattern(t, 4)  -- pattern 1: steps 1-4
+    Track.addPattern(t, 4)  -- pattern 2: steps 5-8
+    Track.setStep(t, 1, Step.new(60, 100, 1, 1))
+    Track.setStep(t, 5, Step.new(72, 100, 1, 1))
+
+    -- Insert a 2-step pattern at position 2 (between existing patterns).
+    Track.insertPattern(t, 2, 2)
+    assert(Track.getPatternCount(t) == 3, "patternCount should be 3 after insert")
+    assert(Track.getStepCount(t) == 10, "stepCount should be 10 (4+2+4)")
+
+    -- Original pattern 1 still at position 1.
+    assert(Track.getStep(t, 1).pitch == 60, "pattern 1 step 1 should be unchanged")
+    -- New pattern at position 2 with default steps (pitch 60).
+    assert(Track.getStep(t, 5).pitch == 60, "new pattern step 1 should be default")
+    -- Original pattern 2 shifted to position 3.
+    assert(Track.getStep(t, 7).pitch == 72, "old pattern 2 step 1 should now be at flat index 7")
+end
+
+-- insertPattern adjusts loop points
+do
+    local t = Track.new()
+    Track.addPattern(t, 4)  -- pattern 1: steps 1-4
+    Track.addPattern(t, 4)  -- pattern 2: steps 5-8
+    Track.setLoopStart(t, 5)
+    Track.setLoopEnd(t, 8)
+
+    -- Insert 3-step pattern at position 1 (before everything).
+    Track.insertPattern(t, 1, 3)
+    assert(Track.getLoopStart(t) == 8, "loopStart should shift from 5 to 8")
+    assert(Track.getLoopEnd(t) == 11, "loopEnd should shift from 8 to 11")
+end
+
+-- ---------------------------------------------------------------------------
+-- swapPatterns
+-- ---------------------------------------------------------------------------
+
+do
+    local t = Track.new()
+    Track.addPattern(t, 2)
+    Track.addPattern(t, 3)
+    Track.setStep(t, 1, Step.new(60, 100, 1, 1))
+    Track.setStep(t, 2, Step.new(62, 100, 1, 1))
+    Track.setStep(t, 3, Step.new(72, 100, 1, 1))
+    Track.setStep(t, 4, Step.new(74, 100, 1, 1))
+    Track.setStep(t, 5, Step.new(76, 100, 1, 1))
+
+    Track.setLoopStart(t, 1)
+    Track.setLoopEnd(t, 2)
+
+    Track.swapPatterns(t, 1, 2)
+    assert(Track.getPatternCount(t) == 2, "swapPatterns should not change patternCount")
+    -- After swap: pattern 1 is old pattern 2 (3 steps), pattern 2 is old pattern 1 (2 steps)
+    assert(Track.getStepCount(t) == 5, "stepCount should still be 5")
+    assert(Track.getStep(t, 1).pitch == 72, "swapped pattern 1 step 1 should be 72")
+    assert(Track.getStep(t, 4).pitch == 60, "swapped pattern 2 step 1 should be 60")
+    -- Loop points should be cleared after swap.
+    assert(Track.getLoopStart(t) == nil, "loopStart should be cleared after swap")
+    assert(Track.getLoopEnd(t) == nil, "loopEnd should be cleared after swap")
+end
+
+-- ---------------------------------------------------------------------------
+-- pastePattern — overwrites destination with source data
+-- ---------------------------------------------------------------------------
+
+do
+    local t = Track.new()
+    Track.addPattern(t, 2)
+    Track.addPattern(t, 2)
+    Track.setStep(t, 1, Step.new(60, 100, 1, 1))
+    Track.setStep(t, 2, Step.new(62, 100, 1, 1))
+    Track.setStep(t, 3, Step.new(72, 100, 1, 1))
+    Track.setStep(t, 4, Step.new(74, 100, 1, 1))
+
+    -- Paste pattern 1 over pattern 2.
+    local src = Track.getPattern(t, 1)
+    Track.pastePattern(t, 2, src)
+
+    assert(Track.getStep(t, 3).pitch == 60, "pasted step 1 should match source")
+    assert(Track.getStep(t, 4).pitch == 62, "pasted step 2 should match source")
+
+    -- Deep copy — mutating paste target should not affect source.
+    Step.setPitch(Track.getStep(t, 3), 48)
+    assert(Track.getStep(t, 1).pitch == 60, "source unaffected after pasting and mutating")
+end
+
 print("tests/track.lua OK")

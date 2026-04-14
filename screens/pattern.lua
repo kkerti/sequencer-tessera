@@ -1,7 +1,6 @@
 -- pattern.lua
--- Pattern screen for Grid VSN1 320x240 LCD
--- CONSTRAINT: init must be under 2KB (WASM loadScript limit)
--- All heavy code goes in the loop section.
+-- Pattern screen: piano-roll style note blocks on a pitch grid
+-- Compact rectangular blocks at pitch height, not full bars
 
 -- INIT START
 n=0
@@ -17,154 +16,206 @@ SW=56
 SC="minPent"
 VO=0
 SS=1
+BTN_LEFT=9
+BTN_UP=10
+BTN_DOWN=11
+BTN_RIGHT=12
+
+function navButtonPressed(index)
+    return uiControlPressed and uiControlPressed[index]==1
+end
+
+function navMoveIndex(current,minValue,maxValue,delta)
+    local nextValue=current+delta
+    if nextValue<minValue then nextValue=minValue end
+    if nextValue>maxValue then nextValue=maxValue end
+    return nextValue
+end
 print("init ok "..NT)
 -- INIT END
 
 -- LOOP START
 n=n+1
 
--- slider -> selected step
-SS=math.floor(sliderValue/255*(NT-1))+1
-if SS<1 then SS=1 end
-if SS>NT then SS=NT end
--- auto-scroll
+-- navigation with 4 buttons
+if navButtonPressed(BTN_LEFT) then SS=navMoveIndex(SS,1,NT,-1) end
+if navButtonPressed(BTN_RIGHT) then SS=navMoveIndex(SS,1,NT,1) end
+if navButtonPressed(BTN_UP) then SS=navMoveIndex(SS,1,NT,-8) end
+if navButtonPressed(BTN_DOWN) then SS=navMoveIndex(SS,1,NT,8) end
+
 if SS<VO+1 then VO=SS-1 end
 if SS>VO+8 then VO=SS-8 end
 if VO<0 then VO=0 end
 if VO>NT-8 then VO=NT-8 end
--- advance cursor every 30 frames
 if n%30==0 then TC=TC+1 end
 if TC>NT then TC=1 end
 
 -- colors
 local bg={18,18,24}
 local hd={30,30,42}
-local sb={28,28,38}
-local sa={50,50,70}
-local cb={80,140,220}
-local ch={100,180,255}
+local gd={32,32,40}
+local cb={70,130,210}
+local ch={110,180,255}
 local gn={60,200,120}
-local gf={60,50,50}
-local mu={80,60,60}
+local gf={45,40,40}
+local mu={60,50,55}
 local rc={220,180,60}
 local lc={200,100,60}
 local tx={200,200,210}
 local td={100,100,120}
 local wh={255,255,255}
-local bk={0,0,0}
 
 -- layout
 local W,H=320,240
-local HH=24
-local FH=20
-local SW2=38
-local SG=2
-local SX=6
-local SY=HH+4
-local SH=H-HH-FH-8
-local BB=SY+SH-22
-local BT=SY+14
-local BM=BB-BT
-local GY=BB+4
-local GH2=8
-local RY=GY+GH2+3
+local HH=22
+local FH=18
+local VIS=8
+local CW=38
+local CG=2
+local CX=6
+local PY=HH+2
+local PH=H-HH-FH-4
+local NH=10
+
+-- find pitch range of visible steps
+local pMin,pMax=127,0
+for i=1,VIS do
+    local si=VO+i
+    if si<=NT and S[si].d>0 then
+        if S[si].p<pMin then pMin=S[si].p end
+        if S[si].p>pMax then pMax=S[si].p end
+    end
+end
+if pMin>pMax then pMin=60 pMax=72 end
+-- pad range by 2 semitones each side
+pMin=pMin-2
+pMax=pMax+2
+local pRange=pMax-pMin
+if pRange<12 then
+    local mid=math.floor((pMin+pMax)/2)
+    pMin=mid-6
+    pMax=mid+6
+    pRange=12
+end
 
 -- clear
 ggdrf(0,0,0,W,H,bg)
 
 -- header
 ggdrf(0,0,0,W,HH,hd)
-ggdft(0,"TRK1",4,4,8,tx)
-ggdft(0,DR,40,4,8,td)
-ggdft(0,tostring(BPM).."bpm",130,4,8,tx)
-ggdft(0,"sw"..tostring(SW).."%",195,4,8,td)
-ggdft(0,SC,260,4,8,td)
-ggdft(0,tostring(SS).."/"..tostring(NT),4,14,8,td)
+ggdft(0,"TRK1",4,3,8,tx)
+ggdft(0,DR,40,3,8,td)
+ggdft(0,tostring(BPM).."bpm",130,3,8,tx)
+ggdft(0,"sw"..tostring(SW).."%",200,3,8,td)
+ggdft(0,SC,265,3,8,td)
+ggdft(0,tostring(SS).."/"..tostring(NT),4,12,8,td)
+
+-- pitch grid lines (every C and every visible semitone reference)
+local gridArea=PH-NH-8
+for semi=pMin,pMax do
+    local yNorm=(pMax-semi)/pRange
+    local y=PY+4+math.floor(yNorm*gridArea)
+    -- draw faint line at every octave C
+    if semi%12==0 then
+        ggdrf(0,CX,y,CX+VIS*(CW+CG)-CG,y+1,{40,40,55})
+        -- C label on left? too tight, skip
+    end
+end
 
 -- step columns
-for i=1,8 do
+for i=1,VIS do
     local si=VO+i
     if si<=NT then
         local s=S[si]
-        local x=SX+(i-1)*(SW2+SG)
+        local x=CX+(i-1)*(CW+CG)
         local sel=(si==SS)
         local cur=(si==TC)
 
-        -- background
-        local c=sb
-        if sel then c=sa end
-        if s.a==0 then c=mu end
-        ggdrf(0,x,SY,x+SW2,BB+2,c)
+        -- column separator (faint vertical)
+        if i>1 then
+            ggdrf(0,x-1,PY,x,PY+PH,{28,28,36})
+        end
 
-        -- pitch bar
-        if s.d>0 then
-            local np=(s.p-36)/60
-            if np<0 then np=0 end
-            if np>1 then np=1 end
-            local bh=math.floor(np*BM)
-            if bh<3 then bh=3 end
-            local by=BB-bh
-            local bc=cb
-            if sel then bc=ch end
-            if s.a==0 then bc=mu end
-            ggdrf(0,x+2,by,x+SW2-2,BB,bc)
+        -- selected column highlight
+        if sel then
+            ggdrf(0,x,PY,x+CW,PY+PH-NH-4,{35,35,50})
+        end
 
-            -- velocity highlight
-            local vh=math.floor(bh*s.v/127*0.3)
-            if vh>1 then
-                local vc={
-                    math.floor(bc[1]+(wh[1]-bc[1])*0.3),
-                    math.floor(bc[2]+(wh[2]-bc[2])*0.3),
-                    math.floor(bc[3]+(wh[3]-bc[3])*0.3)
-                }
-                ggdrf(0,x+2,by,x+SW2-2,by+vh,vc)
+        if s.d>0 and s.a==1 then
+            -- note block position
+            local yNorm=(pMax-s.p)/pRange
+            local ny=PY+4+math.floor(yNorm*gridArea)
+
+            -- gate width: proportion of column width
+            local gateRatio=s.g/math.max(s.d,1)
+            if gateRatio>1 then gateRatio=1 end
+            local nw=math.floor((CW-4)*gateRatio)
+            if nw<6 then nw=6 end
+
+            -- note block
+            local nc=cb
+            if sel then nc=ch end
+            -- velocity -> brightness
+            local vb=0.5+0.5*(s.v/127)
+            local nvColor={
+                math.floor(nc[1]*vb),
+                math.floor(nc[2]*vb),
+                math.floor(nc[3]*vb)
+            }
+            ggdrf(0,x+2,ny,x+2+nw,ny+NH,nvColor)
+
+            -- note outline if selected
+            if sel then
+                ggdr(0,x+1,ny-1,x+3+nw,ny+NH+1,wh)
             end
 
-            -- pitch name
+            -- pitch label below the note block
             local pn=NN[(s.p%12)+1]..tostring(math.floor(s.p/12)-1)
-            local ly=by-10
-            if ly<SY+2 then ly=by+2 end
-            ggdft(0,pn,x+3,ly,8,tx)
-        else
-            ggdft(0,"SKIP",x+4,BB-30,8,td)
-        end
+            ggdft(0,pn,x+3,ny+NH+2,8,tx)
 
-        -- gate bar
-        if s.g>0 and s.d>0 then
-            local gr=s.g/math.max(s.d,1)
-            if gr>1 then gr=1 end
-            local gw=math.floor((SW2-4)*gr)
-            ggdrf(0,x+2,GY,x+2+gw,GY+GH2,gn)
-            if gw<SW2-4 then
-                ggdrf(0,x+2+gw,GY,x+SW2-2,GY+GH2,gf)
+            -- ratchet dots above note
+            if s.r>1 then
+                for r=1,s.r do
+                    local dx=x+3+(r-1)*8
+                    ggdrf(0,dx,ny-6,dx+4,ny-2,rc)
+                end
             end
-        else
-            ggdrf(0,x+2,GY,x+SW2-2,GY+GH2,gf)
-        end
-
-        -- ratchet dots
-        if s.r>1 then
-            for r=1,s.r do
-                local dx=x+4+(r-1)*9
-                ggdrf(0,dx,RY,dx+5,RY+5,rc)
-            end
+        elseif s.d==0 then
+            -- skip marker
+            local midY=PY+math.floor(PH/2)-4
+            ggdft(0,"--",x+12,midY,8,td)
+        elseif s.g==0 then
+            -- rest marker
+            local yNorm=(pMax-s.p)/pRange
+            local ny=PY+4+math.floor(yNorm*gridArea)
+            ggdrf(0,x+2,ny,x+CW-2,ny+NH,gf)
+            local pn=NN[(s.p%12)+1]..tostring(math.floor(s.p/12)-1)
+            ggdft(0,pn,x+3,ny+NH+2,8,td)
+        elseif s.a==0 then
+            -- muted
+            local yNorm=(pMax-s.p)/pRange
+            local ny=PY+4+math.floor(yNorm*gridArea)
+            ggdrf(0,x+2,ny,x+CW-2,ny+NH,mu)
+            local pn=NN[(s.p%12)+1]..tostring(math.floor(s.p/12)-1)
+            ggdft(0,pn,x+3,ny+NH+2,8,td)
         end
 
         -- loop markers
         if si==LS then
-            ggdrf(0,x,SY,x+2,BB+2,lc)
+            ggdrf(0,x,PY,x+2,PY+PH,lc)
         end
         if si==LE then
-            ggdrf(0,x+SW2-2,SY,x+SW2,BB+2,lc)
+            ggdrf(0,x+CW-2,PY,x+CW,PY+PH,lc)
         end
 
-        -- playback cursor
+        -- playback cursor (bottom indicator)
+        local botY=PY+PH-NH
         if cur then
-            ggdrf(0,x,RY+8,x+SW2,RY+12,wh)
+            ggdrf(0,x,botY,x+CW,botY+3,wh)
         end
 
         -- step number
-        ggdft(0,tostring(si),x+14,RY+14,8,td)
+        ggdft(0,tostring(si),x+14,botY+4,8,td)
     end
 end
 
@@ -176,17 +227,17 @@ if ss then
     local pn=NN[(ss.p%12)+1]..tostring(math.floor(ss.p/12)-1)
     local dt=pn.." v"..ss.v.." d"..ss.d.." g"..ss.g.." r"..ss.r
     if ss.a==0 then dt=dt.." [MUTE]" end
-    ggdft(0,dt,4,fy+4,8,tx)
-    ggdft(0,"loop:"..LS.."-"..LE,230,fy+4,8,lc)
+    ggdft(0,dt,4,fy+3,8,tx)
+    ggdft(0,"loop:"..LS.."-"..LE,230,fy+3,8,lc)
 end
 
 -- scrollbar
 if NT>8 then
-    local sth=SH
+    local sth=PH
     local th=math.floor(sth*8/NT)
     if th<8 then th=8 end
-    local ty=SY+math.floor((sth-th)*VO/(NT-8))
-    ggdrf(0,W-4,SY,W-1,SY+sth,{40,40,52})
+    local ty=PY+math.floor((sth-th)*VO/(NT-8))
+    ggdrf(0,W-4,PY,W-1,PY+sth,{32,32,40})
     ggdrf(0,W-4,ty,W-1,ty+th,td)
 end
 -- LOOP END

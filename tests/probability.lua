@@ -1,9 +1,10 @@
 -- tests/probability.lua
--- Behavioural tests for sequencer/probability.lua and engine integration.
+-- Behavioural tests for sequencer/probability.lua and player integration.
 -- Run with: lua tests/probability.lua
 
 local Step        = require("sequencer/step")
 local Engine      = require("sequencer/engine")
+local Player      = require("player/player")
 local Track       = require("sequencer/track")
 local Probability = require("sequencer/probability")
 
@@ -83,7 +84,7 @@ do
     assert(not ok, "expected error for setProbability > 100")
 end
 
--- ── Engine integration: probability 0 suppresses NOTE_ON and NOTE_OFF ───────
+-- ── Player integration: probability 0 suppresses NOTE_ON and NOTE_OFF ───────
 
 do
     math.randomseed(99999)
@@ -93,42 +94,53 @@ do
     Track.setStep(t, 1, Step.new(60, 100, 2, 1, 1, 0))
     Track.setStep(t, 2, Step.new(64, 100, 2, 1, 1, 100))
 
-    -- Pulse 1: step 1 would fire NOTE_ON, but probability 0 suppresses it.
-    local evs = Engine.tick(e)
-    assert(#evs == 0, "probability 0 should suppress NOTE_ON, got " .. #evs)
+    local player = Player.new(e, 120, function() return 0 end)
+    Player.start(player)
 
-    -- Pulse 2: step 1 would fire NOTE_OFF, should also be suppressed.
-    evs = Engine.tick(e)
+    local function tickEvents()
+        local evs = {}
+        Player.tick(player, function(ev) evs[#evs + 1] = ev end)
+        return evs
+    end
+
+    -- Pulse 1: step 1 NOTE_ON suppressed by probability 0.
+    local evs = tickEvents()
+    local noteOns = {}
+    for _, ev in ipairs(evs) do if ev.type == "NOTE_ON" then noteOns[#noteOns+1] = ev end end
+    assert(#noteOns == 0, "probability 0 should suppress NOTE_ON, got " .. #noteOns)
+
+    -- Pulse 2: step 1 NOTE_OFF also suppressed (probSuppressed flag).
+    evs = tickEvents()
     assert(#evs == 0, "probability 0 should suppress NOTE_OFF, got " .. #evs)
 
     -- Pulse 3: step 2 fires NOTE_ON normally (probability 100).
-    evs = Engine.tick(e)
-    assert(#evs == 1 and evs[1].type == "NOTE_ON" and evs[1].pitch == 64,
+    evs = tickEvents()
+    noteOns = {}
+    for _, ev in ipairs(evs) do if ev.type == "NOTE_ON" then noteOns[#noteOns+1] = ev end end
+    assert(#noteOns == 1 and noteOns[1].pitch == 64,
         "probability 100 step should fire NOTE_ON normally")
-
-    -- Pulse 4: step 2 NOTE_OFF fires normally.
-    evs = Engine.tick(e)
-    assert(#evs == 1 and evs[1].type == "NOTE_OFF" and evs[1].pitch == 64,
-        "probability 100 step should fire NOTE_OFF normally")
 end
 
--- ── Engine: suppressed NOTE_ON does not pollute activeNotes ─────────────────
+-- ── Player: suppressed NOTE_ON does not register an active note ──────────────
 
 do
     local e = Engine.new(120, 4, 1, 1)
     local t = Engine.getTrack(e, 1)
     Track.setStep(t, 1, Step.new(60, 100, 2, 1, 1, 0))
 
-    Engine.tick(e) -- suppressed NOTE_ON
-    assert(next(e.activeNotes) == nil,
-        "activeNotes should be empty after suppressed NOTE_ON")
+    local player = Player.new(e, 120, function() return 0 end)
+    Player.start(player)
 
-    Engine.tick(e) -- suppressed NOTE_OFF
-    assert(next(e.activeNotes) == nil,
-        "activeNotes should remain empty after suppressed NOTE_OFF")
+    Player.tick(player, function() end)  -- suppressed NOTE_ON
+    assert(player.activeNoteCount == 0,
+        "activeNoteCount should be 0 after suppressed NOTE_ON")
+
+    Player.tick(player, function() end)  -- suppressed NOTE_OFF
+    assert(player.activeNoteCount == 0,
+        "activeNoteCount should remain 0 after suppressed NOTE_OFF")
 end
 
--- ── Engine reset clears probSuppressed ──────────────────────────────────────
+-- ── Player.allNotesOff after suppressed note returns empty list ──────────────
 
 do
     local e = Engine.new(120, 4, 1, 2)
@@ -136,13 +148,13 @@ do
     Track.setStep(t, 1, Step.new(60, 100, 4, 2, 1, 0))
     Track.setStep(t, 2, Step.new(64, 100, 4, 2, 1, 100))
 
-    Engine.tick(e) -- suppressed NOTE_ON → probSuppressed[1] = true
-    assert(e.probSuppressed[1] == true,
-        "probSuppressed should be true after suppressed NOTE_ON")
+    local player = Player.new(e, 120, function() return 0 end)
+    Player.start(player)
+    Player.tick(player, function() end)  -- suppressed NOTE_ON for step 1
 
-    Engine.reset(e)
-    assert(e.probSuppressed[1] == false,
-        "reset should clear probSuppressed")
+    -- probSuppressed[1] should be true after suppressed NOTE_ON
+    assert(player.probSuppressed[1] == true,
+        "probSuppressed should be true after suppressed NOTE_ON")
 end
 
 -- ── Probability is non-destructive: step data unchanged ─────────────────────

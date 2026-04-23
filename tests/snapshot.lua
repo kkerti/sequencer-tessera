@@ -10,7 +10,6 @@ local filePath = "/tmp/sequencer_snapshot_test.lua"
 
 do
     local e = Engine.new(123, 4, 2, 0)
-    Engine.setSwing(e, 60)
     Engine.setScale(e, "major", 0)
 
     local t1 = Engine.getTrack(e, 1)
@@ -34,7 +33,6 @@ do
 
     assert(loaded.bpm == 123)
     assert(loaded.trackCount == 2)
-    assert(loaded.swingPercent == 60)
     assert(loaded.scaleName == "major")
 
     local lt1 = Engine.getTrack(loaded, 1)

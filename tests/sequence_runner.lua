@@ -5,8 +5,9 @@
 --   lua tests/sequence_runner.lua 01_basic_patterns
 --   lua tests/sequence_runner.lua all
 
-local Engine = require("sequencer/engine")
-local Tui = require("tui")
+local Engine  = require("sequencer/engine")
+local Player  = require("player/player")
+local Tui     = require("tui")
 local Helpers = require("tests.sequences._helpers")
 
 local scenarioArg = arg[1] or "all"
@@ -35,6 +36,18 @@ local function runScenario(name)
     local engine = scenario.build(Helpers)
     local pulseLimit = pulsesArg or scenario.defaultPulses or 16
 
+    -- Wrap engine in a player for MIDI emission.
+    local player = Player.new(engine, engine.bpm, function() return 0 end)
+    -- Apply swing/scale if the scenario stored them on the engine table
+    -- (legacy scenarios may set engine.swingPercent / engine.scaleName directly).
+    if engine.swingPercent and engine.swingPercent > 50 then
+        Player.setSwing(player, engine.swingPercent)
+    end
+    if engine.scaleName then
+        Player.setScale(player, engine.scaleName, engine.rootNote or 0)
+    end
+    Player.start(player)
+
     local eventsPerPulse = {}
     local noteOnPitches = {}
     local noteOnCount = 0
@@ -43,11 +56,14 @@ local function runScenario(name)
     print("[CASE:" .. scenario.name .. "] " .. scenario.description)
 
     for pulse = 1, pulseLimit do
-        local events = Engine.tick(engine)
-        eventsPerPulse[pulse] = events
+        local pulseEvents = {}
+        Player.tick(player, function(ev)
+            pulseEvents[#pulseEvents + 1] = ev
+        end)
+        eventsPerPulse[pulse] = pulseEvents
 
-        for i = 1, #events do
-            local event = events[i]
+        for i = 1, #pulseEvents do
+            local event = pulseEvents[i]
             if event.type == "NOTE_ON" then
                 noteOnCount = noteOnCount + 1
                 noteOnPitches[#noteOnPitches + 1] = event.pitch
@@ -56,9 +72,9 @@ local function runScenario(name)
             end
         end
 
-        print(Tui.renderTickTrace(engine, pulse, events))
+        print(Tui.renderTickTrace(engine, pulse, pulseEvents))
         if pulse % engine.pulsesPerBeat == 0 then
-            print(Tui.render(engine, pulse, events))
+            print(Tui.render(engine, pulse, pulseEvents))
         end
     end
 

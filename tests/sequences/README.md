@@ -28,8 +28,10 @@ lua tests/sequence_runner.lua 09_full_stack_performance 32
 Real-time playback to Ableton (via bridge):
 
 ```bash
-lua tests/sequence_player.lua 09_full_stack_performance gate-ms=40 ch1=1 ch2=10 | python3 bridge.py
+lua tests/sequence_player.lua 09_full_stack_performance ch1=1 ch2=10 | python3 bridge.py
 ```
+
+Gate lengths are driven by `os.clock()` wall-clock time — no `gate-ms` override needed.
 
 ## Scenario list
 

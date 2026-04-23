@@ -1,15 +1,21 @@
 -- tests/sequence_player.lua
 -- Plays a scenario in real time and emits MIDI line protocol to stdout.
+-- Routes through player/player.lua — os.clock() drives gate/NOTE_OFF timing.
 --
 -- Usage:
 --   lua tests/sequence_player.lua list
 --   lua tests/sequence_player.lua 01_basic_patterns
---   lua tests/sequence_player.lua 01_basic_patterns no-tui
+--   lua tests/sequence_player.lua 09_full_stack_performance no-tui
+--   lua tests/sequence_player.lua 10_four_track_polyrhythm_showcase ch1=1 ch2=10
+--
+-- Pipe to bridge to hear in Ableton:
+--   lua tests/sequence_player.lua 11_four_track_dark_polyrhythm | python3 bridge.py
 
-local uv = require("luv")
-local Engine = require("sequencer/engine")
-local Track = require("sequencer/track")
-local Tui = require("tui")
+local uv      = require("luv")
+local Engine  = require("sequencer/engine")
+local Player  = require("player/player")
+local Track   = require("sequencer/track")
+local Tui     = require("tui")
 local Helpers = require("tests.sequences._helpers")
 
 local SCENARIOS = {
@@ -28,9 +34,7 @@ local SCENARIOS = {
 
 local function hasScenario(name)
     for i = 1, #SCENARIOS do
-        if SCENARIOS[i] == name then
-            return true
-        end
+        if SCENARIOS[i] == name then return true end
     end
     return false
 end
@@ -38,12 +42,14 @@ end
 local function printUsage()
     io.stderr:write("Usage:\n")
     io.stderr:write("  lua tests/sequence_player.lua list\n")
-    io.stderr:write("  lua tests/sequence_player.lua <scenario-name> [no-tui] [gate-ms=45] [ch1=1] [ch2=10]\n")
+    io.stderr:write("  lua tests/sequence_player.lua <scenario-name> [no-tui] [ch1=1] [ch2=10]\n")
     io.stderr:write("\nScenarios:\n")
     for i = 1, #SCENARIOS do
         io.stderr:write("  - " .. SCENARIOS[i] .. "\n")
     end
 end
+
+-- ── Argument parsing ──────────────────────────────────────────────────────────
 
 local scenarioName = arg[1]
 if scenarioName == nil or scenarioName == "help" or scenarioName == "-h" or scenarioName == "--help" then
@@ -52,9 +58,7 @@ if scenarioName == nil or scenarioName == "help" or scenarioName == "-h" or scen
 end
 
 if scenarioName == "list" then
-    for i = 1, #SCENARIOS do
-        print(SCENARIOS[i])
-    end
+    for i = 1, #SCENARIOS do print(SCENARIOS[i]) end
     os.exit(0)
 end
 
@@ -65,7 +69,6 @@ if not hasScenario(scenarioName) then
 end
 
 local withTui = true
-local shortGateMs = 45
 local trackChannelOverrides = {}
 
 for i = 2, #arg do
@@ -73,20 +76,17 @@ for i = 2, #arg do
     if token == "no-tui" then
         withTui = false
     else
-        local gateValue = token:match("^gate%-ms=(%d+)$")
-        if gateValue ~= nil then
-            shortGateMs = tonumber(gateValue)
-        else
-            local trackIndex, channel = token:match("^ch(%d+)=(%d+)$")
-            if trackIndex ~= nil and channel ~= nil then
-                trackChannelOverrides[tonumber(trackIndex)] = tonumber(channel)
-            end
+        local trackIndex, channel = token:match("^ch(%d+)=(%d+)$")
+        if trackIndex ~= nil and channel ~= nil then
+            trackChannelOverrides[tonumber(trackIndex)] = tonumber(channel)
         end
     end
 end
 
+-- ── Build engine from scenario ────────────────────────────────────────────────
+
 local scenario = require("tests.sequences." .. scenarioName)
-local engine = scenario.build(Helpers)
+local engine   = scenario.build(Helpers)
 
 for trackIndex, channel in pairs(trackChannelOverrides) do
     if trackIndex >= 1 and trackIndex <= engine.trackCount then
@@ -94,89 +94,76 @@ for trackIndex, channel in pairs(trackChannelOverrides) do
     end
 end
 
-local intervalMs = math.floor(engine.pulseIntervalMs)
-local pulseCount = 0
+-- ── Wrap in player ────────────────────────────────────────────────────────────
 
-local function emitNoteOn(pitch, velocity, channel)
-    io.write("NOTE_ON " .. pitch .. " " .. velocity .. " " .. channel .. "\n")
+local player = Player.new(engine, engine.bpm, uv.now)
+
+-- Scenarios store swing as engine.swingPercent (raw field) and scale via
+-- Engine.setScale (stored as engine.scaleName / engine.scaleTable).
+-- Apply both to the player here.
+if engine.swingPercent and engine.swingPercent > 50 then
+    Player.setSwing(player, engine.swingPercent)
+end
+if engine.scaleName then
+    Player.setScale(player, engine.scaleName, engine.rootNote or 0)
 end
 
-local function emitNoteOff(pitch, channel)
-    io.write("NOTE_OFF " .. pitch .. " " .. channel .. "\n")
-end
+Player.start(player)
 
-local pendingOffTimers = {}
+-- ── MIDI emit ─────────────────────────────────────────────────────────────────
 
-local function scheduleShortNoteOff(pitch, channel)
-    if shortGateMs <= 0 then
-        return
+local function onMidiEvent(event)
+    if event.type == "NOTE_ON" then
+        io.write("NOTE_ON "  .. event.pitch .. " " .. event.velocity .. " " .. event.channel .. "\n")
+    elseif event.type == "NOTE_OFF" then
+        io.write("NOTE_OFF " .. event.pitch .. " " .. event.channel .. "\n")
     end
-
-    local timer = uv.new_timer()
-    pendingOffTimers[#pendingOffTimers + 1] = timer
-    uv.timer_start(timer, shortGateMs, 0, function()
-        emitNoteOff(pitch, channel)
-        io.flush()
-        uv.timer_stop(timer)
-        timer:close()
-    end)
 end
 
--- Cancels all pending short-gate timers and emits NOTE_OFF events for every
--- note the engine currently tracks as sounding.
-local function flushAllNotes()
-    for _, t in ipairs(pendingOffTimers) do
-        if not t:is_closing() then
-            uv.timer_stop(t)
-            t:close()
-        end
-    end
-    pendingOffTimers = {}
-
-    local offEvents = Engine.allNotesOff(engine)
-    for _, event in ipairs(offEvents) do
-        emitNoteOff(event.pitch, event.channel)
+local function flushAll()
+    local offs = Player.allNotesOff(player)
+    for _, ev in ipairs(offs) do
+        io.write("NOTE_OFF " .. ev.pitch .. " " .. ev.channel .. "\n")
     end
     io.flush()
 end
 
-if withTui then
-    io.stderr:write("[SCENARIO] " .. scenario.name .. " - " .. scenario.description .. "\n")
-    io.stderr:write("[OPTIONS] gate-ms=" .. shortGateMs .. "\n")
-end
+-- ── Timer ─────────────────────────────────────────────────────────────────────
 
-local timer = uv.new_timer()
+local intervalMs = math.floor(player.pulseIntervalMs)
+local pulseCount = 0
+local timer      = uv.new_timer()
 
--- ── Signal handling — clean shutdown ─────────────────────────────────────────
 local sigint = uv.new_signal()
 uv.signal_start(sigint, "sigint", function()
-    io.stderr:write("[player] SIGINT received — flushing notes and exiting\n")
-    flushAllNotes()
+    io.stderr:write("[sequence_player] SIGINT — flushing notes\n")
+    flushAll()
     uv.timer_stop(timer)
     uv.stop()
 end)
 
+if withTui then
+    io.stderr:write("[SCENARIO] " .. scenario.name .. " — " .. scenario.description .. "\n")
+    io.stderr:write("[BPM] " .. engine.bpm)
+    if engine.swingPercent and engine.swingPercent > 50 then
+        io.stderr:write("  [SWING] " .. engine.swingPercent .. "%")
+    end
+    if engine.scaleName then
+        io.stderr:write("  [SCALE] " .. engine.scaleName)
+    end
+    io.stderr:write("\n")
+end
+
 uv.timer_start(timer, 0, intervalMs, function()
     pulseCount = pulseCount + 1
-    local events = Engine.tick(engine)
-
-    for i = 1, #events do
-        local event = events[i]
-        if event.type == "NOTE_ON" then
-            emitNoteOn(event.pitch, event.velocity, event.channel)
-            scheduleShortNoteOff(event.pitch, event.channel)
-        elseif event.type == "NOTE_OFF" then
-            if shortGateMs <= 0 then
-                emitNoteOff(event.pitch, event.channel)
-            end
-        end
-    end
+    Player.tick(player, onMidiEvent)
     io.flush()
 
     if withTui then
-        io.stderr:write(Tui.renderTickTrace(engine, pulseCount, events) .. "\n")
+        -- Pass empty events table to TUI (events were consumed by callback).
+        io.stderr:write(Tui.renderTickTrace(engine, pulseCount, {}) .. "\n")
         if pulseCount % engine.pulsesPerBeat == 0 then
-            io.stderr:write(Tui.render(engine, pulseCount, events) .. "\n")
+            io.stderr:write(Tui.render(engine, pulseCount, {}) .. "\n")
         end
         io.stderr:flush()
     end

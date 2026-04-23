@@ -18,7 +18,7 @@ function Scenario.build(helpers)
     local t4 = engine.tracks[4] -- percussion-like accents
 
     -- Global feature layer
-    Engine.setSwing(engine, 58)
+    engine.swingPercent = 58
     Engine.setScale(engine, "minorPentatonic", 0)
 
     -- Track channels (so Ableton can route each track separately)

@@ -89,8 +89,6 @@ function Snapshot.toTable(engine)
     local data = {
         bpm = engine.bpm,
         pulsesPerBeat = engine.pulsesPerBeat,
-        pulseCount = engine.pulseCount,
-        swingPercent = engine.swingPercent,
         scaleName = engine.scaleName,
         rootNote = engine.rootNote,
         tracks = {},
@@ -164,13 +162,9 @@ function Snapshot.fromTable(data)
     local trackCount = #data.tracks
     local engine = Engine.new(data.bpm, data.pulsesPerBeat, trackCount, 0)
 
-    if data.swingPercent ~= nil then
-        Engine.setSwing(engine, data.swingPercent)
-    end
     if data.scaleName ~= nil then
         Engine.setScale(engine, data.scaleName, data.rootNote or 0)
     end
-    engine.pulseCount = data.pulseCount or 0
 
     for trackIndex = 1, trackCount do
         snapshotRestoreTrack(engine, trackIndex, data.tracks[trackIndex])

@@ -26,7 +26,7 @@ function Scenario.build(helpers)
     Track.setStep(track, 8, Step.new(53, 80, 1, 1))
 
     -- 62% gives audible swing without becoming half-time hold behavior.
-    Engine.setSwing(engine, 62)
+    engine.swingPercent = 62
 
     return engine
 end

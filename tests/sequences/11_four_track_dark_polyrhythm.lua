@@ -17,7 +17,7 @@ function Scenario.build(helpers)
     local t3 = engine.tracks[3] -- slow reversed harmonic anchor
     local t4 = engine.tracks[4] -- metallic/percussive accents
 
-    Engine.setSwing(engine, 60)
+    engine.swingPercent = 60
     Engine.setScale(engine, "harmonicMinor", 0)
 
     Track.setMidiChannel(t1, 1)

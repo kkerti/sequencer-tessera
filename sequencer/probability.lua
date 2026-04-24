@@ -7,13 +7,15 @@
 -- were suppressed. The engine handles NOTE_OFF suppression by tracking
 -- whether a NOTE_ON was actually emitted for the current step.
 
+local Step = require("sequencer/step")
+
 local Probability = {}
 
 -- Returns true if the step should play, false if suppressed.
 -- Uses step.probability (0-100). 100 = always, 0 = never.
 -- Steps without a probability field default to 100 (always play).
 function Probability.shouldPlay(step)
-    local prob = step.probability
+    local prob = Step.getProbability(step)
     if prob == nil or prob >= 100 then
         return true
     end

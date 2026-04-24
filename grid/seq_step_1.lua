@@ -1,24 +1,20 @@
 local Step=require("seq_step")
-local Utils=require("seq_utils")
-
-local PITCH_MIN    = 0
-local PITCH_MAX    = 127
-local VELOCITY_MIN = 0
-local VELOCITY_MAX = 127
-local DURATION_MIN = 0
-local DURATION_MAX = 99
-local GATE_MIN     = 0
-local GATE_MAX     = 99
-local RATCHET_MIN  = 1
-local RATCHET_MAX  = 4
-local PROB_MIN     = 0
-local PROB_MAX     = 100
-function Step._stepIsRatchetOnPulse(step, pulseCounter)
-    for i = 0, step.ratchet - 1 do
-        local startPulse = math.floor((i * step.duration) / step.ratchet)
-        if pulseCounter == startPulse then
-            return true
-        end
-    end
-    return false
-end
+Step._I_PITCH    = 1
+Step._I_VEL      = 2
+Step._I_DUR      = 3
+Step._I_GATE     = 4
+Step._I_RATCH    = 5
+Step._I_PROB     = 6
+Step._I_ACTIVE   = 7
+Step._PITCH_MIN    = 0
+Step._PITCH_MAX    = 127
+Step._VELOCITY_MIN = 0
+Step._VELOCITY_MAX = 127
+Step._DURATION_MIN = 0
+Step._DURATION_MAX = 99
+Step._GATE_MIN     = 0
+Step._GATE_MAX     = 99
+Step._RATCHET_MIN  = 1
+Step._RATCHET_MAX  = 4
+Step._PROB_MIN     = 0
+Step._PROB_MAX     = 100

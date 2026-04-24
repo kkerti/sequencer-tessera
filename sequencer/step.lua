@@ -1,18 +1,33 @@
 -- sequencer/step.lua
 -- A single step in a sequence.
--- pitch    : MIDI note number 0-127
--- velocity : MIDI velocity 0-127
--- duration : length in clock pulses 0-99 (0 = skip this step)
--- gate     : note-on length in clock pulses 0-99
---              0              = rest (note never fires)
---              gate >= duration = legato (note held through full step)
--- ratchet  : repeat count per step (1-4, Metropolis-style)
+-- pitch       : MIDI note number 0-127
+-- velocity    : MIDI velocity 0-127
+-- duration    : length in clock pulses 0-99 (0 = skip this step)
+-- gate        : note-on length in clock pulses 0-99
+--                 0              = rest (note never fires)
+--                 gate >= duration = legato (note held through full step)
+-- ratchet     : repeat count per step (1-4, Metropolis-style)
 -- probability : chance this step fires (0-100, 100 = always; Blackbox-style)
--- active   : boolean, false mutes the step without removing it
+-- active      : boolean, false mutes the step without removing it
+--
+-- Internal storage: positional array to avoid hash-part allocation.
+-- All access MUST go through the public getters/setters below.
+-- Direct index access from outside this module is forbidden.
+--
+-- Layout: { pitch, velocity, duration, gate, ratchet, probability, active }
 
 local Utils        = require("utils")
 
 local Step         = {}
+
+-- Internal index constants — not exported.
+local I_PITCH    = 1
+local I_VEL      = 2
+local I_DUR      = 3
+local I_GATE     = 4
+local I_RATCH    = 5
+local I_PROB     = 6
+local I_ACTIVE   = 7
 
 local PITCH_MIN    = 0
 local PITCH_MAX    = 127
@@ -36,112 +51,109 @@ function Step.new(pitch, velocity, duration, gate, ratchet, probability)
     ratchet     = ratchet or 1
     probability = probability or 100
 
-    assert(type(pitch) == "number" and pitch >= PITCH_MIN and pitch <= PITCH_MAX, "stepNew: pitch out of range 0-127")
+    assert(type(pitch) == "number" and pitch >= PITCH_MIN and pitch <= PITCH_MAX,
+        "stepNew: pitch out of range 0-127")
     assert(type(velocity) == "number" and velocity >= VELOCITY_MIN and velocity <= VELOCITY_MAX,
         "stepNew: velocity out of range 0-127")
     assert(type(duration) == "number" and duration >= DURATION_MIN and duration <= DURATION_MAX,
         "stepNew: duration out of range 0-99")
-    assert(type(gate) == "number" and gate >= GATE_MIN and gate <= GATE_MAX, "stepNew: gate out of range 0-99")
+    assert(type(gate) == "number" and gate >= GATE_MIN and gate <= GATE_MAX,
+        "stepNew: gate out of range 0-99")
     assert(type(ratchet) == "number" and ratchet >= RATCHET_MIN and ratchet <= RATCHET_MAX,
         "stepNew: ratchet out of range 1-4")
     assert(type(probability) == "number" and probability >= PROB_MIN and probability <= PROB_MAX,
         "stepNew: probability out of range 0-100")
 
-    return {
-        pitch       = pitch,
-        velocity    = velocity,
-        duration    = duration,
-        gate        = gate,
-        ratchet     = ratchet,
-        probability = probability,
-        active      = true,
-    }
+    return { pitch, velocity, duration, gate, ratchet, probability, true }
 end
 
 -- Pitch
 function Step.getPitch(step)
-    return step.pitch
+    return step[I_PITCH]
 end
 
 function Step.setPitch(step, value)
     assert(type(value) == "number" and value >= PITCH_MIN and value <= PITCH_MAX,
         "stepSetPitch: value out of range 0-127")
-    step.pitch = value
+    step[I_PITCH] = value
 end
 
 -- Velocity
 function Step.getVelocity(step)
-    return step.velocity
+    return step[I_VEL]
 end
 
 function Step.setVelocity(step, value)
     assert(type(value) == "number" and value >= VELOCITY_MIN and value <= VELOCITY_MAX,
         "stepSetVelocity: value out of range 0-127")
-    step.velocity = value
+    step[I_VEL] = value
 end
 
 -- Duration
 function Step.getDuration(step)
-    return step.duration
+    return step[I_DUR]
 end
 
 function Step.setDuration(step, value)
     assert(type(value) == "number" and value >= DURATION_MIN and value <= DURATION_MAX,
         "stepSetDuration: value out of range 0-99")
-    step.duration = value
+    step[I_DUR] = value
 end
 
 -- Gate
 function Step.getGate(step)
-    return step.gate
+    return step[I_GATE]
 end
 
 function Step.setGate(step, value)
-    assert(type(value) == "number" and value >= GATE_MIN and value <= GATE_MAX, "stepSetGate: value out of range 0-99")
-    step.gate = value
+    assert(type(value) == "number" and value >= GATE_MIN and value <= GATE_MAX,
+        "stepSetGate: value out of range 0-99")
+    step[I_GATE] = value
 end
 
 -- Ratchet
 function Step.getRatchet(step)
-    return step.ratchet
+    return step[I_RATCH]
 end
 
 function Step.setRatchet(step, value)
     assert(type(value) == "number" and value >= RATCHET_MIN and value <= RATCHET_MAX,
         "stepSetRatchet: value out of range 1-4")
-    step.ratchet = value
+    step[I_RATCH] = value
 end
 
 -- Probability
 function Step.getProbability(step)
-    return step.probability
+    return step[I_PROB]
 end
 
 function Step.setProbability(step, value)
     assert(type(value) == "number" and value >= PROB_MIN and value <= PROB_MAX,
         "stepSetProbability: value out of range 0-100")
-    step.probability = value
+    step[I_PROB] = value
 end
 
 -- Active
 function Step.getActive(step)
-    return step.active
+    return step[I_ACTIVE]
 end
 
 function Step.setActive(step, value)
     assert(type(value) == "boolean", "stepSetActive: value must be boolean")
-    step.active = value
+    step[I_ACTIVE] = value
 end
 
 -- Returns true if this step should fire a note-on (active and not a rest).
 function Step.isPlayable(step)
-    return step.active and step.duration > 0 and step.gate > 0
+    return step[I_ACTIVE] and step[I_DUR] > 0 and step[I_GATE] > 0
 end
 
 -- Checks if any ratchet sub-division starts at this pulse (NOTE_ON boundary).
 local function stepIsRatchetOnPulse(step, pulseCounter)
-    for i = 0, step.ratchet - 1 do
-        local startPulse = math.floor((i * step.duration) / step.ratchet)
+    local ratch = step[I_RATCH]
+    local dur   = step[I_DUR]
+    for i = 0, ratch - 1 do
+        local startPulse = math.floor((i * dur) / ratch)
         if pulseCounter == startPulse then
             return true
         end
@@ -151,20 +163,23 @@ end
 
 -- Checks if any ratchet sub-division ends at this pulse (NOTE_OFF boundary).
 local function stepIsRatchetOffPulse(step, pulseCounter)
-    for i = 0, step.ratchet - 1 do
-        local startPulse = math.floor((i * step.duration) / step.ratchet)
-        local nextStartPulse = math.floor(((i + 1) * step.duration) / step.ratchet)
-        local subDuration = nextStartPulse - startPulse
+    local ratch = step[I_RATCH]
+    local dur   = step[I_DUR]
+    local gate  = step[I_GATE]
+    for i = 0, ratch - 1 do
+        local startPulse    = math.floor((i * dur) / ratch)
+        local nextStartPulse = math.floor(((i + 1) * dur) / ratch)
+        local subDuration   = nextStartPulse - startPulse
         if subDuration < 1 then
             subDuration = 1
         end
 
-        local offPulse = startPulse + step.gate
+        local offPulse = startPulse + gate
         if offPulse > startPulse + subDuration then
             offPulse = startPulse + subDuration
         end
-        if offPulse >= step.duration then
-            offPulse = step.duration - 1
+        if offPulse >= dur then
+            offPulse = dur - 1
         end
 
         if pulseCounter == offPulse then
@@ -177,17 +192,18 @@ end
 -- Returns NOTE_ON / NOTE_OFF / nil for this pulse inside the step.
 -- pulseCounter is 0-based pulse index within the current step.
 function Step.getPulseEvent(step, pulseCounter)
-    assert(type(pulseCounter) == "number" and pulseCounter >= 0, "stepGetPulseEvent: pulseCounter must be >= 0")
+    assert(type(pulseCounter) == "number" and pulseCounter >= 0,
+        "stepGetPulseEvent: pulseCounter must be >= 0")
 
     if not Step.isPlayable(step) then
         return nil
     end
 
-    if step.ratchet == 1 then
+    if step[I_RATCH] == 1 then
         if pulseCounter == 0 then
             return "NOTE_ON"
         end
-        if pulseCounter == step.gate then
+        if pulseCounter == step[I_GATE] then
             return "NOTE_OFF"
         end
         return nil
@@ -206,13 +222,13 @@ function Step.getPulseEvent(step, pulseCounter)
 end
 
 -- Resolves pitch through an optional scale table.
--- If no scale table is provided, returns raw step.pitch.
+-- If no scale table is provided, returns raw step pitch.
 function Step.resolvePitch(step, scaleTable, rootNote)
     if scaleTable == nil then
-        return step.pitch
+        return step[I_PITCH]
     end
     rootNote = rootNote or 0
-    return Utils.quantizePitch(step.pitch, rootNote, scaleTable)
+    return Utils.quantizePitch(step[I_PITCH], rootNote, scaleTable)
 end
 
 return Step

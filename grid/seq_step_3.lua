@@ -1,45 +1,27 @@
 local Step=require("seq_step")
-local Utils=require("seq_utils")
-local PITCH_MIN    = 0
-local PITCH_MAX    = 127
-local VELOCITY_MIN = 0
-local VELOCITY_MAX = 127
-local DURATION_MIN = 0
-local DURATION_MAX = 99
-local GATE_MIN     = 0
-local GATE_MAX     = 99
-local RATCHET_MIN  = 1
-local RATCHET_MAX  = 4
-local PROB_MIN     = 0
-local PROB_MAX     = 100
-function Step.new(pitch, velocity, duration, gate, ratchet, probability)
-    pitch       = pitch or 60
-    velocity    = velocity or 100
-    duration    = duration or 4
-    gate        = gate or 2
-    ratchet     = ratchet or 1
-    probability = probability or 100
+function Step._stepIsRatchetOffPulse(step, pulseCounter)
+    local ratch = step[Step._I_RATCH]
+    local dur   = step[Step._I_DUR]
+    local gate  = step[Step._I_GATE]
+    for i = 0, ratch - 1 do
+        local startPulse    = math.floor((i * dur) / ratch)
+        local nextStartPulse = math.floor(((i + 1) * dur) / ratch)
+        local subDuration   = nextStartPulse - startPulse
+        if subDuration < 1 then
+            subDuration = 1
+        end
 
+        local offPulse = startPulse + gate
+        if offPulse > startPulse + subDuration then
+            offPulse = startPulse + subDuration
+        end
+        if offPulse >= dur then
+            offPulse = dur - 1
+        end
 
-    return {
-        pitch       = pitch,
-        velocity    = velocity,
-        duration    = duration,
-        gate        = gate,
-        ratchet     = ratchet,
-        probability = probability,
-        active      = true,
-    }
-end
-function Step.getPitch(step)
-    return step.pitch
-end
-function Step.setPitch(step, value)
-    step.pitch = value
-end
-function Step.getVelocity(step)
-    return step.velocity
-end
-function Step.setVelocity(step, value)
-    step.velocity = value
+        if pulseCounter == offPulse then
+            return true
+        end
+    end
+    return false
 end

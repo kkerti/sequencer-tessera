@@ -1,37 +1,40 @@
 local Scene=require("seq_scene")
-local NAME_MAX_LEN = 32
-local MAX_SCENES   = 32
-function Scene.getLengthBeats(scene)
-    return scene.lengthBeats
-end
-function Scene.setName(scene, name)
-    scene.name = name
-end
-function Scene.getName(scene)
-    return scene.name
-end
-function Scene.newChain()
+function Scene.new(repeats, lengthBeats, name, trackLoops)
+    repeats     = repeats or 1
+    lengthBeats = lengthBeats or 4
+    name        = name or ""
+    trackLoops  = trackLoops or {}
+
+
     return {
-        scenes       = {},
-        sceneCount   = 0,
-        cursor       = 1,     -- 1-based index into scenes
-        repeatCount  = 0,     -- how many full passes have completed for current scene
-        beatCount    = 0,     -- beats elapsed within the current pass
-        active       = false, -- whether the chain is driving loop points
+        repeats     = repeats,
+        lengthBeats = lengthBeats,
+        name        = name,
+        trackLoops  = trackLoops,
     }
 end
-function Scene.chainAppend(chain, scene)
+function Scene.setTrackLoop(scene, trackIndex, loopStart, loopEnd)
 
-    chain.sceneCount = chain.sceneCount + 1
-    chain.scenes[chain.sceneCount] = scene
-    return scene
-end
-function Scene.chainInsert(chain, index, scene)
-
-    chain.sceneCount = chain.sceneCount + 1
-    for i = chain.sceneCount, index + 1, -1 do
-        chain.scenes[i] = chain.scenes[i - 1]
+    if loopStart == nil and loopEnd == nil then
+        scene.trackLoops[trackIndex] = nil
+        return
     end
-    chain.scenes[index] = scene
-    return scene
+
+
+    scene.trackLoops[trackIndex] = {
+        loopStart = loopStart,
+        loopEnd   = loopEnd,
+    }
+end
+function Scene.getTrackLoop(scene, trackIndex)
+    return scene.trackLoops[trackIndex]
+end
+function Scene.setRepeats(scene, repeats)
+    scene.repeats = repeats
+end
+function Scene.getRepeats(scene)
+    return scene.repeats
+end
+function Scene.setLengthBeats(scene, lengthBeats)
+    scene.lengthBeats = lengthBeats
 end

@@ -1,12 +1,16 @@
 local Track=require("seq_track")
-local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
+function Track._trackNextForward(cursor, rangeStart, rangeEnd)
+    if cursor >= rangeEnd then
+        return rangeStart
+    end
+    return cursor + 1
+end
+function Track._trackNextReverse(cursor, rangeStart, rangeEnd)
+    if cursor <= rangeStart then
+        return rangeEnd
+    end
+    return cursor - 1
+end
 function Track._trackNextRandom(rangeStart, rangeEnd)
     return math.random(rangeStart, rangeEnd)
 end

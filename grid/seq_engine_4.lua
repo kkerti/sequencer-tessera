@@ -1,13 +1,27 @@
 local Engine=require("seq_engine")
 local Track=require("seq_track")
-local Step=require("seq_step")
-local Utils=require("seq_utils")
-local Performance=require("seq_performance")
 local Scene=require("seq_scene")
-local Probability=require("seq_probability")
-function Engine._engineProcessTrackEvent(engine, trackIndex, step, event, events)
-    if event == "NOTE_ON" then
-        Engine._engineHandleNoteOn(engine, trackIndex, step, events)
-    elseif event == "NOTE_OFF" then
-        Engine._engineHandleNoteOff(engine, trackIndex, step, events)
+function Engine.activateSceneChain(engine)
+    local chain = engine.sceneChain
+    Scene.chainSetActive(chain, true)
+    Scene.chainReset(chain)
+    local current = Scene.chainGetCurrent(chain)
+    if current then
+        Scene.applyToTracks(current, engine.tracks, engine.trackCount)
     end
+end
+function Engine.deactivateSceneChain(engine)
+    local chain = engine.sceneChain
+    if chain then
+        Scene.chainSetActive(chain, false)
+    end
+end
+function Engine.advanceTrack(engine, trackIndex)
+    local track = engine.tracks[trackIndex]
+    local step  = Track.getCurrentStep(track)
+    local event = Track.advance(track)
+    return step, event
+end
+function Engine.onPulse(engine, pulseCount)
+    Engine._engineTickSceneChain(engine, pulseCount)
+end

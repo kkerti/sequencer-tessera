@@ -22,12 +22,18 @@
 --   lua tools/gridsplit.lua --dry                   -- dry run, report only
 --   lua tools/gridsplit.lua --keep-asserts          -- don't strip asserts
 
-local GRID_CHAR_LIMIT = 880
+local GRID_CHAR_LIMIT = 800
 local DEFAULT_OUTDIR = "grid"
 
 -- -----------------------------------------------------------------------
 -- Minifier
 -- -----------------------------------------------------------------------
+
+-- Grid counts non-whitespace characters only — newlines, spaces, and tabs
+-- on the device-stored script do not consume the per-file budget.
+local function gridCharCount(source)
+    return (#(source:gsub("[ \t\n\r]", "")))
+end
 
 local function minifyLua(source)
     local out = {}
@@ -210,22 +216,25 @@ local function parseBlocks(source)
         local opens = 0
         local closes = 0
 
-        -- Count block openers. Lua grammar: function, if (but not elseif),
-        -- for, while, repeat each open a block. `do` by itself also opens,
-        -- but `for ... do` and `while ... do` already count through for/while.
-        -- We handle by counting `do` but NOT counting for/while's implicit do.
-        -- Actually, both `for` and `while` require a `do` — the do IS the
-        -- block opener. So count: function, if, repeat as openers, and `do`
-        -- separately (covers for..do, while..do, and bare do..end).
+        -- Count block openers that each require exactly one matching closer.
+        -- Rules:
+        --   function  -> closed by end
+        --   if        -> closed by end  (elseif/else do NOT open new blocks)
+        --   do        -> closed by end  (this covers for..do, while..do, bare do)
+        --   repeat    -> closed by until
+        -- NOTE: `for` and `while` themselves are NOT counted — their `do` is
+        -- the actual block opener and is already counted above.
 
         -- function
         for _ in s:gmatch("%f[%w_]function%f[^%w_]") do opens = opens + 1 end
-        -- if (but not elseif)
-        for _ in s:gmatch("%f[%w_]if%f[^%w_]") do opens = opens + 1 end
-        opens = opens - select(2, s:gsub("%f[%w_]elseif%f[^%w_]", ""))
-        -- do (covers for..do, while..do, standalone do)
+        -- if (but not elseif — match `if` only when preceded by a non-word char
+        -- or start of string, and NOT part of `elseif`)
+        -- Strategy: temporarily blank out `elseif` tokens, then count `if`.
+        local sNoElseif = s:gsub("%f[%w_]elseif%f[^%w_]", "      ")
+        for _ in sNoElseif:gmatch("%f[%w_]if%f[^%w_]") do opens = opens + 1 end
+        -- do (covers for..do, while..do, standalone do — NOT for/while alone)
         for _ in s:gmatch("%f[%w_]do%f[^%w_]") do opens = opens + 1 end
-        -- repeat
+        -- repeat (closed by until, not end)
         for _ in s:gmatch("%f[%w_]repeat%f[^%w_]") do opens = opens + 1 end
 
         -- Closers
@@ -352,29 +361,107 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
 
     local requires = {}
     local localVars = {}
+    local moduleDataLines = {}     -- preamble lines that aren't handled elsewhere
+                                   -- (e.g. `Utils.SCALES = {...}`, multi-line tables)
+    local promotedLocalNames = {}  -- multi-line `local NAME = {...}` we promote to Module._NAME
 
+    -- Group preamble into logical statements.  Statements that open `{` and
+    -- don't close it on the same line continue across lines until braces match.
+    local stmtBuf = {}
+    local stmtDepth = 0
+    local statements = {}
+    local function flushStmt()
+        if #stmtBuf > 0 then
+            statements[#statements + 1] = table.concat(stmtBuf, "\n")
+            stmtBuf = {}
+        end
+    end
     for line in preambleText:gmatch("[^\n]+") do
-        local trimmed = line:match("^%s*(.-)%s*$")
+        stmtBuf[#stmtBuf + 1] = line
+        for ch in line:gmatch(".") do
+            if ch == "{" then stmtDepth = stmtDepth + 1 end
+            if ch == "}" then stmtDepth = stmtDepth - 1 end
+        end
+        if stmtDepth <= 0 then
+            stmtDepth = 0
+            flushStmt()
+        end
+    end
+    flushStmt()
+
+    for _, stmt in ipairs(statements) do
+        local firstLine = stmt:match("^[^\n]*") or stmt
+        local trimmed = firstLine:match("^%s*(.-)%s*$")
+
         local varName, modPath = trimmed:match('^local%s+(%w+)%s*=%s*require%("([^"]+)"%)')
         if not varName then
             varName, modPath = trimmed:match("^local%s+(%w+)%s*=%s*require%('([^']+)'%)")
         end
-        if varName then
+
+        local isModuleDecl = trimmed:match("^local%s+" .. (moduleName or "X") .. "%s*=%s*{%s*}%s*$")
+        local isComment    = trimmed:match("^%-%-") or trimmed == ""
+        local isLocalReq   = varName ~= nil
+        -- Any `local NAME = ...` (single-line OR multi-line) that isn't a require
+        -- gets promoted to `Module._NAME = ...` so it survives chunk boundaries
+        -- and is visible everywhere with no per-chunk duplication.
+        local promoteName = stmt:match("^%s*local%s+([%w_]+)%s*=")
+
+        if isLocalReq then
             requires[#requires + 1] = { var = varName, path = modPath }
-        elseif trimmed:match("^local%s+") and
-               not trimmed:match("^local%s+%u%w*%s*=%s*{") and
-               not trimmed:match("^%-%-") then
-            localVars[#localVars + 1] = trimmed
+        elseif isModuleDecl or isComment then
+            -- skip — handled by root or irrelevant
+        elseif promoteName then
+            local promoted = stmt:gsub(
+                "^(%s*)local%s+" .. promoteName,
+                "%1" .. moduleName .. "._" .. promoteName, 1)
+            moduleDataLines[#moduleDataLines + 1] = promoted
+            promotedLocalNames[#promotedLocalNames + 1] = promoteName
+        else
+            -- Module-table data or arbitrary preamble code.
+            moduleDataLines[#moduleDataLines + 1] = stmt
         end
     end
 
-    -- Phase 3: Build the chunk preamble that each chunk file will start with
-    local chunkPreambleLines = {}
-    chunkPreambleLines[#chunkPreambleLines + 1] = string.format(
-        'local %s=require("%s")', moduleName, prefix)
+    local moduleDataText = table.concat(moduleDataLines, "\n")
+
+    -- Rewrite references to promoted locals in all function bodies.
+    local function rewritePromotedRefs(blocks)
+        for _, b in ipairs(blocks) do
+            for _, name in ipairs(promotedLocalNames) do
+                b.text = b.text:gsub(
+                    "([^%.%w_])" .. name .. "([^%w_])",
+                    "%1" .. moduleName .. "._" .. name .. "%2")
+            end
+        end
+    end
+    rewritePromotedRefs(publicFuncBlocks)
+    rewritePromotedRefs(localFuncBlocks)
+
+    -- Phase 3: Build per-chunk preamble helpers.
+    -- Only emit require lines for variables actually referenced in a chunk's code.
+
+    -- Returns the require line for the module itself (always needed).
+    local moduleRequireLine = string.format('local %s=require("%s")', moduleName, prefix)
+
+    -- Map: varName -> require line string, for each preamble dependency.
+    local requireLineFor = {}
     for _, req in ipairs(requires) do
-        chunkPreambleLines[#chunkPreambleLines + 1] = string.format(
+        requireLineFor[req.var] = string.format(
             'local %s=require("%s")', req.var, requirePathToGridPrefix(req.path))
+    end
+
+    -- Build a preamble string for a list of function-body texts.
+    -- Includes the module self-require, then only deps referenced in those texts.
+    local function buildChunkPreamble(funcTexts, extraText)
+        local combined = table.concat(funcTexts, "\n") .. (extraText or "")
+        local lines = { moduleRequireLine }
+        for _, req in ipairs(requires) do
+            -- Check if the variable name appears as a word in the combined text
+            if combined:find("%f[%w_]" .. req.var .. "%f[^%w_]") then
+                lines[#lines + 1] = requireLineFor[req.var]
+            end
+        end
+        return table.concat(lines, "\n")
     end
 
     -- Phase 4: Decide how to handle local functions.
@@ -396,9 +483,13 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
         localVarsText = localVarsText .. "\n" .. lv
     end
 
-    local chunkPreambleBase = table.concat(chunkPreambleLines, "\n")
-    local chunkPreambleFull = chunkPreambleBase .. localVarsText .. localFuncText
-    local chunkPreambleFullMin = #minifyLua(chunkPreambleFull)
+    -- For the promote-local-funcs threshold check, use all requires (worst case).
+    local allRequiresLine = moduleRequireLine
+    for _, req in ipairs(requires) do
+        allRequiresLine = allRequiresLine .. "\n" .. requireLineFor[req.var]
+    end
+    local chunkPreambleFull = allRequiresLine .. localVarsText .. localFuncText
+    local chunkPreambleFullMin = gridCharCount(chunkPreambleFull)
 
     local promoteLocalFuncs = false
 
@@ -435,32 +526,28 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
         end
     end
 
-    -- Phase 5: Build chunk preamble (final version)
-    local chunkPreamble
-    if promoteLocalFuncs then
-        chunkPreamble = chunkPreambleBase .. localVarsText
-    else
-        chunkPreamble = chunkPreambleFull
-    end
-
-    -- Phase 6: Group public functions into chunks
+    -- Phase 6: Group public functions into chunks.
+    -- Use worst-case preamble size (all requires) for the bin-packing estimate;
+    -- actual per-chunk preambles are built later with only used deps.
     local allFuncBlocks = {}
     for _, b in ipairs(publicFuncBlocks) do
         allFuncBlocks[#allFuncBlocks + 1] = b
     end
 
-    -- Group by minified size
+    local worstCasePreambleSize = gridCharCount(allRequiresLine .. localVarsText
+        .. (promoteLocalFuncs and "" or localFuncText))
+
     local chunks = {}
     local curChunk = {}
-    local curSize = #minifyLua(chunkPreamble)
+    local curSize = worstCasePreambleSize
 
     for _, block in ipairs(allFuncBlocks) do
-        local blockMin = #minifyLua(block.text)
+        local blockMin = gridCharCount(block.text)
 
         if curSize + blockMin + 1 > limit and #curChunk > 0 then
             chunks[#chunks + 1] = curChunk
             curChunk = {}
-            curSize = #minifyLua(chunkPreamble)
+            curSize = worstCasePreambleSize
         end
 
         curChunk[#curChunk + 1] = block
@@ -475,7 +562,7 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
     local localFuncChunks = {}
     if promoteLocalFuncs then
         local lfCurChunk = {}
-        local lfCurSize = #minifyLua(chunkPreambleBase .. localVarsText)
+        local lfCurSize = gridCharCount(allRequiresLine .. localVarsText)
 
         for _, lfb in ipairs(localFuncBlocks) do
             -- Convert: local function name(  ->  function Module._name(
@@ -483,12 +570,12 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
                 "^local%s+function%s+(%S+)",
                 "function " .. moduleName .. "._" .. "%1")
             local convBlock = { text = converted, name = moduleName .. "._" .. (lfb.name or "?") }
-            local blockMin = #minifyLua(converted)
+            local blockMin = gridCharCount(converted)
 
             if lfCurSize + blockMin + 1 > limit and #lfCurChunk > 0 then
                 localFuncChunks[#localFuncChunks + 1] = lfCurChunk
                 lfCurChunk = {}
-                lfCurSize = #minifyLua(chunkPreambleBase .. localVarsText)
+                lfCurSize = gridCharCount(allRequiresLine .. localVarsText)
             end
 
             lfCurChunk[#lfCurChunk + 1] = convBlock
@@ -502,12 +589,44 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
 
     -- Phase 8: Emit files
 
-    -- Total chunk count = local func chunks + public func chunks
-    local totalChunks = #localFuncChunks + #chunks
+    -- Module data chunks (preamble assignments like `Utils.SCALES = {...}`).
+    -- Multi-line table values may exceed the limit on their own; for those we
+    -- fall back to writing one big chunk and warn — splitting an inner table
+    -- literal across files would require re-parsing the table body.
+    local hasDataChunk = moduleDataText:match("%S") ~= nil
+    local dataChunks = {}   -- list of strings, each a complete chunk content
+    if hasDataChunk then
+        local dataPreamble = string.format('local %s=require("%s")', moduleName, prefix)
+        local preambleSize = gridCharCount(dataPreamble .. "\n")
+        local cur = { dataPreamble }
+        local curSize = preambleSize
+        for _, stmt in ipairs(moduleDataLines) do
+            local stmtSize = gridCharCount(stmt)
+            if curSize + stmtSize > limit and #cur > 1 then
+                dataChunks[#dataChunks + 1] = table.concat(cur, "\n") .. "\n"
+                cur = { dataPreamble }
+                curSize = preambleSize
+            end
+            cur[#cur + 1] = stmt
+            curSize = curSize + stmtSize
+        end
+        if #cur > 1 then
+            dataChunks[#dataChunks + 1] = table.concat(cur, "\n") .. "\n"
+        end
+    end
 
-    -- Root file: create module table + local vars (if small) + require chunks
+    -- Total chunk count = data chunks + local func chunks + public func chunks
+    local totalChunks = #dataChunks + #localFuncChunks + #chunks
+
+    -- Root file: create module table + local vars (if small) + require chunks.
+    -- IMPORTANT: register the module in package.loaded BEFORE requiring chunks.
+    -- Chunks call require("seq_xxx") to get this same table; without the early
+    -- registration, that re-entry hits Lua's "loading sentinel" and the chunk
+    -- receives `true` instead of the table → infinite recursion / load failure.
     local rootLines = {}
     rootLines[#rootLines + 1] = string.format("local %s={}", moduleName)
+    rootLines[#rootLines + 1] = string.format(
+        'package.loaded["%s"]=%s', prefix, moduleName)
 
     -- If local vars are small, include in root. Otherwise they go in chunks.
     if not promoteLocalFuncs then
@@ -521,15 +640,19 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
         end
     end
 
-    -- Require all chunks (local func chunks first, then public func chunks)
+    -- Require all chunks (data chunk first, then local-func chunks, then public).
+    -- A single trailing GC pass after all requires keeps the root small enough
+    -- to fit the char limit even with many chunks (per-require GC was costing
+    -- ~38 non-whitespace chars per chunk).
     for i = 1, totalChunks do
         rootLines[#rootLines + 1] = string.format('require("%s_%d")', prefix, i)
     end
+    rootLines[#rootLines + 1] = 'collectgarbage("collect")'
 
     rootLines[#rootLines + 1] = string.format("return %s", moduleName)
 
     local rootContent = table.concat(rootLines, "\n") .. "\n"
-    local rootMinSize = #minifyLua(rootContent)
+    local rootMinSize = gridCharCount(rootContent)
 
     result.files[#result.files + 1] = {
         path = outdir .. "/" .. prefix .. ".lua",
@@ -545,26 +668,47 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
             outdir, prefix, rootMinSize, limit)
     end
 
-    -- Emit local function chunks
+    -- Emit data chunks (preamble assignments) FIRST so module data is in place
+    -- before functions are attached.
     local chunkIndex = 0
+    for _, content in ipairs(dataChunks) do
+        chunkIndex = chunkIndex + 1
+        local minSize = gridCharCount(content)
+        result.files[#result.files + 1] = {
+            path = string.format("%s/%s_%d.lua", outdir, prefix, chunkIndex),
+            content = content,
+            minSize = minSize,
+            isRoot = false,
+            functions = { "<module data>" },
+        }
+        if minSize > limit then
+            result.warnings[#result.warnings + 1] = string.format(
+                "Data chunk %d for %s is %d chars (limit %d) — single statement too large",
+                chunkIndex, prefix, minSize, limit)
+        end
+    end
+
+    -- Emit local function chunks
     for ci, chunk in ipairs(localFuncChunks) do
         chunkIndex = chunkIndex + 1
-        local chunkLines = {}
-
-        -- Preamble: require module + dependencies
-        chunkLines[#chunkLines + 1] = chunkPreambleBase
-        if #localVars > 0 then
-            chunkLines[#chunkLines + 1] = localVarsText
-        end
-
+        local funcTexts = {}
         local funcNames = {}
         for _, block in ipairs(chunk) do
-            chunkLines[#chunkLines + 1] = block.text
+            funcTexts[#funcTexts + 1] = block.text
             funcNames[#funcNames + 1] = block.name or "?"
         end
 
+        local preamble = buildChunkPreamble(funcTexts, localVarsText)
+        local chunkLines = { preamble }
+        if #localVars > 0 then
+            chunkLines[#chunkLines + 1] = localVarsText
+        end
+        for _, block in ipairs(chunk) do
+            chunkLines[#chunkLines + 1] = block.text
+        end
+
         local content = table.concat(chunkLines, "\n") .. "\n"
-        local minSize = #minifyLua(content)
+        local minSize = gridCharCount(content)
 
         result.files[#result.files + 1] = {
             path = string.format("%s/%s_%d.lua", outdir, prefix, chunkIndex),
@@ -586,23 +730,31 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
     -- Emit public function chunks
     for ci, chunk in ipairs(chunks) do
         chunkIndex = chunkIndex + 1
-        local chunkLines = {}
+        local funcTexts = {}
+        local funcNames = {}
+        for _, block in ipairs(chunk) do
+            funcTexts[#funcTexts + 1] = block.text
+            funcNames[#funcNames + 1] = block.name or "?"
+        end
 
-        chunkLines[#chunkLines + 1] = chunkPreamble
+        -- Extra text for dep-detection: local vars + local funcs (if inlined)
+        local extraForDeps = localVarsText
+        if not promoteLocalFuncs then extraForDeps = extraForDeps .. localFuncText end
+
+        local preamble = buildChunkPreamble(funcTexts, extraForDeps)
+        local chunkLines = { preamble }
 
         -- If NOT promoting, include local functions in the chunk
         if not promoteLocalFuncs and localFuncText ~= "" then
             chunkLines[#chunkLines + 1] = localFuncText
         end
 
-        local funcNames = {}
         for _, block in ipairs(chunk) do
             chunkLines[#chunkLines + 1] = block.text
-            funcNames[#funcNames + 1] = block.name or "?"
         end
 
         local content = table.concat(chunkLines, "\n") .. "\n"
-        local minSize = #minifyLua(content)
+        local minSize = gridCharCount(content)
 
         result.files[#result.files + 1] = {
             path = string.format("%s/%s_%d.lua", outdir, prefix, chunkIndex),
@@ -650,9 +802,13 @@ local DEFAULT_SOURCES = {
     "sequencer/engine.lua",
     "sequencer/snapshot.lua",
     "sequencer/scene.lua",
+    "sequencer/probability.lua",
+    "player/player.lua",
+    "song_loader.lua",
 }
 
 local i = 1
+local includeSongs = false
 while i <= #args do
     if args[i] == "--limit" then
         i = i + 1; limit = tonumber(args[i])
@@ -662,6 +818,8 @@ while i <= #args do
         dryRun = true
     elseif args[i] == "--keep-asserts" then
         keepAsserts = true
+    elseif args[i] == "--include-songs" then
+        includeSongs = true
     elseif args[i]:sub(1, 1) ~= "-" then
         sourceFiles[#sourceFiles + 1] = args[i]
     end
@@ -725,6 +883,32 @@ end
 
 print(string.rep("=", 80))
 print(string.format("Total: %d files, %d chars minified", totalFiles, totalMinified))
+
+-- Optionally copy songs/ files into outdir as flat names (Grid uses a flat
+-- require namespace, so songs/dark_groove.lua becomes outdir/dark_groove.lua).
+if includeSongs and not dryRun then
+    print("")
+    local handle = io.popen("ls songs/*.lua 2>/dev/null")
+    local copied = 0
+    if handle then
+        for path in handle:lines() do
+            local base = path:match("([^/]+)%.lua$")
+            if base then
+                local src = io.open(path, "r")
+                local dst = io.open(outdir .. "/" .. base .. ".lua", "w")
+                if src and dst then
+                    dst:write(src:read("*a"))
+                    src:close(); dst:close()
+                    copied = copied + 1
+                    print(string.format("  COPY  %-35s -> %s/%s.lua",
+                        path, outdir, base))
+                end
+            end
+        end
+        handle:close()
+    end
+    print(string.format("Copied %d song file(s) into %s/", copied, outdir))
+end
 
 if #allWarnings > 0 then
     print(string.format("\n%d warnings:", #allWarnings))

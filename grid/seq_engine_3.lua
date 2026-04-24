@@ -1,23 +1,24 @@
 local Engine=require("seq_engine")
-local Track=require("seq_track")
-local Step=require("seq_step")
 local Utils=require("seq_utils")
-local Performance=require("seq_performance")
-local Scene=require("seq_scene")
-local Probability=require("seq_probability")
-function Engine._engineHandleNoteOff(engine, trackIndex, step, events)
-    if engine.probSuppressed[trackIndex] then
-        engine.probSuppressed[trackIndex] = false
-        return
+function Engine.setScale(engine, scaleName, rootNote)
+    rootNote = rootNote or 0
+    engine.scaleName  = scaleName
+    engine.scaleTable = Utils.SCALES[scaleName]
+    engine.rootNote   = rootNote
+end
+function Engine.clearScale(engine)
+    engine.scaleName  = nil
+    engine.scaleTable = nil
+    engine.rootNote   = 0
+end
+function Engine.setSceneChain(engine, chain)
+    if chain ~= nil then
     end
-    local channel = engine.tracks[trackIndex].midiChannel or trackIndex
-    local pitch   = Step.resolvePitch(step, engine.scaleTable, engine.rootNote)
-    local key     = Engine._noteKey(pitch, channel)
-    engine.activeNotes[key] = nil
-    events[#events + 1] = {
-        type     = "NOTE_OFF",
-        pitch    = pitch,
-        velocity = 0,
-        channel  = channel,
-    }
+    engine.sceneChain = chain
+end
+function Engine.getSceneChain(engine)
+    return engine.sceneChain
+end
+function Engine.clearSceneChain(engine)
+    engine.sceneChain = nil
 end

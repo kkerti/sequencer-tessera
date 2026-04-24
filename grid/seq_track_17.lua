@@ -1,32 +1,35 @@
 local Track=require("seq_track")
-local Pattern=require("seq_pattern")
 local Step=require("seq_step")
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
-function Track.getCurrentStep(track)
-    return Track._trackGetStepAtFlat(track, track.cursor)
-end
-function Track.setLoopStart(track, index)
-    local stepCount = Track._trackComputeStepCount(track)
-    if track.loopEnd ~= nil then
+function Track.setDirection(track, direction)
+    track.direction = direction
+    if direction == Track._DIRECTION_PINGPONG then
+        track.pingPongDir = 1
     end
-    track.loopStart = index
 end
-function Track.setLoopEnd(track, index)
+function Track.getDirection(track)
+    return track.direction
+end
+function Track.advance(track)
     local stepCount = Track._trackComputeStepCount(track)
-    if track.loopStart ~= nil then
+    if stepCount == 0 then
+        return nil
     end
-    track.loopEnd = index
-end
-function Track.clearLoopStart(track)
-    track.loopStart = nil
-end
-function Track.clearLoopEnd(track)
-    track.loopEnd = nil
-end
-function Track.getLoopStart(track)
-    return track.loopStart
+
+    local step = Track._trackSkipZeroDuration(track, stepCount)
+
+    if step == nil then
+        return nil
+    end
+
+    local event = Step.getPulseEvent(step, track.pulseCounter)
+
+    track.pulseCounter = track.pulseCounter + 1
+
+    -- Step duration elapsed: move to next step (respecting loop points).
+    if track.pulseCounter >= Step.getDuration(step) then
+        track.pulseCounter = 0
+        track.cursor       = Track._trackGetNextCursor(track, track.cursor)
+    end
+
+    return event
 end

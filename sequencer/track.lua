@@ -288,40 +288,38 @@ end
 -- Removes the pattern at `patternIndex` and its steps from the track.
 -- Adjusts loop points: clears any that fall inside the deleted range,
 -- shifts any that fall after it. Resets cursor to 1 to avoid stale state.
-function Track.deletePattern(track, patternIndex)
-    assert(type(patternIndex) == "number" and patternIndex >= 1 and patternIndex <= track.patternCount,
-        "trackDeletePattern: patternIndex out of range 1-" .. track.patternCount)
-    assert(track.patternCount > 1, "trackDeletePattern: cannot delete the last remaining pattern")
-
-    -- Compute the flat range of the pattern being removed.
-    local delStart = Track.patternStartIndex(track, patternIndex)
-    local delEnd   = Track.patternEndIndex(track, patternIndex)
-    local delCount = delEnd - delStart + 1
-
-    -- Remove from patterns array.
+-- Removes pattern at `patternIndex` from the patterns array (in place).
+local function trackRemovePatternFromArray(track, patternIndex)
     for i = patternIndex, track.patternCount - 1 do
         track.patterns[i] = track.patterns[i + 1]
     end
     track.patterns[track.patternCount] = nil
     track.patternCount = track.patternCount - 1
+end
 
-    -- Adjust loop points.
-    if track.loopStart ~= nil then
-        if track.loopStart >= delStart and track.loopStart <= delEnd then
-            track.loopStart = nil
-        elseif track.loopStart > delEnd then
-            track.loopStart = track.loopStart - delCount
-        end
-    end
-    if track.loopEnd ~= nil then
-        if track.loopEnd >= delStart and track.loopEnd <= delEnd then
-            track.loopEnd = nil
-        elseif track.loopEnd > delEnd then
-            track.loopEnd = track.loopEnd - delCount
-        end
-    end
+-- Shifts a single loop endpoint after a pattern delete spanning [delStart, delEnd].
+-- Returns the new value (nil if the endpoint fell inside the deleted range).
+local function trackShiftLoopAfterDelete(value, delStart, delEnd, delCount)
+    if value == nil then return nil end
+    if value >= delStart and value <= delEnd then return nil end
+    if value > delEnd then return value - delCount end
+    return value
+end
 
-    -- Reset cursor to avoid stale references.
+function Track.deletePattern(track, patternIndex)
+    assert(type(patternIndex) == "number" and patternIndex >= 1 and patternIndex <= track.patternCount,
+        "trackDeletePattern: patternIndex out of range 1-" .. track.patternCount)
+    assert(track.patternCount > 1, "trackDeletePattern: cannot delete the last remaining pattern")
+
+    local delStart = Track.patternStartIndex(track, patternIndex)
+    local delEnd   = Track.patternEndIndex(track, patternIndex)
+    local delCount = delEnd - delStart + 1
+
+    trackRemovePatternFromArray(track, patternIndex)
+
+    track.loopStart = trackShiftLoopAfterDelete(track.loopStart, delStart, delEnd, delCount)
+    track.loopEnd   = trackShiftLoopAfterDelete(track.loopEnd,   delStart, delEnd, delCount)
+
     track.cursor       = 1
     track.pulseCounter = 0
 end
@@ -555,7 +553,7 @@ end
 local function trackSkipZeroDuration(track, stepCount)
     local step = trackGetStepAtFlat(track, track.cursor)
     local skipGuard = 0
-    while step ~= nil and step.duration == 0 do
+    while step ~= nil and Step.getDuration(step) == 0 do
         track.cursor       = trackGetNextCursor(track, track.cursor)
         track.pulseCounter = 0
         step               = trackGetStepAtFlat(track, track.cursor)
@@ -587,7 +585,7 @@ function Track.advance(track)
     track.pulseCounter = track.pulseCounter + 1
 
     -- Step duration elapsed: move to next step (respecting loop points).
-    if track.pulseCounter >= step.duration then
+    if track.pulseCounter >= Step.getDuration(step) then
         track.pulseCounter = 0
         track.cursor       = trackGetNextCursor(track, track.cursor)
     end

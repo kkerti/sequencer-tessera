@@ -1,12 +1,6 @@
 local Track=require("seq_track")
 local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
-function Track.copyPattern(track, srcIndex)
+function Track.duplicatePattern(track, srcIndex)
 
     local Utils  = require("utils")
     local src    = track.patterns[srcIndex]
@@ -19,7 +13,11 @@ function Track.copyPattern(track, srcIndex)
         newPat.steps[i] = Utils.tableCopy(src.steps[i])
     end
 
+    -- Shift patterns after srcIndex forward by one slot.
     track.patternCount = track.patternCount + 1
-    track.patterns[track.patternCount] = newPat
+    for i = track.patternCount, srcIndex + 2, -1 do
+        track.patterns[i] = track.patterns[i - 1]
+    end
+    track.patterns[srcIndex + 1] = newPat
     return newPat
 end

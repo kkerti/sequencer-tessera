@@ -1,5 +1,4 @@
 local Snapshot=require("seq_snapshot")
-local Engine=require("seq_engine")
 local Track=require("seq_track")
 local Pattern=require("seq_pattern")
 local Step=require("seq_step")

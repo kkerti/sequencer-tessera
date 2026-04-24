@@ -1,26 +1,26 @@
 local Track=require("seq_track")
-local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
-function Track.insertPattern(track, patternIndex, stepCount)
-    stepCount = stepCount or 8
+function Track.pastePattern(track, destIndex, srcPattern)
 
-    local newPat = Pattern.new(stepCount)
+    local Utils   = require("utils")
+    local dest    = track.patterns[destIndex]
+    local count   = srcPattern.stepCount
 
-    -- Shift patterns forward.
-    track.patternCount = track.patternCount + 1
-    for i = track.patternCount, patternIndex + 1, -1 do
-        track.patterns[i] = track.patterns[i - 1]
+    -- Replace steps.
+    dest.steps     = {}
+    dest.stepCount = count
+    for i = 1, count do
+        dest.steps[i] = Utils.tableCopy(srcPattern.steps[i])
     end
-    track.patterns[patternIndex] = newPat
+    dest.name = srcPattern.name
 
-    Track._trackAdjustLoopPointsAfterInsert(track, patternIndex, stepCount)
-
+    -- Cursor reset for safety — step count may have changed.
     track.cursor       = 1
     track.pulseCounter = 0
-    return newPat
+end
+function Track.getStepCount(track)
+    return Track._trackComputeStepCount(track)
+end
+function Track.getStep(track, index)
+    local stepCount = Track._trackComputeStepCount(track)
+    return Track._trackGetStepAtFlat(track, index)
 end

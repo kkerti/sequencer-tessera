@@ -1,9 +1,5 @@
 local Track={}
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
+package.loaded["seq_track"]=Track
 require("seq_track_1")
 require("seq_track_2")
 require("seq_track_3")
@@ -22,6 +18,5 @@ require("seq_track_15")
 require("seq_track_16")
 require("seq_track_17")
 require("seq_track_18")
-require("seq_track_19")
-require("seq_track_20")
+collectgarbage("collect")
 return Track

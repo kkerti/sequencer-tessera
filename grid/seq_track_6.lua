@@ -1,12 +1,4 @@
 local Track=require("seq_track")
-local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
 function Track._trackGetNextCursor(track, cursor)
     local stepCount = Track._trackComputeStepCount(track)
     if stepCount == 0 then
@@ -21,4 +13,11 @@ function Track._trackGetNextCursor(track, cursor)
     end
 
     return Track._trackDispatchDirection(track, cursor, rangeStart, rangeEnd)
+end
+function Track._trackRemovePatternFromArray(track, patternIndex)
+    for i = patternIndex, track.patternCount - 1 do
+        track.patterns[i] = track.patterns[i + 1]
+    end
+    track.patterns[track.patternCount] = nil
+    track.patternCount = track.patternCount - 1
 end

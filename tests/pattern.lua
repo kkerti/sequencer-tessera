@@ -21,11 +21,11 @@ do
     assert(Pattern.getStepCount(pat) == 4, "stepCount should be 4")
     local s = Pattern.getStep(pat, 1)
     assert(s ~= nil, "step 1 should exist")
-    assert(s.pitch == 60, "default pitch should be 60")
-    assert(s.velocity == 100, "default velocity should be 100")
-    assert(s.duration == 4, "default duration should be 4")
-    assert(s.gate == 2, "default gate should be 2")
-    assert(s.active == true, "default active should be true")
+    assert(Step.getPitch(s)       == 60,   "default pitch should be 60")
+    assert(Step.getVelocity(s)    == 100,  "default velocity should be 100")
+    assert(Step.getDuration(s)    == 4,    "default duration should be 4")
+    assert(Step.getGate(s)        == 2,    "default gate should be 2")
+    assert(Step.getActive(s)      == true, "default active should be true")
 end
 
 -- Construction with stepCount and name.
@@ -62,8 +62,8 @@ do
     local newStep = Step.new(72, 90, 8, 4)
     Pattern.setStep(pat, 2, newStep)
     local retrieved = Pattern.getStep(pat, 2)
-    assert(retrieved.pitch == 72, "replaced step pitch should be 72")
-    assert(retrieved.velocity == 90, "replaced step velocity should be 90")
+    assert(Step.getPitch(retrieved) == 72, "replaced step pitch should be 72")
+    assert(Step.getVelocity(retrieved) == 90, "replaced step velocity should be 90")
 end
 
 -- ---------------------------------------------------------------------------

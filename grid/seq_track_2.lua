@@ -1,12 +1,19 @@
 local Track=require("seq_track")
 local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
+function Track._trackIsDirectionValid(direction)
+    return direction == Track._DIRECTION_FORWARD or
+        direction == Track._DIRECTION_REVERSE or
+        direction == Track._DIRECTION_PINGPONG or
+        direction == Track._DIRECTION_RANDOM or
+        direction == Track._DIRECTION_BROWNIAN
+end
+function Track._trackComputeStepCount(track)
+    local total = 0
+    for i = 1, track.patternCount do
+        total = total + Pattern.getStepCount(track.patterns[i])
+    end
+    return total
+end
 function Track._trackGetStepAtFlat(track, flatIndex)
     local offset = 0
     for i = 1, track.patternCount do
@@ -18,16 +25,4 @@ function Track._trackGetStepAtFlat(track, flatIndex)
         offset = offset + patCount
     end
     return nil
-end
-function Track._trackNextForward(cursor, rangeStart, rangeEnd)
-    if cursor >= rangeEnd then
-        return rangeStart
-    end
-    return cursor + 1
-end
-function Track._trackNextReverse(cursor, rangeStart, rangeEnd)
-    if cursor <= rangeStart then
-        return rangeEnd
-    end
-    return cursor - 1
 end

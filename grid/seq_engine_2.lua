@@ -1,24 +1,27 @@
 local Engine=require("seq_engine")
-local Track=require("seq_track")
-local Step=require("seq_step")
-local Utils=require("seq_utils")
-local Performance=require("seq_performance")
-local Scene=require("seq_scene")
-local Probability=require("seq_probability")
-function Engine._engineHandleNoteOn(engine, trackIndex, step, events)
-    if not Probability.shouldPlay(step) then
-        engine.probSuppressed[trackIndex] = true
-        return
-    end
-    engine.probSuppressed[trackIndex] = false
-    local channel = engine.tracks[trackIndex].midiChannel or trackIndex
-    local pitch   = Step.resolvePitch(step, engine.scaleTable, engine.rootNote)
-    local key     = Engine._noteKey(pitch, channel)
-    engine.activeNotes[key] = true
-    events[#events + 1] = {
-        type     = "NOTE_ON",
-        pitch    = pitch,
-        velocity = Step.getVelocity(step),
-        channel  = channel,
+function Engine.bpmToMs(bpm, pulsesPerBeat)
+    pulsesPerBeat = pulsesPerBeat or 4
+    return (60000 / bpm) / pulsesPerBeat
+end
+function Engine.new(bpm, pulsesPerBeat, trackCount, stepCount)
+    bpm           = bpm or 120
+    pulsesPerBeat = pulsesPerBeat or 4
+    trackCount    = trackCount or 4
+    stepCount     = stepCount or 8
+
+
+    return {
+        bpm             = bpm,
+        pulsesPerBeat   = pulsesPerBeat,
+        pulseIntervalMs = Engine.bpmToMs(bpm, pulsesPerBeat),
+        tracks          = Engine._engineInitTracks(trackCount, stepCount),
+        trackCount      = trackCount,
+        scaleName       = nil,
+        scaleTable      = nil,
+        rootNote        = 0,
+        sceneChain      = nil,
     }
+end
+function Engine.getTrack(engine, index)
+    return engine.tracks[index]
 end

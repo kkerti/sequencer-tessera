@@ -1,29 +1,15 @@
 local Track=require("seq_track")
-local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
-function Track.duplicatePattern(track, srcIndex)
+function Track.deletePattern(track, patternIndex)
 
-    local Utils  = require("utils")
-    local src    = track.patterns[srcIndex]
-    local count  = Pattern.getStepCount(src)
-    local newPat = Pattern.new(0, Pattern.getName(src))
+    local delStart = Track.patternStartIndex(track, patternIndex)
+    local delEnd   = Track.patternEndIndex(track, patternIndex)
+    local delCount = delEnd - delStart + 1
 
-    newPat.steps     = {}
-    newPat.stepCount = count
-    for i = 1, count do
-        newPat.steps[i] = Utils.tableCopy(src.steps[i])
-    end
+    Track._trackRemovePatternFromArray(track, patternIndex)
 
-    -- Shift patterns after srcIndex forward by one slot.
-    track.patternCount = track.patternCount + 1
-    for i = track.patternCount, srcIndex + 2, -1 do
-        track.patterns[i] = track.patterns[i - 1]
-    end
-    track.patterns[srcIndex + 1] = newPat
-    return newPat
+    track.loopStart = Track._trackShiftLoopAfterDelete(track.loopStart, delStart, delEnd, delCount)
+    track.loopEnd   = Track._trackShiftLoopAfterDelete(track.loopEnd,   delStart, delEnd, delCount)
+
+    track.cursor       = 1
+    track.pulseCounter = 0
 end

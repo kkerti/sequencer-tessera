@@ -55,30 +55,29 @@ local function playerNoteKey(pitch, channel)
     return pitch .. ":" .. channel
 end
 
+-- Emits NOTE_OFF and removes one expired note at index i (swap-remove).
+-- Returns the next index to check (same i after swap, i+1 if no swap needed).
+local function playerExpireNote(player, i, emit)
+    local key = player.activeNoteKeys[i]
+    local pitch, channel = key:match("^(%d+):(%d+)$")
+    emit({ type="NOTE_OFF", pitch=tonumber(pitch), velocity=0, channel=tonumber(channel) })
+    local last = player.activeNoteCount
+    if i ~= last then
+        player.activeNoteKeys[i]  = player.activeNoteKeys[last]
+        player.activeNoteOffAt[i] = player.activeNoteOffAt[last]
+    end
+    player.activeNoteKeys[last]  = nil
+    player.activeNoteOffAt[last] = nil
+    player.activeNoteCount       = last - 1
+    return i
+end
+
 -- Scans active notes and emits NOTE_OFF for any whose off_at time has passed.
--- Uses pre-allocated parallel arrays to avoid per-tick table allocation.
 local function playerFlushExpiredNotes(player, nowMs, emit)
     local i = 1
     while i <= player.activeNoteCount do
         if nowMs >= player.activeNoteOffAt[i] then
-            local key = player.activeNoteKeys[i]
-            local pitch, channel = key:match("^(%d+):(%d+)$")
-            emit({
-                type     = "NOTE_OFF",
-                pitch    = tonumber(pitch),
-                velocity = 0,
-                channel  = tonumber(channel),
-            })
-            -- O(1) removal: swap with last element and shrink.
-            local last = player.activeNoteCount
-            if i ~= last then
-                player.activeNoteKeys[i]  = player.activeNoteKeys[last]
-                player.activeNoteOffAt[i] = player.activeNoteOffAt[last]
-            end
-            player.activeNoteKeys[last]  = nil
-            player.activeNoteOffAt[last] = nil
-            player.activeNoteCount       = last - 1
-            -- Do not increment i: re-check this slot (now holds the swapped element).
+            i = playerExpireNote(player, i, emit)
         else
             i = i + 1
         end
@@ -93,6 +92,15 @@ local function playerTrackNoteOn(player, pitch, channel, offAtMs)
     player.activeNoteCount    = n
 end
 
+-- Resolves channel, quantized pitch, and gate-off timestamp for a step.
+local function playerResolveNoteOn(player, trackIndex, step, nowMs)
+    local track   = player.engine.tracks[trackIndex]
+    local channel = track.midiChannel or trackIndex
+    local pitch   = Step.resolvePitch(step, player.scaleTable, player.rootNote)
+    local offAtMs = nowMs + playerGateToMs(Step.getGate(step), player.engine.pulsesPerBeat, player.bpm)
+    return channel, pitch, offAtMs
+end
+
 -- Handles a NOTE_ON raw event from the engine for one track slot.
 local function playerHandleNoteOn(player, trackIndex, step, nowMs, emit)
     if not Probability.shouldPlay(step) then
@@ -100,20 +108,9 @@ local function playerHandleNoteOn(player, trackIndex, step, nowMs, emit)
         return
     end
     player.probSuppressed[trackIndex] = false
-
-    local track   = player.engine.tracks[trackIndex]
-    local channel = track.midiChannel or trackIndex
-    local pitch   = Step.resolvePitch(step, player.scaleTable, player.rootNote)
-    local offAtMs = nowMs + playerGateToMs(step.gate, player.engine.pulsesPerBeat, player.bpm)
-
+    local channel, pitch, offAtMs = playerResolveNoteOn(player, trackIndex, step, nowMs)
     playerTrackNoteOn(player, pitch, channel, offAtMs)
-
-    emit({
-        type     = "NOTE_ON",
-        pitch    = pitch,
-        velocity = Step.getVelocity(step),
-        channel  = channel,
-    })
+    emit({ type="NOTE_ON", pitch=pitch, velocity=Step.getVelocity(step), channel=channel })
 end
 
 -- Handles a NOTE_OFF raw event from the engine.

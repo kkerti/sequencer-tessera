@@ -1,28 +1,14 @@
 local Utils=require("seq_utils")
-local NOTE_NAMES = {
-function Utils.quantizePitch(pitch, rootNote, scaleTable)
-
-    local best = nil
-    local bestDistance = nil
-
-    local baseOctave = math.floor(pitch / 12)
-    for octave = baseOctave - 1, baseOctave + 1 do
-        for i = 1, #scaleTable do
-            local degree = scaleTable[i]
-            local candidate = octave * 12 + ((rootNote + degree) % 12)
-            if candidate >= 0 and candidate <= 127 then
-                local distance = math.abs(candidate - pitch)
-                if best == nil or distance < bestDistance or (distance == bestDistance and candidate < best) then
-                    best = candidate
-                    bestDistance = distance
-                end
-            end
-        end
-    end
-
-    if best == nil then
-        return Utils.clamp(pitch, 0, 127)
-    end
-
-    return best
-end
+Utils.SCALES.persian          = { 0, 1, 4, 5, 6, 8, 11 }
+Utils.SCALES.japanese         = { 0, 1, 5, 7, 8 }
+Utils.SCALES.egyptian         = { 0, 2, 5, 7, 10 }
+Utils.SCALES.spanish          = { 0, 1, 3, 4, 5, 6, 8, 10 }
+Utils.SCALES.iwato            = { 0, 1, 5, 6, 10 }
+Utils.SCALES.hirajoshi        = { 0, 2, 3, 7, 8 }
+Utils.SCALES.inSen            = { 0, 1, 5, 7, 10 }
+Utils.SCALES.pelog            = { 0, 1, 3, 7, 8 }
+Utils.SCALES.prometheus       = { 0, 2, 4, 6, 9, 10 }
+Utils.SCALES.neapolitanMajor  = { 0, 1, 3, 5, 7, 9, 11 }
+Utils.SCALES.neapolitanMinor  = { 0, 1, 3, 5, 7, 8, 11 }
+Utils.SCALES.enigmatic        = { 0, 1, 4, 6, 8, 10, 11 }
+Utils.SCALES.leadingWholeTone = { 0, 2, 4, 6, 8, 10, 11 }

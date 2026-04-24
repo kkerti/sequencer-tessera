@@ -2,6 +2,7 @@
 -- Text UI renderer for sequencer state snapshots.
 -- Output is append-only plain text for easy log parsing.
 
+local Step  = require("sequencer/step")
 local Track = require("sequencer/track")
 local Utils = require("utils")
 
@@ -18,14 +19,14 @@ end
 local function tuiStepCell(step, isActive)
     local base
 
-    if step.duration == 0 then
+    if Step.getDuration(step) == 0 then
         base = "SKIP"
     else
-        local noteName = Utils.pitchToName(step.pitch)
-        if step.gate == 0 then
+        local noteName = Utils.pitchToName(Step.getPitch(step))
+        if Step.getGate(step) == 0 then
             base = noteName .. "."
         else
-            local dashCount = step.duration
+            local dashCount = Step.getDuration(step)
             if dashCount < 1 then
                 dashCount = 1
             end

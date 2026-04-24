@@ -1,45 +1,37 @@
 local Scene=require("seq_scene")
-local NAME_MAX_LEN = 32
-local MAX_SCENES   = 32
-function Scene.chainCompletePass(chain)
-    if chain.sceneCount == 0 then
-        return false
+function Scene.chainRemove(chain, index)
+
+    for i = index, chain.sceneCount - 1 do
+        chain.scenes[i] = chain.scenes[i + 1]
     end
+    chain.scenes[chain.sceneCount] = nil
+    chain.sceneCount = chain.sceneCount - 1
 
-    chain.repeatCount = chain.repeatCount + 1
-    local current = chain.scenes[chain.cursor]
-
-    if chain.repeatCount >= current.repeats then
-        -- Advance to next scene.
-        chain.repeatCount = 0
-        chain.beatCount   = 0
-        if chain.cursor >= chain.sceneCount then
-            chain.cursor = 1 -- wrap
-        else
-            chain.cursor = chain.cursor + 1
-        end
-        return true
+    -- Adjust cursor if needed.
+    if chain.cursor > chain.sceneCount then
+        chain.cursor = math.max(1, chain.sceneCount)
     end
-
-    return false
 end
-function Scene.chainBeat(chain)
-    if chain.sceneCount == 0 then
-        return false
-    end
-
-    chain.beatCount = chain.beatCount + 1
-    local current = chain.scenes[chain.cursor]
-
-    if chain.beatCount >= current.lengthBeats then
-        chain.beatCount = 0
-        return Scene.chainCompletePass(chain)
-    end
-
-    return false
+function Scene.chainGetScene(chain, index)
+    return chain.scenes[index]
 end
-function Scene.chainJumpTo(chain, index)
-    chain.cursor      = index
+function Scene.chainGetCount(chain)
+    return chain.sceneCount
+end
+function Scene.chainGetCurrent(chain)
+    if chain.sceneCount == 0 then
+        return nil
+    end
+    return chain.scenes[chain.cursor]
+end
+function Scene.chainReset(chain)
+    chain.cursor      = 1
     chain.repeatCount = 0
     chain.beatCount   = 0
+end
+function Scene.chainSetActive(chain, active)
+    chain.active = active
+end
+function Scene.chainIsActive(chain)
+    return chain.active
 end

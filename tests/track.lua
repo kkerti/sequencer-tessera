@@ -80,7 +80,7 @@ do
     local newStep = Step.new(72, 80, 6, 3)
     Track.setStep(t, 2, newStep)
     local got = Track.getStep(t, 2)
-    assert(got.pitch == 72, "getStep should return the updated step")
+    assert(Step.getPitch(got) == 72, "getStep should return the updated step")
 end
 
 -- getStep out of range
@@ -125,7 +125,7 @@ do
     -- Pulse 0 of step 2 → NOTE_ON E4
     ev = Track.advance(t)
     assert(ev == "NOTE_ON", "expected NOTE_ON for step 2")
-    assert(Track.getCurrentStep(t).pitch == 64, "expected pitch 64 on step 2")
+    assert(Step.getPitch(Track.getCurrentStep(t)) == 64, "expected pitch 64 on step 2")
 end
 
 -- ---------------------------------------------------------------------------
@@ -430,13 +430,13 @@ do
     assert(Track.getStepCount(t) == 6, "stepCount should be 6 after copying 3-step pattern")
 
     -- Verify data is correct.
-    assert(Track.getStep(t, 4).pitch == 72, "copied step 1 pitch should be 72")
-    assert(Track.getStep(t, 5).pitch == 74, "copied step 2 pitch should be 74")
-    assert(Track.getStep(t, 6).pitch == 76, "copied step 3 pitch should be 76")
+    assert(Step.getPitch(Track.getStep(t, 4)) == 72, "copied step 1 pitch should be 72")
+    assert(Step.getPitch(Track.getStep(t, 5)) == 74, "copied step 2 pitch should be 74")
+    assert(Step.getPitch(Track.getStep(t, 6)) == 76, "copied step 3 pitch should be 76")
 
     -- Verify deep copy — mutating the copy should not affect the original.
     Step.setPitch(Track.getStep(t, 4), 48)
-    assert(Track.getStep(t, 1).pitch == 72, "original should be unaffected by copy mutation")
+    assert(Step.getPitch(Track.getStep(t, 1)) == 72, "original should be unaffected by copy mutation")
 end
 
 -- ---------------------------------------------------------------------------
@@ -457,16 +457,16 @@ do
     assert(Track.getStepCount(t) == 6, "stepCount should be 6 after duplicating 2-step pattern")
 
     -- Pattern order should be: original(1), copy(2), old-pattern-2(3)
-    assert(Track.getStep(t, 1).pitch == 60, "pattern 1 step 1 unchanged")
-    assert(Track.getStep(t, 2).pitch == 62, "pattern 1 step 2 unchanged")
-    assert(Track.getStep(t, 3).pitch == 60, "duplicated pattern step 1 should match source")
-    assert(Track.getStep(t, 4).pitch == 62, "duplicated pattern step 2 should match source")
-    assert(Track.getStep(t, 5).pitch == 64, "old pattern 2 step 1 shifted")
-    assert(Track.getStep(t, 6).pitch == 66, "old pattern 2 step 2 shifted")
+    assert(Step.getPitch(Track.getStep(t, 1)) == 60, "pattern 1 step 1 unchanged")
+    assert(Step.getPitch(Track.getStep(t, 2)) == 62, "pattern 1 step 2 unchanged")
+    assert(Step.getPitch(Track.getStep(t, 3)) == 60, "duplicated pattern step 1 should match source")
+    assert(Step.getPitch(Track.getStep(t, 4)) == 62, "duplicated pattern step 2 should match source")
+    assert(Step.getPitch(Track.getStep(t, 5)) == 64, "old pattern 2 step 1 shifted")
+    assert(Step.getPitch(Track.getStep(t, 6)) == 66, "old pattern 2 step 2 shifted")
 
     -- Deep copy verification.
     Step.setPitch(Track.getStep(t, 3), 48)
-    assert(Track.getStep(t, 1).pitch == 60, "original unaffected by duplicated step mutation")
+    assert(Step.getPitch(Track.getStep(t, 1)) == 60, "original unaffected by duplicated step mutation")
 end
 
 -- ---------------------------------------------------------------------------
@@ -530,11 +530,11 @@ do
     assert(Track.getStepCount(t) == 10, "stepCount should be 10 (4+2+4)")
 
     -- Original pattern 1 still at position 1.
-    assert(Track.getStep(t, 1).pitch == 60, "pattern 1 step 1 should be unchanged")
+    assert(Step.getPitch(Track.getStep(t, 1)) == 60, "pattern 1 step 1 should be unchanged")
     -- New pattern at position 2 with default steps (pitch 60).
-    assert(Track.getStep(t, 5).pitch == 60, "new pattern step 1 should be default")
+    assert(Step.getPitch(Track.getStep(t, 5)) == 60, "new pattern step 1 should be default")
     -- Original pattern 2 shifted to position 3.
-    assert(Track.getStep(t, 7).pitch == 72, "old pattern 2 step 1 should now be at flat index 7")
+    assert(Step.getPitch(Track.getStep(t, 7)) == 72, "old pattern 2 step 1 should now be at flat index 7")
 end
 
 -- insertPattern adjusts loop points
@@ -572,8 +572,8 @@ do
     assert(Track.getPatternCount(t) == 2, "swapPatterns should not change patternCount")
     -- After swap: pattern 1 is old pattern 2 (3 steps), pattern 2 is old pattern 1 (2 steps)
     assert(Track.getStepCount(t) == 5, "stepCount should still be 5")
-    assert(Track.getStep(t, 1).pitch == 72, "swapped pattern 1 step 1 should be 72")
-    assert(Track.getStep(t, 4).pitch == 60, "swapped pattern 2 step 1 should be 60")
+    assert(Step.getPitch(Track.getStep(t, 1)) == 72, "swapped pattern 1 step 1 should be 72")
+    assert(Step.getPitch(Track.getStep(t, 4)) == 60, "swapped pattern 2 step 1 should be 60")
     -- Loop points should be cleared after swap.
     assert(Track.getLoopStart(t) == nil, "loopStart should be cleared after swap")
     assert(Track.getLoopEnd(t) == nil, "loopEnd should be cleared after swap")
@@ -596,12 +596,12 @@ do
     local src = Track.getPattern(t, 1)
     Track.pastePattern(t, 2, src)
 
-    assert(Track.getStep(t, 3).pitch == 60, "pasted step 1 should match source")
-    assert(Track.getStep(t, 4).pitch == 62, "pasted step 2 should match source")
+    assert(Step.getPitch(Track.getStep(t, 3)) == 60, "pasted step 1 should match source")
+    assert(Step.getPitch(Track.getStep(t, 4)) == 62, "pasted step 2 should match source")
 
     -- Deep copy — mutating paste target should not affect source.
     Step.setPitch(Track.getStep(t, 3), 48)
-    assert(Track.getStep(t, 1).pitch == 60, "source unaffected after pasting and mutating")
+    assert(Step.getPitch(Track.getStep(t, 1)) == 60, "source unaffected after pasting and mutating")
 end
 
 print("tests/track.lua OK")

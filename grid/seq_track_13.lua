@@ -1,30 +1,32 @@
 local Track=require("seq_track")
 local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
-function Track.deletePattern(track, patternIndex)
+function Track.insertPattern(track, patternIndex, stepCount)
+    stepCount = stepCount or 8
 
-    -- Compute the flat range of the pattern being removed.
-    local delStart = Track.patternStartIndex(track, patternIndex)
-    local delEnd   = Track.patternEndIndex(track, patternIndex)
-    local delCount = delEnd - delStart + 1
+    local newPat = Pattern.new(stepCount)
 
-    -- Remove from patterns array.
-    for i = patternIndex, track.patternCount - 1 do
-        track.patterns[i] = track.patterns[i + 1]
+    -- Shift patterns forward.
+    track.patternCount = track.patternCount + 1
+    for i = track.patternCount, patternIndex + 1, -1 do
+        track.patterns[i] = track.patterns[i - 1]
     end
-    track.patterns[track.patternCount] = nil
-    track.patternCount = track.patternCount - 1
+    track.patterns[patternIndex] = newPat
 
-    -- Adjust loop points.
-    if track.loopStart ~= nil then
-        if track.loopStart >= delStart and track.loopStart <= delEnd then
-            track.loopStart = nil
-        elseif track.loopStart > delEnd then
-            track.loopStart = track.loopStart - delCount
-        end
-    end
+    Track._trackAdjustLoopPointsAfterInsert(track, patternIndex, stepCount)
+
+    track.cursor       = 1
+    track.pulseCounter = 0
+    return newPat
+end
+function Track.swapPatterns(track, indexA, indexB)
+
+    if indexA == indexB then return end
+
+    track.patterns[indexA], track.patterns[indexB] = track.patterns[indexB], track.patterns[indexA]
+
+    -- Clear loop points since flat indices are now different.
+    track.loopStart    = nil
+    track.loopEnd      = nil
+    track.cursor       = 1
+    track.pulseCounter = 0
+end

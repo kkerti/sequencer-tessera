@@ -1,44 +1,36 @@
 local Step=require("seq_step")
-local Utils=require("seq_utils")
-local PITCH_MIN    = 0
-local PITCH_MAX    = 127
-local VELOCITY_MIN = 0
-local VELOCITY_MAX = 127
-local DURATION_MIN = 0
-local DURATION_MAX = 99
-local GATE_MIN     = 0
-local GATE_MAX     = 99
-local RATCHET_MIN  = 1
-local RATCHET_MAX  = 4
-local PROB_MIN     = 0
-local PROB_MAX     = 100
+function Step.new(pitch, velocity, duration, gate, ratchet, probability)
+    pitch       = pitch or 60
+    velocity    = velocity or 100
+    duration    = duration or 4
+    gate        = gate or 2
+    ratchet     = ratchet or 1
+    probability = probability or 100
+
+
+    return { pitch, velocity, duration, gate, ratchet, probability, true }
+end
+function Step.getPitch(step)
+    return step[Step._I_PITCH]
+end
+function Step.setPitch(step, value)
+    step[Step._I_PITCH] = value
+end
+function Step.getVelocity(step)
+    return step[Step._I_VEL]
+end
+function Step.setVelocity(step, value)
+    step[Step._I_VEL] = value
+end
 function Step.getDuration(step)
-    return step.duration
+    return step[Step._I_DUR]
 end
 function Step.setDuration(step, value)
-    step.duration = value
+    step[Step._I_DUR] = value
 end
 function Step.getGate(step)
-    return step.gate
+    return step[Step._I_GATE]
 end
 function Step.setGate(step, value)
-    step.gate = value
-end
-function Step.getRatchet(step)
-    return step.ratchet
-end
-function Step.setRatchet(step, value)
-    step.ratchet = value
-end
-function Step.getProbability(step)
-    return step.probability
-end
-function Step.setProbability(step, value)
-    step.probability = value
-end
-function Step.getActive(step)
-    return step.active
-end
-function Step.setActive(step, value)
-    step.active = value
+    step[Step._I_GATE] = value
 end

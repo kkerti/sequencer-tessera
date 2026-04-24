@@ -41,16 +41,16 @@ do
     assert(Track.getLoopEnd(lt1) == 4)
     assert(Track.getDirection(lt1) == "pingpong")
     assert(Track.getMidiChannel(lt1) == 9)
-    assert(Track.getStep(lt1, 1).ratchet == 2)
-    assert(Track.getStep(lt1, 1).probability == 100)  -- default
-    assert(Track.getStep(lt1, 3).probability == 50)    -- explicit 50
-    assert(Track.getStep(lt1, 4).probability == 0)     -- explicit 0
-    assert(Track.getStep(lt1, 4).duration == 0)
+    assert(Step.getRatchet(Track.getStep(lt1, 1)) == 2)
+    assert(Step.getProbability(Track.getStep(lt1, 1)) == 100)  -- default
+    assert(Step.getProbability(Track.getStep(lt1, 3)) == 50)    -- explicit 50
+    assert(Step.getProbability(Track.getStep(lt1, 4)) == 0)     -- explicit 0
+    assert(Step.getDuration(Track.getStep(lt1, 4)) == 0)
 
     local lt2 = Engine.getTrack(loaded, 2)
     assert(Track.getPatternCount(lt2) == 1)
-    assert(Track.getStep(lt2, 1).pitch == 48)
-    assert(Track.getStep(lt2, 1).probability == 100)   -- default
+    assert(Step.getPitch(Track.getStep(lt2, 1)) == 48)
+    assert(Step.getProbability(Track.getStep(lt2, 1)) == 100)   -- default
 end
 
 os.remove(filePath)

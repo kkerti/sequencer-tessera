@@ -1,11 +1,5 @@
 local Track=require("seq_track")
 local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
 function Track.new()
     return {
         patterns     = {},
@@ -17,7 +11,7 @@ function Track.new()
         clockDiv     = 1,
         clockMult    = 1,
         clockAccum   = 0,
-        direction    = DIRECTION_FORWARD,
+        direction    = Track._DIRECTION_FORWARD,
         pingPongDir  = 1,
         midiChannel  = nil,
     }

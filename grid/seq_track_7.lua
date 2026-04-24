@@ -1,12 +1,10 @@
 local Track=require("seq_track")
-local Pattern=require("seq_pattern")
-local Step=require("seq_step")
-
-local DIRECTION_FORWARD = "forward"
-local DIRECTION_REVERSE = "reverse"
-local DIRECTION_PINGPONG = "pingpong"
-local DIRECTION_RANDOM = "random"
-local DIRECTION_BROWNIAN = "brownian"
+function Track._trackShiftLoopAfterDelete(value, delStart, delEnd, delCount)
+    if value == nil then return nil end
+    if value >= delStart and value <= delEnd then return nil end
+    if value > delEnd then return value - delCount end
+    return value
+end
 function Track._trackAdjustLoopPointsAfterInsert(track, patternIndex, stepCount)
     if stepCount <= 0 then
         return

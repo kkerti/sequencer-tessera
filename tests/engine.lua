@@ -47,8 +47,8 @@ Track.setStep(tAdv, 4, Step.new(72, 100, 4, 2))
 
 -- Pulse 0 of step 1 → NOTE_ON pitch 60
 local step, event = Engine.advanceTrack(eAdv, 1)
-assert(event == "NOTE_ON",  "pulse 0 should be NOTE_ON")
-assert(step.pitch == 60,    "step pitch should be 60")
+assert(event == "NOTE_ON",          "pulse 0 should be NOTE_ON")
+assert(Step.getPitch(step) == 60,   "step pitch should be 60")
 
 -- Pulse 1 → nil
 step, event = Engine.advanceTrack(eAdv, 1)
@@ -56,13 +56,13 @@ assert(event == nil, "pulse 1 should produce no event")
 
 -- Pulse 2 (gate boundary) → NOTE_OFF
 step, event = Engine.advanceTrack(eAdv, 1)
-assert(event == "NOTE_OFF", "pulse 2 (gate) should be NOTE_OFF")
-assert(step.pitch == 60,    "step pitch for NOTE_OFF should still be 60")
+assert(event == "NOTE_OFF",         "pulse 2 (gate) should be NOTE_OFF")
+assert(Step.getPitch(step) == 60,   "step pitch for NOTE_OFF should still be 60")
 
 -- Pulse 3 → nil, then step 2 starts
 Engine.advanceTrack(eAdv, 1)
 step, event = Engine.advanceTrack(eAdv, 1) -- pulse 0 of step 2
-assert(event == "NOTE_ON" and step.pitch == 64,
+assert(event == "NOTE_ON" and Step.getPitch(step) == 64,
     "step 2 pulse 0 should be NOTE_ON pitch 64")
 
 -- ── Engine.advanceTrack — direction modes ─────────────────────────────────────
@@ -79,7 +79,7 @@ Track.setDirection(tRev, "reverse")
 local _, ev1 = Engine.advanceTrack(eRev, 1)
 assert(ev1 == "NOTE_ON", "reverse: step 1 NOTE_ON")
 local s2, ev2 = Engine.advanceTrack(eRev, 1)
-assert(ev2 == "NOTE_ON" and s2.pitch == 65,
+assert(ev2 == "NOTE_ON" and Step.getPitch(s2) == 65,
     "reverse: after step 1 should jump to step 4 (pitch 65)")
 
 -- ── Engine.reset ─────────────────────────────────────────────────────────────

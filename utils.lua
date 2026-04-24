@@ -8,38 +8,37 @@ local NOTE_NAMES = {
     "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"
 }
 
-Utils.SCALES = {
-    chromatic = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 },
-    major = { 0, 2, 4, 5, 7, 9, 11 },
-    naturalMinor = { 0, 2, 3, 5, 7, 8, 10 },
-    harmonicMinor = { 0, 2, 3, 5, 7, 8, 11 },
-    melodicMinor = { 0, 2, 3, 5, 7, 9, 11 },
-    dorian = { 0, 2, 3, 5, 7, 9, 10 },
-    phrygian = { 0, 1, 3, 5, 7, 8, 10 },
-    lydian = { 0, 2, 4, 6, 7, 9, 11 },
-    mixolydian = { 0, 2, 4, 5, 7, 9, 10 },
-    locrian = { 0, 1, 3, 5, 6, 8, 10 },
-    majorPentatonic = { 0, 2, 4, 7, 9 },
-    minorPentatonic = { 0, 3, 5, 7, 10 },
-    blues = { 0, 3, 5, 6, 7, 10 },
-    wholeTone = { 0, 2, 4, 6, 8, 10 },
-    diminished = { 0, 2, 3, 5, 6, 8, 9, 11 },
-    arabic = { 0, 1, 4, 5, 7, 8, 11 },
-    hungarianMinor = { 0, 2, 3, 6, 7, 8, 11 },
-    persian = { 0, 1, 4, 5, 6, 8, 11 },
-    japanese = { 0, 1, 5, 7, 8 },
-    egyptian = { 0, 2, 5, 7, 10 },
-    spanish = { 0, 1, 3, 4, 5, 6, 8, 10 },
-    iwato = { 0, 1, 5, 6, 10 },
-    hirajoshi = { 0, 2, 3, 7, 8 },
-    inSen = { 0, 1, 5, 7, 10 },
-    pelog = { 0, 1, 3, 7, 8 },
-    prometheus = { 0, 2, 4, 6, 9, 10 },
-    neapolitanMajor = { 0, 1, 3, 5, 7, 9, 11 },
-    neapolitanMinor = { 0, 1, 3, 5, 7, 8, 11 },
-    enigmatic = { 0, 1, 4, 6, 8, 10, 11 },
-    leadingWholeTone = { 0, 2, 4, 6, 8, 10, 11 },
-}
+Utils.SCALES = {}
+Utils.SCALES.chromatic        = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
+Utils.SCALES.major            = { 0, 2, 4, 5, 7, 9, 11 }
+Utils.SCALES.naturalMinor     = { 0, 2, 3, 5, 7, 8, 10 }
+Utils.SCALES.harmonicMinor    = { 0, 2, 3, 5, 7, 8, 11 }
+Utils.SCALES.melodicMinor     = { 0, 2, 3, 5, 7, 9, 11 }
+Utils.SCALES.dorian           = { 0, 2, 3, 5, 7, 9, 10 }
+Utils.SCALES.phrygian         = { 0, 1, 3, 5, 7, 8, 10 }
+Utils.SCALES.lydian           = { 0, 2, 4, 6, 7, 9, 11 }
+Utils.SCALES.mixolydian       = { 0, 2, 4, 5, 7, 9, 10 }
+Utils.SCALES.locrian          = { 0, 1, 3, 5, 6, 8, 10 }
+Utils.SCALES.majorPentatonic  = { 0, 2, 4, 7, 9 }
+Utils.SCALES.minorPentatonic  = { 0, 3, 5, 7, 10 }
+Utils.SCALES.blues            = { 0, 3, 5, 6, 7, 10 }
+Utils.SCALES.wholeTone        = { 0, 2, 4, 6, 8, 10 }
+Utils.SCALES.diminished       = { 0, 2, 3, 5, 6, 8, 9, 11 }
+Utils.SCALES.arabic           = { 0, 1, 4, 5, 7, 8, 11 }
+Utils.SCALES.hungarianMinor   = { 0, 2, 3, 6, 7, 8, 11 }
+Utils.SCALES.persian          = { 0, 1, 4, 5, 6, 8, 11 }
+Utils.SCALES.japanese         = { 0, 1, 5, 7, 8 }
+Utils.SCALES.egyptian         = { 0, 2, 5, 7, 10 }
+Utils.SCALES.spanish          = { 0, 1, 3, 4, 5, 6, 8, 10 }
+Utils.SCALES.iwato            = { 0, 1, 5, 6, 10 }
+Utils.SCALES.hirajoshi        = { 0, 2, 3, 7, 8 }
+Utils.SCALES.inSen            = { 0, 1, 5, 7, 10 }
+Utils.SCALES.pelog            = { 0, 1, 3, 7, 8 }
+Utils.SCALES.prometheus       = { 0, 2, 4, 6, 9, 10 }
+Utils.SCALES.neapolitanMajor  = { 0, 1, 3, 5, 7, 9, 11 }
+Utils.SCALES.neapolitanMinor  = { 0, 1, 3, 5, 7, 8, 11 }
+Utils.SCALES.enigmatic        = { 0, 1, 4, 6, 8, 10, 11 }
+Utils.SCALES.leadingWholeTone = { 0, 2, 4, 6, 8, 10, 11 }
 
 -- Creates a table of `n` elements all set to `default`.
 function Utils.tableNew(n, default)

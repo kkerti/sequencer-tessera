@@ -1,21 +1,36 @@
 local Step=require("seq_step")
 local Utils=require("seq_utils")
-local PITCH_MIN    = 0
-local PITCH_MAX    = 127
-local VELOCITY_MIN = 0
-local VELOCITY_MAX = 127
-local DURATION_MIN = 0
-local DURATION_MAX = 99
-local GATE_MIN     = 0
-local GATE_MAX     = 99
-local RATCHET_MIN  = 1
-local RATCHET_MAX  = 4
-local PROB_MIN     = 0
-local PROB_MAX     = 100
+function Step.getPulseEvent(step, pulseCounter)
+
+    if not Step.isPlayable(step) then
+        return nil
+    end
+
+    if step[Step._I_RATCH] == 1 then
+        if pulseCounter == 0 then
+            return "NOTE_ON"
+        end
+        if pulseCounter == step[Step._I_GATE] then
+            return "NOTE_OFF"
+        end
+        return nil
+    end
+
+    -- Priority rule: NOTE_ON wins if on/off boundaries collide.
+    if Step._stepIsRatchetOnPulse(step, pulseCounter) then
+        return "NOTE_ON"
+    end
+
+    if Step._stepIsRatchetOffPulse(step, pulseCounter) then
+        return "NOTE_OFF"
+    end
+
+    return nil
+end
 function Step.resolvePitch(step, scaleTable, rootNote)
     if scaleTable == nil then
-        return step.pitch
+        return step[Step._I_PITCH]
     end
     rootNote = rootNote or 0
-    return Utils.quantizePitch(step.pitch, rootNote, scaleTable)
+    return Utils.quantizePitch(step[Step._I_PITCH], rootNote, scaleTable)
 end

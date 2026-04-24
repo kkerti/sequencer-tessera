@@ -21,9 +21,22 @@
 --   lua tools/gridsplit.lua --limit 800             -- custom char limit
 --   lua tools/gridsplit.lua --dry                   -- dry run, report only
 --   lua tools/gridsplit.lua --keep-asserts          -- don't strip asserts
+--   lua tools/gridsplit.lua --require-prefix /tt    -- prefix all require names
+--                                                      so chunks load via e.g.
+--                                                      require("/tt/seq_step_1")
 
 local GRID_CHAR_LIMIT = 800
 local DEFAULT_OUTDIR = "grid"
+
+-- Builds the require-string a chunk uses to load itself or a sibling.
+-- With prefix "/tt" and name "seq_step_1" -> "/tt/seq_step_1".
+-- With nil/empty prefix -> "seq_step_1" (legacy flat behaviour).
+local function gridRequireName(prefix, name)
+    if prefix and prefix ~= "" then
+        return prefix .. "/" .. name
+    end
+    return name
+end
 
 -- -----------------------------------------------------------------------
 -- Minifier
@@ -317,8 +330,10 @@ end
 -- Chunk builder
 -- -----------------------------------------------------------------------
 
-local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFlag)
+local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFlag, requirePrefix)
     local prefix = sourceToGridPrefix(sourcePath)
+    -- Used for require() strings only; file paths on disk stay flat under outdir.
+    local prefixedSelf = gridRequireName(requirePrefix, prefix)
     local result = { files = {}, warnings = {} }
 
     -- Phase 1: strip asserts
@@ -441,13 +456,14 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
     -- Only emit require lines for variables actually referenced in a chunk's code.
 
     -- Returns the require line for the module itself (always needed).
-    local moduleRequireLine = string.format('local %s=require("%s")', moduleName, prefix)
+    local moduleRequireLine = string.format('local %s=require("%s")', moduleName, prefixedSelf)
 
     -- Map: varName -> require line string, for each preamble dependency.
     local requireLineFor = {}
     for _, req in ipairs(requires) do
         requireLineFor[req.var] = string.format(
-            'local %s=require("%s")', req.var, requirePathToGridPrefix(req.path))
+            'local %s=require("%s")', req.var,
+            gridRequireName(requirePrefix, requirePathToGridPrefix(req.path)))
     end
 
     -- Build a preamble string for a list of function-body texts.
@@ -596,7 +612,7 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
     local hasDataChunk = moduleDataText:match("%S") ~= nil
     local dataChunks = {}   -- list of strings, each a complete chunk content
     if hasDataChunk then
-        local dataPreamble = string.format('local %s=require("%s")', moduleName, prefix)
+        local dataPreamble = string.format('local %s=require("%s")', moduleName, prefixedSelf)
         local preambleSize = gridCharCount(dataPreamble .. "\n")
         local cur = { dataPreamble }
         local curSize = preambleSize
@@ -626,7 +642,7 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
     local rootLines = {}
     rootLines[#rootLines + 1] = string.format("local %s={}", moduleName)
     rootLines[#rootLines + 1] = string.format(
-        'package.loaded["%s"]=%s', prefix, moduleName)
+        'package.loaded["%s"]=%s', prefixedSelf, moduleName)
 
     -- If local vars are small, include in root. Otherwise they go in chunks.
     if not promoteLocalFuncs then
@@ -645,7 +661,8 @@ local function buildGridFiles(sourcePath, source, limit, outdir, stripAssertsFla
     -- to fit the char limit even with many chunks (per-require GC was costing
     -- ~38 non-whitespace chars per chunk).
     for i = 1, totalChunks do
-        rootLines[#rootLines + 1] = string.format('require("%s_%d")', prefix, i)
+        rootLines[#rootLines + 1] = string.format(
+            'require("%s_%d")', prefixedSelf, i)
     end
     rootLines[#rootLines + 1] = 'collectgarbage("collect")'
 
@@ -809,6 +826,7 @@ local DEFAULT_SOURCES = {
 
 local i = 1
 local includeSongs = false
+local requirePrefix = nil
 while i <= #args do
     if args[i] == "--limit" then
         i = i + 1; limit = tonumber(args[i])
@@ -820,18 +838,27 @@ while i <= #args do
         keepAsserts = true
     elseif args[i] == "--include-songs" then
         includeSongs = true
+    elseif args[i] == "--require-prefix" then
+        i = i + 1; requirePrefix = args[i]
     elseif args[i]:sub(1, 1) ~= "-" then
         sourceFiles[#sourceFiles + 1] = args[i]
     end
     i = i + 1
 end
 
+if requirePrefix then
+    -- Strip trailing slash for consistent concatenation.
+    requirePrefix = requirePrefix:gsub("/+$", "")
+    if requirePrefix == "" then requirePrefix = nil end
+end
+
 if #sourceFiles == 0 then sourceFiles = DEFAULT_SOURCES end
 
 if not dryRun then os.execute("mkdir -p " .. outdir) end
 
-print(string.format("Grid Split — limit: %d chars, output: %s/, asserts: %s",
-    limit, outdir, keepAsserts and "keep" or "strip"))
+print(string.format("Grid Split — limit: %d chars, output: %s/, asserts: %s, prefix: %s",
+    limit, outdir, keepAsserts and "keep" or "strip",
+    requirePrefix or "(none)"))
 print(string.rep("=", 80))
 
 local totalFiles = 0
@@ -849,7 +876,7 @@ for _, sourcePath in ipairs(sourceFiles) do
 
     print(string.format("\n--- %s (%d bytes raw) ---", sourcePath, #source))
 
-    local result = buildGridFiles(sourcePath, source, limit, outdir, not keepAsserts)
+    local result = buildGridFiles(sourcePath, source, limit, outdir, not keepAsserts, requirePrefix)
 
     print(string.format("  Parsed: %d public + %d local functions, local funcs %s",
         result.publicFuncCount, result.localFuncCount,

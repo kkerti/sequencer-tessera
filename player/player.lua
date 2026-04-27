@@ -80,10 +80,12 @@ function Player.setBpm(p, bpm)
     end
 end
 
--- Emergency drain: scans events [1..cursor] and emits NOTE_OFF for any
--- NOTE_ON that hasn't been paired yet. O(cursor); call only on stop/panic.
--- Returns the count of NOTE_OFFs emitted.
-function Player.allNotesOff(p, emit)
+-- Emergency drain: scans events [1..cursor] and returns a list of
+-- NOTE_OFF descriptors for every NOTE_ON that hasn't been paired yet.
+-- Caller is responsible for sending the MIDI (via midi_send / emit fn).
+-- Returns: { { pitch=int, channel=int }, ... }  (possibly empty)
+-- O(cursor); call only on stop/panic.
+function Player.allNotesOff(p)
     local song    = p.song
     local kind    = song.kind
     local pairOff = song.pairOff   -- may be nil for static songs
@@ -91,7 +93,7 @@ function Player.allNotesOff(p, emit)
     local pitch   = song.pitch
     local channel = song.channel
     local pc      = p.pulseCount
-    local count   = 0
+    local offs    = {}
 
     for i = 1, p.cursor - 1 do
         local k = kind[i]
@@ -112,12 +114,11 @@ function Player.allNotesOff(p, emit)
                 end
             end
             if not off or off == 0 or atPulse[off] > pc then
-                emit("NOTE_OFF", pitch[i], 0, channel[i])
-                count = count + 1
+                offs[#offs + 1] = { pitch = pitch[i], channel = channel[i] }
             end
         end
     end
-    return count
+    return offs
 end
 
 -- ---------------------------------------------------------------------------

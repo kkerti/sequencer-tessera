@@ -226,7 +226,7 @@ do
     assert(#events == 0, "no time elapsed -> no events")
 end
 
--- ── allNotesOff drains in-flight notes via callback ─────────────────────────
+-- ── allNotesOff drains in-flight notes (returns descriptor list) ───────────
 
 do
     local song = makeSong({ { 0, 60, 100, 5, 8 } }, 16, true)
@@ -235,23 +235,19 @@ do
     local _, emit = recordEmit()
     Player.externalPulse(p, emit)            -- emits NOTE_ON only (gate=8)
 
-    local offs = {}
-    local count = Player.allNotesOff(p, function(t, pitch, vel, ch)
-        offs[#offs + 1] = { type = t, pitch = pitch, channel = ch }
-    end)
-    assert(count == 1, "one NOTE_OFF returned, got " .. count)
-    assert(offs[1].type    == "NOTE_OFF", "type")
+    local offs = Player.allNotesOff(p)
+    assert(#offs == 1, "one NOTE_OFF returned, got " .. #offs)
     assert(offs[1].pitch   == 60, "pitch")
     assert(offs[1].channel == 5,  "channel")
 end
 
--- ── allNotesOff on idle player emits nothing ────────────────────────────────
+-- ── allNotesOff on idle player returns empty list ───────────────────────────
 
 do
     local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, true)
     local p = Player.new(song, nil, 120)
-    local count = Player.allNotesOff(p, function() error("should not emit") end)
-    assert(count == 0, "idle player -> zero NOTE_OFFs")
+    local offs = Player.allNotesOff(p)
+    assert(#offs == 0, "idle player -> empty list, got " .. #offs)
 end
 
 -- ── setBpm preserves pulse position (internal-clock mode) ────────────────────

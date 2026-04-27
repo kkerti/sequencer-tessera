@@ -1,5 +1,11 @@
 -- 2026-04-11 Grid Screen UI Setup
 
+> **SUPERSEDED (2026-04-27)** — VSN1 LCD screen prototyping in `screens/` and the
+> `grid-wasm/` simulator are inactive. Current architecture is headless: the
+> tape-deck player on Grid runs compiled songs without on-device UI. Live
+> editing happens via `live/edit.lua` invoked from rtmidi callbacks. This note
+> is retained for historical context only. See `docs/ARCHITECTURE.md`.
+
 ## What was done
 
 Set up a local test environment for designing Grid VSN1 LCD screens (320x240px) using the grid-fw WASM build. Built a working Pattern screen prototype.

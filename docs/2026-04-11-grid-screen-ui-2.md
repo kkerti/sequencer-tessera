@@ -1,5 +1,8 @@
 # 2026-04-11 Screen UI Session 2
 
+> **SUPERSEDED (2026-04-27)** — see `docs/2026-04-11-grid-screen-ui.md` header.
+> The four LCD screen designs in `screens/` are inactive prototypes.
+
 ## What was done
 
 Built and tested all 4 screen designs for the Grid VSN1 LCD (320x240):

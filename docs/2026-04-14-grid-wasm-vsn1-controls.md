@@ -1,5 +1,8 @@
 # 2026-04-14 Grid WASM VSN1 Controls
 
+> **SUPERSEDED (2026-04-27)** — `grid-wasm/` simulator is inactive; see
+> `docs/2026-04-11-grid-screen-ui.md` header for context.
+
 ## Purpose
 
 Extend `grid-wasm/index.html` to simulate VSN1 physical controls for screen testing:

@@ -57,8 +57,8 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - Run the live-edit stack (descriptor → in-memory compile → lite player): `lua main.lua | python3 bridge.py`
 - Run the ship-mirror stack (precompiled song + lite player): `lua main_lite.lua | python3 bridge.py`
 - Compile a song to `compiled/`: `lua tools/song_compile.lua songs/<name>.lua`
-- Build the Grid upload bundle: `rm -rf grid && mkdir -p grid/player grid/<song> && lua tools/strip.lua player/player.lua --out grid/player/player.lua && lua tools/song_compile.lua songs/<song>.lua --outdir grid/<song>`
-- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua`
+- Build the Grid upload bundle: see README.md `Build the Grid upload bundle`. Includes `/player/`, `/utils/`, `/sequencer_lite/`, `/live/` and per-song folders.
+- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua && lua tests/sequencer_lite.lua && lua tests/live_edit.lua`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
 - `python-rtmidi` installed system-wide via `pip3 install python-rtmidi --break-system-packages`
 
@@ -154,6 +154,15 @@ sequencer/                     -- AUTHORING ENGINE (macOS only)
   probability.lua              -- non-destructive per-step probability evaluation
   song_writer.lua              -- bridge to player: rollNextLoop on loop boundary
 
+sequencer_lite/                -- ON-DEVICE AUTHORING ENGINE (carve of sequencer/)
+  step.lua / pattern.lua       -- byte-equivalent to sequencer/
+  track.lua                    -- pattern-manipulation ops removed
+  engine.lua                   -- scene-chain hooks removed
+  -- See docs/dropped-features.md.
+
+live/                          -- ON-DEVICE LIVE EDITOR (operates on compiled songs)
+  edit.lua                     -- O(1) pitch/velocity/mute; queued ratchet splice on loop boundary
+
 player/                        -- TAPE-DECK PLAYER (runs on Grid; ~180 lines)
   player.lua                   -- walks compiled event arrays; internal + external (MIDI 0xF8) clock modes
 
@@ -163,13 +172,17 @@ songs/                         -- terse song descriptors (authoring inputs, pure
 compiled/                      -- output of tools/song_compile.lua (single self-contained file)
   <name>.lua
 
-grid/                          -- final upload bundle (one file per library, in its own folder)
-  player/player.lua            -- → /player/player.lua  on device
-  <song>/<song>.lua            -- → /<song>/<song>.lua  on device
+grid/                          -- final upload bundle (FLAT — one file per library at root)
+  player.lua                   -- → /player.lua            on device
+  utils.lua                    -- → /utils.lua             on device
+  sequencer_lite.lua           -- → /sequencer_lite.lua    on device (optional; bundled by tools/bundle.lua)
+  edit.lua                     -- → /edit.lua              on device (optional)
+  <song>.lua                   -- → /<song>.lua            on device
 
 tools/
   song_compile.lua             -- engine → compiled song (schema v2), single inlined file
-  strip.lua                    -- comment + statement-assert remover for shipping
+  bundle.lua                   -- splice N modules into one file; rewrites cross-module require()
+  strip.lua                    -- comment + statement-assert remover
   charcheck.lua                -- raw + minified char count reporter
   memprofile.lua               -- on-device memory footprint estimator
 
@@ -177,11 +190,14 @@ tests/
   utils.lua  step.lua  pattern.lua  track.lua  engine.lua
   performance.lua  mathops.lua  snapshot.lua  scene.lua
   probability.lua  song_writer.lua  player.lua  tui.lua
+  sequencer_lite.lua           -- smoke test for the lite engine carve
+  live_edit.lua                -- behavioural tests for live/edit.lua
   sequence_runner.lua          -- runs scenarios in tests/sequences/
   sequences/                   -- end-to-end feature scenarios
 
 docs/
   ARCHITECTURE.md              -- full system map: pipeline, schema v2, deployment, clock modes
+  dropped-features.md          -- what sequencer_lite/ leaves out and how to revive it
   2026-03-09-init-goal.md      -- project goal and architecture decisions
   manuals/er-101.md            -- ER-101 feature reference (engine architecture)
   manuals/metropolis.md        -- Metropolis reference (selective feature adoption)

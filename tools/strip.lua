@@ -22,6 +22,7 @@
 --   lua tools/strip.lua <file.lua> --outdir <dir>        -- write to <dir>/<basename>
 --   lua tools/strip.lua <file.lua> --out <path>          -- write to exact path
 --   lua tools/strip.lua <file1> <file2> --outdir <dir>   -- batch
+--   lua tools/strip.lua <file> --keep-blanks             -- preserve blank lines
 --
 -- Reports raw vs stripped byte counts on stderr.
 
@@ -213,6 +214,66 @@ local function stripSource(src)
 end
 
 -- ---------------------------------------------------------------------------
+-- Blank-line collapse pass.
+-- After stripping comments and statement asserts, the source is left with
+-- runs of blank/whitespace-only lines where comment blocks used to be. This
+-- is dead weight on device. Collapse:
+--   * leading blank lines (file head)  -> dropped entirely
+--   * runs of 2+ blank lines (mid-file) -> a single blank line
+--   * trailing blank lines              -> a single trailing newline
+-- A "blank line" is a line whose contents are empty or whitespace only.
+-- ---------------------------------------------------------------------------
+
+local function collapseBlankLines(src)
+    local lines = {}
+    -- Split preserving a trailing empty line if the source ends with \n.
+    local pos = 1
+    local len = #src
+    while pos <= len do
+        local nl = src:find("\n", pos, true)
+        if nl then
+            lines[#lines + 1] = src:sub(pos, nl - 1)
+            pos = nl + 1
+        else
+            lines[#lines + 1] = src:sub(pos)
+            pos = len + 1
+        end
+    end
+    -- If source ended with \n, add a trailing empty line so join works out.
+    if src:sub(-1) == "\n" then lines[#lines + 1] = "" end
+
+    local function isBlank(s) return s:match("^%s*$") ~= nil end
+
+    -- Drop leading blank lines.
+    local first = 1
+    while first <= #lines and isBlank(lines[first]) do
+        first = first + 1
+    end
+
+    local out = {}
+    local prevBlank = false
+    for k = first, #lines do
+        local line = lines[k]
+        local blank = isBlank(line)
+        if blank then
+            if not prevBlank then
+                out[#out + 1] = ""
+            end
+            prevBlank = true
+        else
+            out[#out + 1] = line
+            prevBlank = false
+        end
+    end
+
+    -- Drop trailing blank lines, then re-add exactly one trailing newline.
+    while #out > 0 and isBlank(out[#out]) do
+        out[#out] = nil
+    end
+    return table.concat(out, "\n") .. "\n"
+end
+
+-- ---------------------------------------------------------------------------
 -- CLI
 -- ---------------------------------------------------------------------------
 
@@ -242,10 +303,12 @@ Usage:
   lua tools/strip.lua <file.lua>                     -- print to stdout
   lua tools/strip.lua <file.lua> --out <path>        -- write to <path>
   lua tools/strip.lua <file.lua> [...] --outdir <d>  -- write each as <d>/<basename>
+  lua tools/strip.lua <file> --keep-blanks           -- preserve blank-line layout
 
 Strips Lua comments and statement-form `assert(...)` calls.
 Preserves formatting, strings, and value-returning asserts
 (e.g. `local f = assert(io.open(p))`).
+By default, also collapses runs of blank lines to a single blank.
 ]])
     os.exit(1)
 end
@@ -253,6 +316,7 @@ end
 local args = arg or {}
 local files = {}
 local outDir, outPath
+local keepBlanks = false
 local i = 1
 while i <= #args do
     local a = args[i]
@@ -260,6 +324,8 @@ while i <= #args do
         outDir = args[i + 1]; i = i + 2
     elseif a == "--out" then
         outPath = args[i + 1]; i = i + 2
+    elseif a == "--keep-blanks" then
+        keepBlanks = true; i = i + 1
     elseif a:sub(1, 1) == "-" then
         io.stderr:write("Unknown flag: " .. a .. "\n")
         usage()
@@ -287,6 +353,9 @@ for _, path in ipairs(files) do
         os.exit(2)
     end
     local stripped = stripSource(src)
+    if not keepBlanks then
+        stripped = collapseBlankLines(stripped)
+    end
     local rawLen, outLen = #src, #stripped
     totalRaw = totalRaw + rawLen
     totalOut = totalOut + outLen

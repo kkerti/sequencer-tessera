@@ -37,7 +37,9 @@ local timer  = uv.new_timer()
 local sigint = uv.new_signal()
 
 local function flushAllNotes()
-    Player.allNotesOff(player, emit)
+    for _, e in ipairs(Player.allNotesOff(player)) do
+        emit("NOTE_OFF", e.pitch, 0, e.channel)
+    end
     io.flush()
 end
 

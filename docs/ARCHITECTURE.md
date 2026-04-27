@@ -25,7 +25,7 @@ A **rich authoring engine** runs on macOS, **compiles songs to flat event arrays
 │  compiled/<name>.lua  (single self-contained)     │    │     timer  OR  Ableton MIDI 0xF8       │
 │        │                                          │    │                                        │
 │        ▼                                          │    │                                        │
-│  copy into grid/<song>/<song>.lua                 │────┼──→ upload grid/player/* + grid/<song>/*│
+│  copy into grid/<song>.lua (flat layout)          │────┼──→ upload grid/*.lua to /              │
 │                                                   │    │                                        │
 │  grid/  (final upload bundle, one file per lib)   │    │                                        │
 └───────────────────────────────────────────────────┘    └────────────────────────────────────────┘
@@ -67,6 +67,52 @@ The full ER-101 + Metropolis-inspired engine. Lives in `sequencer/`; runs only o
 | `song_writer.lua` | **Bridges to the tape-deck player.** `SongWriter.rollNextLoop(song, loopIndex)` mutates a compiled song in place at every loop boundary, flipping `kind[]` between active and muted to apply per-step probability. Static songs (no probability) skip this entirely and never ship the writer arrays. |
 
 Tests live in `tests/` and cover behaviour. Module files contain only `assert()` input-validation guards.
+
+---
+
+## Lite authoring engine (`sequencer_lite/`)
+
+A carved-down copy of the authoring engine sized to fit on the Grid module. The intent is to allow on-device song authoring — building patterns, editing steps, re-compiling — without paying the full ~60 KB resident cost of `sequencer/`.
+
+| Lite module | Source | Carve |
+|---|---|---|
+| `step.lua`    | byte-equivalent to `sequencer/step.lua`    | none |
+| `pattern.lua` | byte-equivalent to `sequencer/pattern.lua` | none |
+| `track.lua`   | carved from `sequencer/track.lua`          | drops `copyPattern`, `duplicatePattern`, `insertPattern`, `deletePattern`, `swapPatterns`, `pastePattern` |
+| `engine.lua`  | carved from `sequencer/engine.lua`         | drops scene-chain hooks; `Engine.onPulse` becomes a no-op |
+
+Modules **not** included in lite at all: `snapshot.lua`, `mathops.lua`, `scene.lua`, `song_writer.lua`, `performance.lua`, `probability.lua`. (`probability.lua` and `performance.lua` are player-side concerns at runtime; the lite engine doesn't need them at authoring time. `snapshot`/`mathops`/`scene` are intentional drops — see `docs/dropped-features.md` for the full rationale and revival recipes.)
+
+Sizes (raw / stripped):
+
+| Folder | Raw | Stripped | Modules |
+|---|---|---|---|
+| `sequencer_lite/` + `utils.lua` | 29.8 KB | 17.8 KB | 5 files |
+| `sequencer/` (full) + `utils.lua` | 69.2 KB | 38.1 KB | 11 files |
+
+The lite engine is now bundled into Grid uploads as `grid/sequencer_lite.lua` (a single file produced by `tools/bundle.lua` from the 5 source modules). The `grid_module.lua` INIT block contains a commented-out measurement hook that loads the bundle without using it, so on-device RAM cost can be measured by toggling the hook on/off.
+
+---
+
+## Live editor (`live/edit.lua`)
+
+A second on-device editing path, complementary to the lite engine. Where the lite engine reconstructs the full Track/Pattern/Step model and re-compiles to apply edits, `live/edit.lua` mutates the compiled song's parallel arrays directly.
+
+Operation classes:
+
+| Op | Cost | When safe to call |
+|---|---|---|
+| `setPitch(song, idx, midi)` | O(1) plus mate scan if no `pairOff` | any time |
+| `setVelocity(song, idx, vel)` | O(1) | any time |
+| `mute(song, idx)` / `mutePair(song, idx)` | O(1) plus mate scan | any time |
+| `unmute(song, idx)` / `unmutePair(song, idx)` | O(1) plus mate scan | any time |
+| `setRatchet(song, spec)` | O(N) splice + O(N²) `pairOff` rebuild | **only at loop boundary** |
+
+Splice operations are queued via `queueRatchetEdit` / `applyQueue`; chain `applyQueue` into the song's `onLoopBoundary` hook so edits land between loops, never mid-cursor.
+
+Addressing model: **event-index-based, caller-tracks-groups.** The compiled schema does not preserve source-step boundaries (a 4-ratchet step looks identical to four sequential 1-ratchet steps). For ratchet edits the caller passes a spec describing both the current and the new geometry — the editor is the splicing primitive, not the source of truth for "what is a step".
+
+Size: ~6.6 KB stripped. Bundled as `grid/edit.lua`. Tested in `tests/live_edit.lua` (11 checks).
 
 ---
 
@@ -119,7 +165,7 @@ Player.stop(p)
 Player.setBpm(p, bpm)              -- internal-clock mode only
 Player.tick(p, emit)               -- internal clock: pulled by firmware timer
 Player.externalPulse(p, emit)      -- external clock: one MIDI 0xF8 (after 24→ppb division)
-Player.allNotesOff(p, emit)        -- emergency drain on stop/panic
+Player.allNotesOff(p)              -- returns { {pitch=, channel=}, ... }
 ```
 
 `p.pulseCount` is the source of truth. `Player.tick` is a thin shim that derives a target pulse from `clockFn()` and calls `externalPulse` until caught up. Both modes share the same advance loop.
@@ -182,27 +228,58 @@ require("player")                    -- fails
 
 Hard-code the literal paths in your INIT block (see `grid_module.lua`).
 
-### Folder-per-library on device
+### Flat layout on device
 
-Grid uploads/removes whole folders at a time, so each library lives under its own:
+Grid uploads/removes whole folders at a time, but Grid's `require()` does not
+do `package.path` `?` substitution — paths are literal. To keep on-device
+require strings short and unambiguous, every library is bundled into a single
+file and dropped flat at the filesystem root:
 
 ```
-/player/         ← grid/player/player.lua
-/dark_groove/    ← grid/dark_groove/dark_groove.lua
+/player.lua          ← grid/player.lua
+/utils.lua           ← grid/utils.lua
+/sequencer_lite.lua  ← grid/sequencer_lite.lua  (5 source modules bundled)
+/edit.lua            ← grid/edit.lua
+/dark_groove.lua     ← grid/dark_groove.lua
 ```
 
-One file per folder, but the folder boundary makes upload/remove operations atomic per library.
+`require("/player")`, `require("/sequencer_lite")`, `require("/dark_groove")`
+all resolve directly. No subfolders to manage on device.
 
 ### Build commands
 
+Minimal (player + one song):
+
 ```sh
-rm -rf grid
-mkdir -p grid/player grid/dark_groove
-lua tools/strip.lua player/player.lua --out grid/player/player.lua
-lua tools/song_compile.lua songs/dark_groove.lua --outdir grid/dark_groove
+rm -rf grid && mkdir -p grid
+lua tools/strip.lua player/player.lua --out grid/player.lua
+lua tools/song_compile.lua songs/dark_groove.lua --outdir grid
 ```
 
-`tools/strip.lua` removes comments and statement-form `assert(...)` guards. Asserts are an authoring-time test-coverage tool; they are dead weight on device, since every code path that reaches the player has already passed the same checks during macOS dev. Stripping cuts the player from ~6 KB to ~3 KB. Apply it to any sequencer module before upload — the engine itself benefits more (52% reduction across `sequencer/`).
+Full bundle (player + utils + lite engine + live editor + 3 songs):
+
+```sh
+rm -rf grid && mkdir -p grid
+lua tools/strip.lua player/player.lua --out grid/player.lua
+lua tools/strip.lua utils.lua          --out grid/utils.lua
+lua tools/strip.lua live/edit.lua      --out grid/edit.lua
+lua tools/bundle.lua --out /tmp/sequencer_lite.lua \
+    --as Utils=utils.lua \
+    --as Step=sequencer_lite/step.lua \
+    --as Pattern=sequencer_lite/pattern.lua \
+    --as Track=sequencer_lite/track.lua \
+    --as Engine=sequencer_lite/engine.lua \
+    --expose Utils --expose Step --expose Pattern --expose Track \
+    --main Engine
+lua tools/strip.lua /tmp/sequencer_lite.lua --out grid/sequencer_lite.lua
+lua tools/song_compile.lua songs/empty.lua          --outdir grid
+lua tools/song_compile.lua songs/four_on_floor.lua  --outdir grid
+lua tools/song_compile.lua songs/dark_groove.lua    --outdir grid
+```
+
+`tools/strip.lua` removes comments and statement-form `assert(...)` guards. Asserts are an authoring-time test-coverage tool; they are dead weight on device, since every code path that reaches the player has already passed the same checks during macOS dev. Stripping cuts the player from ~6 KB to ~3 KB.
+
+`tools/bundle.lua` splices N source modules into one self-contained file: each module becomes a `do ... end` block, cross-module `require()` calls are rewritten to local upvalues, and secondary modules are exposed as fields on the main export. The bundled `sequencer_lite.lua` returns the Engine table with `Engine.Step`, `Engine.Pattern`, `Engine.Track`, `Engine.Utils` accessible as fields.
 
 For macOS dev (uses `compiled/<name>.lua` directly, asserts retained):
 
@@ -250,6 +327,16 @@ sequencer/                     -- AUTHORING ENGINE (macOS only)
   snapshot.lua                 -- engine state save/load
   song_writer.lua              -- bridge to player: rollNextLoop on loop boundary
 
+sequencer_lite/                -- ON-DEVICE AUTHORING ENGINE (carve of sequencer/)
+  step.lua                     -- byte-equivalent to sequencer/step.lua
+  pattern.lua                  -- byte-equivalent to sequencer/pattern.lua
+  track.lua                    -- pattern-manipulation ops removed
+  engine.lua                   -- scene-chain hooks removed
+  -- See docs/dropped-features.md for the carve rationale + revival recipes.
+
+live/                          -- ON-DEVICE LIVE EDITOR (mutates compiled songs)
+  edit.lua                     -- O(1) pitch/velocity/mute; queued ratchet splice on loop boundary
+
 player/                        -- TAPE-DECK PLAYER (runs on Grid)
   player.lua                   -- ~180 lines, walks compiled event arrays
 
@@ -260,12 +347,15 @@ compiled/                      -- output of tools/song_compile.lua (single self-
   dark_groove.lua
 
 grid/                          -- final upload bundle (one file per library, in its own folder)
-  player/player.lua            -- → /player/player.lua  on device
-  dark_groove/dark_groove.lua  -- → /dark_groove/dark_groove.lua on device
+  player/player.lua            -- → /player/player.lua            on device
+  utils/utils.lua              -- → /utils/utils.lua              on device
+  sequencer_lite/*.lua         -- → /sequencer_lite/*.lua         on device (optional)
+  live/edit.lua                -- → /live/edit.lua                on device (optional)
+  dark_groove/dark_groove.lua  -- → /dark_groove/dark_groove.lua  on device
 
 tools/
   song_compile.lua             -- engine → compiled song + inlined arrays
-  strip.lua                    -- comment + statement-assert remover for shipping
+  strip.lua                    -- comment + statement-assert remover
   charcheck.lua                -- raw + minified char count reporter
   memprofile.lua               -- memory footprint estimator
 
@@ -273,11 +363,14 @@ tests/                         -- behavioural tests
   utils.lua  step.lua  pattern.lua  track.lua  engine.lua
   performance.lua  mathops.lua  snapshot.lua  scene.lua
   probability.lua  song_writer.lua  player.lua  tui.lua
+  sequencer_lite.lua           -- smoke test for the lite engine carve
+  live_edit.lua                -- behavioural tests for live/edit.lua
   sequence_runner.lua          -- runs scenarios in tests/sequences/
   sequences/                   -- 11 end-to-end feature scenarios
 
 docs/
   ARCHITECTURE.md              -- this file
+  dropped-features.md          -- what sequencer_lite/ leaves out and how to revive it
   2026-03-09-init-goal.md      -- original goal + ER-101/Metropolis decisions
   manuals/                     -- ER-101 & Metropolis reference manuals
   2026-04-*.md                 -- session notes (chronological)
@@ -302,7 +395,7 @@ On device the player calls `midi_send(channel, status, note, velocity)` directly
 
 - **Working on hardware.** Ableton-driven MIDI clock playback verified on the Grid module.
 - **All tests pass:** 13 behavioural test files + 11 sequence scenarios.
-- **Bundle is two files.** `grid/player/player.lua` (~6 KB raw / ~2 KB minified) plus `grid/dark_groove/dark_groove.lua` (~2.3 KB).
+- **Bundle is two files.** `grid/player.lua` (~6 KB raw / ~3 KB stripped) plus `grid/dark_groove.lua` (~3.1 KB).
 - **Two clock modes shipped:** internal firmware timer and external MIDI 0xF8.
 
 ### Known gaps

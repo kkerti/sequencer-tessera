@@ -1,43 +1,4 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 local Player = {}
-
-
-
-
 
 function Player.new(song, clockFn, bpm)
     bpm = bpm or song.bpm
@@ -54,10 +15,6 @@ function Player.new(song, clockFn, bpm)
     }
 end
 
-
-
-
-
 function Player.start(p)
     if p.clockFn then p.startMs = p.clockFn() end
     p.pulseCount = 0
@@ -70,8 +27,6 @@ function Player.stop(p)
     p.running = false
 end
 
-
-
 function Player.setBpm(p, bpm)
     p.bpm     = bpm
     p.pulseMs = 60000 / bpm / p.song.pulsesPerBeat
@@ -80,10 +35,7 @@ function Player.setBpm(p, bpm)
     end
 end
 
-
-
-
-function Player.allNotesOff(p, emit)
+function Player.allNotesOff(p)
     local song    = p.song
     local kind    = song.kind
     local pairOff = song.pairOff   
@@ -91,18 +43,17 @@ function Player.allNotesOff(p, emit)
     local pitch   = song.pitch
     local channel = song.channel
     local pc      = p.pulseCount
-    local count   = 0
+    local offs    = {}
 
     for i = 1, p.cursor - 1 do
         local k = kind[i]
         if k == 1 then
-            
+
             local off
             if pairOff then
                 off = pairOff[i]
             else
-                
-                
+
                 for j = i + 1, song.eventCount do
                     if kind[j] == 0 and pitch[j] == pitch[i]
                        and channel[j] == channel[i] then
@@ -112,19 +63,12 @@ function Player.allNotesOff(p, emit)
                 end
             end
             if not off or off == 0 or atPulse[off] > pc then
-                emit("NOTE_OFF", pitch[i], 0, channel[i])
-                count = count + 1
+                offs[#offs + 1] = { pitch = pitch[i], channel = channel[i] }
             end
         end
     end
-    return count
+    return offs
 end
-
-
-
-
-
-
 
 function Player.externalPulse(p, emit)
     if not p.running then return end
@@ -143,7 +87,7 @@ function Player.externalPulse(p, emit)
         elseif k == 0 then
             emit("NOTE_OFF", song.pitch[i], 0,                 song.channel[i])
         end
-        
+
         p.cursor = i + 1
     end
 
@@ -159,12 +103,6 @@ function Player.externalPulse(p, emit)
         end
     end
 end
-
-
-
-
-
-
 
 function Player.tick(p, emit)
     if not p.running then return end

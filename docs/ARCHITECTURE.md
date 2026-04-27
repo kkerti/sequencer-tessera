@@ -310,11 +310,11 @@ On device the player calls `midi_send(channel, status, note, velocity)` directly
 - **Bundle clean:** `grid/` builds with no over-limit warnings (largest chunk ≈680 chars vs 800 limit).
 - **Two clock modes shipped:** internal firmware timer and external MIDI 0xF8.
 
-### Known gaps / minor inconsistencies
+### Known gaps
 
-- Comments in `grid_module.lua` and `main_lite.lua` show `Player.allNotesOff` returning a list of events to iterate. The actual API takes an `emit` callback and returns a count. The comments need a small fix; the on-device behaviour is correct because the working examples use the callback form.
 - `Engine.reset` and a hardware "panic" button are scaffolded in `grid_module.lua` as comments; not yet wired to physical Grid buttons.
 - No multi-song selector yet — current setup hard-codes `dark_groove`. Folder-per-library is ready for it.
+- No identifier-shortening minifier pass on `gridsplit` output yet — useful headroom available when songs grow.
 
 ### Likely next areas
 

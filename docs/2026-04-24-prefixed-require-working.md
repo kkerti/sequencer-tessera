@@ -1,5 +1,8 @@
 # 2026-04-24 — Grid prefix-aware require, end-to-end working
 
+> **SUPERSEDED (2026-04-27).** `tools/gridsplit.lua` and the `--require-prefix` flag have been removed. Compiled songs ship as one file; literal-path requires (e.g. `require("/player/player")`) are still hand-written into the INIT block (Grid's `require()` still doesn't do `?` substitution). See `docs/ARCHITECTURE.md`.
+
+
 ## Status: WORKING ON DEVICE ✅
 
 The lite-player + compiled-song stack is playing on the Grid module. MIDI

@@ -1,14 +1,11 @@
 -- tools/charcheck.lua
--- Validates that a Lua file fits within the Grid controller's 880-character
--- limit (minified). Reports raw size, minified size, and pass/fail status.
+-- Reports raw and minified character counts for Lua files. Useful for
+-- estimating on-device flash and memory footprint.
 --
 -- Usage:
 --   lua tools/charcheck.lua <file.lua>                  -- check one file
 --   lua tools/charcheck.lua <file1.lua> <file2.lua> ... -- check multiple
---   lua tools/charcheck.lua sequencer/*.lua              -- glob works too
---   lua tools/charcheck.lua --limit 500 <file.lua>      -- custom limit
-
-local GRID_CHAR_LIMIT = 880
+--   lua tools/charcheck.lua sequencer/*.lua             -- glob works too
 
 -- -----------------------------------------------------------------------
 -- Minimal Lua minifier (comment + whitespace removal, no AST rewriting)
@@ -133,39 +130,27 @@ if #args == 0 then
     args = arg
 end
 
-local limit = GRID_CHAR_LIMIT
 local files = {}
-
-local i = 1
-while i <= #args do
-    if args[i] == "--limit" then
-        i = i + 1
-        limit = tonumber(args[i])
-        assert(limit and limit > 0, "charcheck: --limit must be a positive number")
-    elseif args[i]:sub(1, 1) ~= "-" then
-        files[#files + 1] = args[i]
-    end
-    i = i + 1
+for _, a in ipairs(args) do
+    if a:sub(1, 1) ~= "-" then files[#files + 1] = a end
 end
 
 if #files == 0 then
-    print("Usage: lua tools/charcheck.lua [--limit N] <file.lua> [file2.lua ...]")
-    print("Default limit: " .. GRID_CHAR_LIMIT .. " characters (Grid controller)")
+    print("Usage: lua tools/charcheck.lua <file.lua> [file2.lua ...]")
+    print("Reports raw and minified character counts (no thresholds).")
     os.exit(1)
 end
 
-local allPass = true
 local totalRaw = 0
 local totalMinified = 0
 
-print(string.format("%-40s %8s %8s %8s  %s", "FILE", "RAW", "MINIFIED", "LIMIT", "STATUS"))
-print(string.rep("-", 80))
+print(string.format("%-50s %10s %10s", "FILE", "RAW", "MINIFIED"))
+print(string.rep("-", 72))
 
 for _, filePath in ipairs(files) do
     local file = io.open(filePath, "r")
     if not file then
-        print(string.format("%-40s  -- FILE NOT FOUND --", filePath))
-        allPass = false
+        print(string.format("%-50s  -- FILE NOT FOUND --", filePath))
     else
         local source = file:read("*a")
         file:close()
@@ -177,30 +162,14 @@ for _, filePath in ipairs(files) do
         totalRaw = totalRaw + rawLen
         totalMinified = totalMinified + minLen
 
-        local status = "PASS"
-        if minLen > limit then
-            status = "FAIL (+" .. (minLen - limit) .. ")"
-            allPass = false
-        end
-
-        -- Shorten long paths for display
         local displayPath = filePath
-        if #displayPath > 40 then
-            displayPath = "..." .. displayPath:sub(-37)
+        if #displayPath > 50 then
+            displayPath = "..." .. displayPath:sub(-47)
         end
 
-        print(string.format("%-40s %8d %8d %8d  %s", displayPath, rawLen, minLen, limit, status))
+        print(string.format("%-50s %10d %10d", displayPath, rawLen, minLen))
     end
 end
 
-print(string.rep("-", 80))
-print(string.format("%-40s %8d %8d", "TOTAL", totalRaw, totalMinified))
-
-if allPass then
-    print("\nAll files PASS the " .. limit .. "-character limit.")
-else
-    local chunks = math.ceil(totalMinified / limit)
-    print("\nSome files FAIL. Total minified would need at least " .. chunks .. " chunks of " .. limit .. " chars.")
-end
-
-os.exit(allPass and 0 or 1)
+print(string.rep("-", 72))
+print(string.format("%-50s %10d %10d", "TOTAL", totalRaw, totalMinified))

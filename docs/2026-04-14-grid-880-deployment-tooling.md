@@ -1,5 +1,8 @@
 # 2026-04-14 Grid 880-char Deployment Tooling
 
+> **SUPERSEDED (2026-04-27).** The 880-char per-file limit no longer applies — the Grid filesystem now accepts arbitrarily large Lua files. `tools/gridsplit.lua` has been removed; `tools/charcheck.lua` is now a plain raw/minified size reporter (no thresholds). Compiled songs ship as a single self-contained file. See `docs/ARCHITECTURE.md` for the current pipeline.
+
+
 ## What was done
 
 Built tooling to validate and split the sequencer engine files for deployment to Grid controllers, which have an 880-character-per-script-file limit.

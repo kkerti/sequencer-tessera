@@ -1,5 +1,8 @@
 # 2026-04-14 Memory Profiling & Grid Constraints
 
+> **PARTIALLY SUPERSEDED (2026-04-27).** The memory-budget analysis in this note is still relevant. The 880-char per-file deployment-tooling references are obsolete — that limit no longer applies and `tools/gridsplit.lua` has been removed. See `docs/ARCHITECTURE.md` for the current pipeline.
+
+
 ## Context
 
 Grid runs on an ESP32 with limited RAM. The sequencer engine must fit comfortably within a **100 KB runtime memory budget** (engine data only, excluding the Lua VM and module code overhead). Today we built tooling to measure and validate this.

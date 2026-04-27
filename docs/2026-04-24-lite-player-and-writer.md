@@ -1,5 +1,8 @@
 # 2026-04-24 — lite player + song-writer migration
 
+> **PARTIALLY SUPERSEDED (2026-04-27).** The lite player + song-writer architecture remains current. The 800-char gridsplit reference in this note is obsolete: files of any size now upload, no chunking required.
+
+
 ## What changed
 
 - Deleted the rich `player/player.lua` (≈300 lines of swing/scale/active-notes/probability).

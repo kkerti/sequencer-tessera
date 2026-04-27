@@ -11,24 +11,24 @@ A **rich authoring engine** runs on macOS, **compiles songs to flat event arrays
 ```
 ┌──────────────── macOS (authoring) ────────────────┐    ┌──────── Grid module (playback) ────────┐
 │                                                   │    │                                        │
-│  songs/<name>.lua          (terse descriptor)     │    │   /player/seq_player.lua  + chunks     │
-│        │                                          │    │   /<song>/<song>.lua      + sidecars   │
+│  songs/<name>.lua          (terse descriptor)     │    │   /player/player.lua                   │
+│        │                                          │    │   /<song>/<song>.lua                   │
 │        ▼                                          │    │        │                               │
 │  sequencer/  (full ER-101 + Metropolis engine)    │    │        ▼                               │
 │        │   step / pattern / track / engine        │    │   tape-deck Player                     │
 │        │   mathops / scene / probability / swing  │    │   (no engine, no scale, no swing)      │
 │        ▼                                          │    │        │                               │
 │  tools/song_compile.lua                           │    │        ▼                               │
-│        │   walk engine for `bars * beatsPerBar`   │    │   midi_send()  →  MIDI out            │
+│        │   walk engine for `bars * beatsPerBar`   │    │   midi_send()  →  MIDI out             │
 │        │   → schema v2 event arrays               │    │                                        │
 │        ▼                                          │    │   Clock source = either firmware       │
-│  compiled/<name>.lua  +  sidecars                 │    │     timer  OR  Ableton MIDI 0xF8       │
+│  compiled/<name>.lua  (single self-contained)     │    │     timer  OR  Ableton MIDI 0xF8       │
 │        │                                          │    │                                        │
 │        ▼                                          │    │                                        │
-│  tools/gridsplit.lua  (chunk to ≤800 chars)       │────┼──→ upload grid/player/* + grid/<song>/* │
-│        │                                          │    │                                        │
-│  grid/  (final upload bundle)                     │    └────────────────────────────────────────┘
-└───────────────────────────────────────────────────┘
+│  copy into grid/<song>/<song>.lua                 │────┼──→ upload grid/player/* + grid/<song>/*│
+│                                                   │    │                                        │
+│  grid/  (final upload bundle, one file per lib)   │    │                                        │
+└───────────────────────────────────────────────────┘    └────────────────────────────────────────┘
 ```
 
 The **boundary** is `tools/song_compile.lua`. Everything left of it is rich and runs only at authoring time. Everything right of it is dumb and small.
@@ -37,13 +37,15 @@ The **boundary** is `tools/song_compile.lua`. Everything left of it is rich and 
 
 ## Why this split
 
-The Grid module is an ESP32 with file-size limits (≤800 non-whitespace chars per file) and tight memory. A full multi-track sequencer engine running per-pulse — with scale quantization, swing, ratchet expansion, direction logic, probability rolls — does not fit comfortably and is not necessary.
+The Grid module is an ESP32 with tight memory. A full multi-track sequencer engine running per-pulse — with scale quantization, swing, ratchet expansion, direction logic, probability rolls — does not fit comfortably and is not necessary.
 
 **Insight:** for a fixed-length song, every NOTE_ON / NOTE_OFF time can be precomputed once, in order, then replayed. The only per-loop randomness we care about is per-step probability, which is cheap to re-roll in place against a sidecar `srcStepProb[]` array.
 
 Result:
 - Authoring: complex but constraint-free (macOS, Lua 5.5, all rocks available).
 - Playback: ~180 lines of Lua, walks five parallel arrays, no allocations per pulse.
+
+> **Note on file sizes.** The Grid filesystem used to enforce an 880-char per-file limit, which required a separate splitter tool and per-array sidecar files. That limit no longer applies — files of any size upload and load on device. The compiled song is now a single self-contained file. Memory footprint still matters, so we keep arrays compact (`intList(arr)` produces no whitespace), but file count and per-file size are no longer a concern.
 
 ---
 
@@ -102,13 +104,13 @@ Key properties:
 - **Interleaved & sorted.** A single cursor walks the arrays linearly per pulse — no separate ON/OFF queues, no priority heap.
 - **Scale and swing are baked in.** `pitch[]` is already the post-scale MIDI note; `atPulse[]` already includes swing delay. The player has zero knowledge of either.
 - **Static songs cost nothing per loop.** Without `hasProbability`, the writer arrays don't ship and `onLoopBoundary` is `nil`.
-- **Sidecars are separate files.** Each large array (`atPulse`, `kind`, `pitch`, `velocity`, `channel`) emits to its own `<name>_<arr>_<n>.lua` chunk so no single file exceeds Grid's 800-char limit.
+- **Single self-contained file.** All five player arrays (and the optional three writer arrays) inline into one Lua module. `dark_groove` compiles to ~2.3 KB.
 
 ---
 
 ## Tape-deck player (`player/player.lua`)
 
-~180 lines, single file (chunked to multiple files at upload time by `gridsplit`). Public API:
+~180 lines, single file. Public API:
 
 ```
 Player.new(song, clockFn?, bpm?)   -- clockFn nil → external-clock mode
@@ -163,9 +165,9 @@ The element's `rtmrx_cb` translates incoming MIDI bytes:
 
 | Tool | Role |
 |---|---|
-| `tools/song_compile.lua` | Walk engine, flatten to schema v2, emit `compiled/<name>.lua` + sidecars. `--require-prefix /<song>` bakes literal paths into sidecar requires for Grid. |
-| `tools/gridsplit.lua`    | Chunk a Lua module into ≤800-char files. Promotes preamble locals to module fields, splits multi-line data across data chunks, rewrites internal requires. `--require-prefix /<lib>` bakes literal paths. |
-| `tools/charcheck.lua`    | Audit non-whitespace char counts per file. |
+| `tools/song_compile.lua` | Walk engine, flatten to schema v2, emit a single self-contained `compiled/<name>.lua`. |
+| `tools/strip.lua`        | Remove comments and statement-form `assert(...)` guards from any Lua module. Preserves value-returning asserts (`local f = assert(io.open(p))`) and overall formatting. Halves the player's footprint. |
+| `tools/charcheck.lua`    | Reports raw and minified character counts (no thresholds; used for memory-footprint estimation). |
 | `tools/memprofile.lua`   | Quantify on-device memory footprint (run on dev to estimate). |
 
 ### Grid require quirk
@@ -173,33 +175,36 @@ The element's `rtmrx_cb` translates incoming MIDI bytes:
 Grid firmware's `require()` does **not** do `package.path` `?` substitution. The module name is treated as a literal file path. Therefore:
 
 ```lua
-require("/player/seq_player")        -- works
+require("/player/player")            -- works
 require("/dark_groove/dark_groove")  -- works
-require("seq_player")                -- fails
+require("player")                    -- fails
 ```
 
-Both build tools accept `--require-prefix` and bake the prefix into every internal require — the root file's chunk loads, each chunk's self-require, each cross-module dependency, and (for songs) every sidecar require.
+Hard-code the literal paths in your INIT block (see `grid_module.lua`).
 
 ### Folder-per-library on device
 
 Grid uploads/removes whole folders at a time, so each library lives under its own:
 
 ```
-/player/         ← grid/player/*       (seq_player + N chunks)
-/dark_groove/    ← grid/dark_groove/*  (song + sidecars)
+/player/         ← grid/player/player.lua
+/dark_groove/    ← grid/dark_groove/dark_groove.lua
 ```
+
+One file per folder, but the folder boundary makes upload/remove operations atomic per library.
 
 ### Build commands
 
-For Grid upload:
-
 ```sh
 rm -rf grid
-lua tools/gridsplit.lua    --require-prefix /player      --outdir grid/player        player/player.lua
-lua tools/song_compile.lua --require-prefix /dark_groove --outdir grid/dark_groove   songs/dark_groove.lua
+mkdir -p grid/player grid/dark_groove
+lua tools/strip.lua player/player.lua --out grid/player/player.lua
+lua tools/song_compile.lua songs/dark_groove.lua --outdir grid/dark_groove
 ```
 
-For macOS dev (no prefix; sidecars resolve via local `package.path`):
+`tools/strip.lua` removes comments and statement-form `assert(...)` guards. Asserts are an authoring-time test-coverage tool; they are dead weight on device, since every code path that reaches the player has already passed the same checks during macOS dev. Stripping cuts the player from ~6 KB to ~3 KB. Apply it to any sequencer module before upload — the engine itself benefits more (52% reduction across `sequencer/`).
+
+For macOS dev (uses `compiled/<name>.lua` directly, asserts retained):
 
 ```sh
 lua tools/song_compile.lua songs/dark_groove.lua
@@ -251,27 +256,17 @@ player/                        -- TAPE-DECK PLAYER (runs on Grid)
 songs/                         -- terse song descriptors (authoring inputs)
   dark_groove.lua
 
-compiled/                      -- output of tools/song_compile.lua (no prefix)
+compiled/                      -- output of tools/song_compile.lua (single self-contained file)
   dark_groove.lua
-  dark_groove_atpulse_1.lua
-  dark_groove_atpulse_2.lua
-  dark_groove_kind_1.lua
-  dark_groove_kind_2.lua
-  dark_groove_pitch_1.lua
-  dark_groove_pitch_2.lua
-  dark_groove_velocity_1.lua
-  dark_groove_velocity_2.lua
-  dark_groove_channel_1.lua
-  dark_groove_channel_2.lua
 
-grid/                          -- final upload bundle (output of gridsplit + song_compile with --require-prefix)
-  player/*.lua                 -- → /player/  on device
-  <song>/*.lua                 -- → /<song>/  on device
+grid/                          -- final upload bundle (one file per library, in its own folder)
+  player/player.lua            -- → /player/player.lua  on device
+  dark_groove/dark_groove.lua  -- → /dark_groove/dark_groove.lua on device
 
 tools/
-  song_compile.lua             -- engine → compiled song + sidecars
-  gridsplit.lua                -- module → ≤800-char chunks, prefix-aware requires
-  charcheck.lua                -- per-file char count audit
+  song_compile.lua             -- engine → compiled song + inlined arrays
+  strip.lua                    -- comment + statement-assert remover for shipping
+  charcheck.lua                -- raw + minified char count reporter
   memprofile.lua               -- memory footprint estimator
 
 tests/                         -- behavioural tests
@@ -307,14 +302,13 @@ On device the player calls `midi_send(channel, status, note, velocity)` directly
 
 - **Working on hardware.** Ableton-driven MIDI clock playback verified on the Grid module.
 - **All tests pass:** 13 behavioural test files + 11 sequence scenarios.
-- **Bundle clean:** `grid/` builds with no over-limit warnings (largest chunk ≈680 chars vs 800 limit).
+- **Bundle is two files.** `grid/player/player.lua` (~6 KB raw / ~2 KB minified) plus `grid/dark_groove/dark_groove.lua` (~2.3 KB).
 - **Two clock modes shipped:** internal firmware timer and external MIDI 0xF8.
 
 ### Known gaps
 
 - `Engine.reset` and a hardware "panic" button are scaffolded in `grid_module.lua` as comments; not yet wired to physical Grid buttons.
 - No multi-song selector yet — current setup hard-codes `dark_groove`. Folder-per-library is ready for it.
-- No identifier-shortening minifier pass on `gridsplit` output yet — useful headroom available when songs grow.
 
 ### Likely next areas
 

@@ -10,7 +10,8 @@
 -- The source song must declare `bars` (length in bars). `beatsPerBar` is
 -- optional and defaults to 4.
 --
--- Output schema (compiled/<name>.lua):
+-- Output: a single self-contained Lua file with all event arrays inline.
+-- Schema (compiled/<name>.lua):
 --   {
 --     formatVersion  = 2,
 --     bpm            = <integer>,
@@ -177,13 +178,12 @@ local function compileTrackEvents(player, songBars, beatsPerBar)
 end
 
 -- ---------------------------------------------------------------------------
--- Code generator — emits a Lua source file with the compiled schema.
--- For Grid-friendly file sizes, large parallel arrays are split into
--- separate sibling files (`<name>_atpulse.lua`, `<name>_pitch.lua`, ...)
--- when the inline literal would exceed `splitThreshold` characters.
+-- Code generator — emits a single self-contained Lua file with the compiled
+-- schema. All arrays inlined; no sidecars, no chunking. Grid's filesystem
+-- accepts arbitrarily large files now.
 -- ---------------------------------------------------------------------------
 
--- Joins integers into a comma list, no spaces (compact for ESP32).
+-- Joins integers into a comma list, no spaces (compact for ESP32 RAM).
 local function intList(arr, count)
     local parts = {}
     for i = 1, count do
@@ -192,135 +192,37 @@ local function intList(arr, count)
     return table.concat(parts, ",")
 end
 
--- Splits an integer array into N chunks of at most `maxItems` items each.
--- Returns a list of joined comma-strings.
-local function chunkPieces(arr, count, maxItems)
-    local pieces = {}
-    local i = 1
-    while i <= count do
-        local last = math.min(i + maxItems - 1, count)
-        local parts = {}
-        for j = i, last do parts[#parts + 1] = tostring(arr[j]) end
-        pieces[#pieces + 1] = table.concat(parts, ",")
-        i = last + 1
-    end
-    return pieces
-end
-
 -- Player-facing arrays (always emitted).
 local PLAYER_FIELDS = { "atPulse", "kind", "pitch", "velocity", "channel" }
 -- Writer-only arrays (emitted only when song has probability/jitter).
 local WRITER_FIELDS = { "pairOff", "srcStepProb", "srcVelocity" }
 
--- Grid per-file char limit (non-whitespace). Main song file must fit in this.
-local GRID_CHAR_LIMIT = 800
-
--- Counts non-whitespace chars (Grid's actual budget).
-local function gridCharCount(s)
-    return (#(s:gsub("[ \t\n\r]", "")))
-end
-
--- Builds the require-string a compiled song uses to load a sidecar.
--- With prefix "/dark_groove" and name "dark_groove_atpulse_1"
---   -> "/dark_groove/dark_groove_atpulse_1".
-local function gridRequireName(prefix, name)
-    if prefix and prefix ~= "" then
-        return prefix .. "/" .. name
-    end
-    return name
-end
-
--- Returns: mainSource, sidecarFiles (map of name → source).
--- Strategy: emit a tight preamble + all arrays inline, then if the file
--- exceeds the Grid char limit, externalise arrays to sidecars in descending
--- size order until it fits.
--- If `noSplit` is true, all arrays stay inline regardless of file size
--- (use this when the device tolerates a single large file).
-local function emitCompiledSources(name, song, ppb, durationPulses, events, requirePrefix, noSplit)
-    -- Decide which array fields to actually emit.
+local function emitCompiledSource(song, ppb, durationPulses, events)
     local fields = {}
     for _, f in ipairs(PLAYER_FIELDS) do fields[#fields + 1] = f end
     if events.hasProbability then
         for _, f in ipairs(WRITER_FIELDS) do fields[#fields + 1] = f end
     end
 
-    -- Materialise each array as its inline literal text once.
-    local literals = {}
-    local sizes    = {}
-    for _, field in ipairs(fields) do
-        literals[field] = intList(events[field], events.count)
-        sizes[field]    = #literals[field]
-    end
+    local lines = {}
+    local function w(s) lines[#lines + 1] = s end
 
-    -- Decide which arrays go to sidecars.
-    -- Start with all inline; if too big, externalise the largest first.
-    local externalised = {}   -- field -> true
-    local function buildMain()
-        local lines = {}
-        local function w(s) lines[#lines + 1] = s end
-        local needR = false
-        for _, field in ipairs(fields) do
-            if externalised[field] then needR = true; break end
-        end
-        w("local s={}")
-        if needR then w("local R=require") end
-        w(string.format("s.bpm=%d", song.bpm))
-        w(string.format("s.pulsesPerBeat=%d", ppb))
-        w(string.format("s.durationPulses=%d", durationPulses))
+    w("local s={}")
+    w(string.format("s.bpm=%d", song.bpm))
+    w(string.format("s.pulsesPerBeat=%d", ppb))
+    w(string.format("s.durationPulses=%d", durationPulses))
+    if song.loop == false then
+        w("s.loop=false")
+    else
         w("s.loop=true")
-        if events.hasProbability then w("s.hasProbability=true") end
-        w(string.format("s.eventCount=%d", events.count))
-        for _, field in ipairs(fields) do
-            if externalised[field] then
-                -- Sidecar: split into <=150-item pieces.
-                local pieces = chunkPieces(events[field], events.count, 150)
-                for pi, _ in ipairs(pieces) do
-                    local sidecarName = string.format("%s_%s_%d", name, field:lower(), pi)
-                    local req = gridRequireName(requirePrefix, sidecarName)
-                    if pi == 1 then
-                        w(string.format('s.%s=R("%s")', field, req))
-                    else
-                        w(string.format('do local x=R("%s")table.move(x,1,#x,#s.%s+1,s.%s)end',
-                            req, field, field))
-                    end
-                end
-            else
-                w(string.format("s.%s={%s}", field, literals[field]))
-            end
-        end
-        w("return s")
-        return table.concat(lines, "\n") .. "\n"
     end
-
-    local mainSource = buildMain()
-    if not noSplit then
-        while gridCharCount(mainSource) > GRID_CHAR_LIMIT do
-            -- Pick largest still-inline field to externalise.
-            local pickField, pickSize = nil, -1
-            for _, field in ipairs(fields) do
-                if not externalised[field] and sizes[field] > pickSize then
-                    pickField, pickSize = field, sizes[field]
-                end
-            end
-            if not pickField then break end   -- nothing left to externalise
-            externalised[pickField] = true
-            mainSource = buildMain()
-        end
-    end
-
-    -- Build sidecars only for fields actually externalised.
-    local sidecars = {}
+    if events.hasProbability then w("s.hasProbability=true") end
+    w(string.format("s.eventCount=%d", events.count))
     for _, field in ipairs(fields) do
-        if externalised[field] then
-            local pieces = chunkPieces(events[field], events.count, 150)
-            for pi, piece in ipairs(pieces) do
-                local sidecarName = string.format("%s_%s_%d", name, field:lower(), pi)
-                sidecars[sidecarName .. ".lua"] = string.format("return{%s}\n", piece)
-            end
-        end
+        w(string.format("s.%s={%s}", field, intList(events[field], events.count)))
     end
-
-    return mainSource, sidecars
+    w("return s")
+    return table.concat(lines, "\n") .. "\n"
 end
 
 -- ---------------------------------------------------------------------------
@@ -353,7 +255,7 @@ function SongCompile.compile(song)
         bpm            = song.bpm,
         pulsesPerBeat  = ppb,
         durationPulses = events.durationPulses,
-        loop           = true,
+        loop           = song.loop ~= false,
         trackCount     = #song.tracks,
         eventCount     = events.count,
         atPulse        = events.atPulse,
@@ -368,19 +270,14 @@ function SongCompile.compile(song)
     }
 end
 
--- Compiles a song file and writes the result (and any sidecar array files)
--- to outdir/<name>.lua and outdir/<name>_<field>_N.lua.
-function SongCompile.compileFile(sourcePath, outdir, requirePrefix, noSplit)
+-- Compiles a song file and writes the result to outdir/<name>.lua.
+function SongCompile.compileFile(sourcePath, outdir)
     outdir = outdir or "compiled"
-    if requirePrefix then
-        requirePrefix = requirePrefix:gsub("/+$", "")
-        if requirePrefix == "" then requirePrefix = nil end
-    end
     local song = dofile(sourcePath)
 
     local name = sourcePath:match("([^/]+)%.lua$") or "song"
     local compiled = SongCompile.compile(song)
-    local source, sidecars = emitCompiledSources(name, song, compiled.pulsesPerBeat,
+    local source = emitCompiledSource(song, compiled.pulsesPerBeat,
         compiled.durationPulses, {
             count          = compiled.eventCount,
             atPulse        = compiled.atPulse,
@@ -392,7 +289,7 @@ function SongCompile.compileFile(sourcePath, outdir, requirePrefix, noSplit)
             srcStepProb    = compiled.srcStepProb,
             srcVelocity    = compiled.srcVelocity,
             hasProbability = compiled.hasProbability,
-        }, requirePrefix, noSplit)
+        })
 
     os.execute("mkdir -p " .. outdir)
     local outPath = outdir .. "/" .. name .. ".lua"
@@ -400,16 +297,7 @@ function SongCompile.compileFile(sourcePath, outdir, requirePrefix, noSplit)
     f:write(source)
     f:close()
 
-    local sidecarCount = 0
-    for fname, content in pairs(sidecars) do
-        local p = outdir .. "/" .. fname
-        local sf = assert(io.open(p, "w"), "songCompile: cannot write " .. p)
-        sf:write(content)
-        sf:close()
-        sidecarCount = sidecarCount + 1
-    end
-
-    return outPath, compiled, sidecarCount
+    return outPath, compiled, #source
 end
 
 -- ---------------------------------------------------------------------------
@@ -419,16 +307,10 @@ end
 if arg and arg[0] and arg[0]:match("song_compile%.lua$") then
     local sourcePath = nil
     local outdir     = "compiled"
-    local requirePrefix = nil
-    local noSplit = false
     local i = 1
     while i <= #arg do
         if arg[i] == "--outdir" then
             i = i + 1; outdir = arg[i]
-        elseif arg[i] == "--require-prefix" then
-            i = i + 1; requirePrefix = arg[i]
-        elseif arg[i] == "--no-split" then
-            noSplit = true
         else
             sourcePath = arg[i]
         end
@@ -436,50 +318,18 @@ if arg and arg[0] and arg[0]:match("song_compile%.lua$") then
     end
 
     if not sourcePath then
-        print("Usage: lua tools/song_compile.lua <song.lua> [--outdir DIR] [--require-prefix /tt] [--no-split]")
+        print("Usage: lua tools/song_compile.lua <song.lua> [--outdir DIR]")
         os.exit(1)
     end
 
-    local outPath, compiled, sidecars = SongCompile.compileFile(sourcePath, outdir, requirePrefix, noSplit)
-    print(string.format("Compiled %s → %s", sourcePath, outPath))
+    local outPath, compiled, byteSize = SongCompile.compileFile(sourcePath, outdir)
+    print(string.format("Compiled %s -> %s", sourcePath, outPath))
     print(string.format("  events:    %d", compiled.eventCount))
     print(string.format("  duration:  %d pulses (%d bars at %d BPM)",
         compiled.durationPulses,
         compiled.durationPulses / (compiled.pulsesPerBeat * 4),
         compiled.bpm))
-    print(string.format("  sidecars:  %d", sidecars))
-
-    -- Verify all written files fit Grid's 800-char (non-whitespace) budget,
-    -- but only when splitting is enabled — --no-split is an explicit opt-out.
-    if not noSplit then
-        local handle = io.popen("ls " .. outdir .. "/*.lua 2>/dev/null")
-        if handle then
-            local maxSize, overCount = 0, 0
-            for path in handle:lines() do
-                local f = io.open(path, "r")
-                if f then
-                    local content = f:read("*a"); f:close()
-                    local nws = (#(content:gsub("[ \t\n\r]", "")))
-                    if nws > maxSize then maxSize = nws end
-                    if nws > 800 then
-                        overCount = overCount + 1
-                        print(string.format("  WARNING: %s is %d non-ws chars (>800)", path, nws))
-                    end
-                end
-            end
-            handle:close()
-            print(string.format("  largest file: %d non-ws chars  (limit 800)", maxSize))
-            if overCount > 0 then os.exit(1) end
-        end
-    else
-        -- Still report the main file size for visibility.
-        local f = io.open(outPath, "r")
-        if f then
-            local content = f:read("*a"); f:close()
-            local nws = (#(content:gsub("[ \t\n\r]", "")))
-            print(string.format("  main file:    %d non-ws chars  (--no-split, limit not enforced)", nws))
-        end
-    end
+    print(string.format("  file size: %d bytes", byteSize))
 end
 
 return SongCompile

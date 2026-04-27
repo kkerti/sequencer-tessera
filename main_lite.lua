@@ -9,8 +9,6 @@
 -- In Ableton: Preferences → MIDI → enable "Sequencer" as MIDI input.
 
 local uv     = require("luv")
--- Sidecar arrays live next to the compiled song.
-package.path = "compiled/?.lua;" .. package.path
 local Player = require("player/player")
 local song   = require("compiled/dark_groove")
 

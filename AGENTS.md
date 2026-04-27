@@ -45,6 +45,7 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - Single-threaded; **one timer** drives the entire sequencer tick — do not create multiple timers
 - `io` is available on device for snapshot file reads/writes
 - VSN1 screen is 320×240px LCD; simultaneous high-frequency updates cause buffering lag — batch screen redraws
+- The Grid filesystem accepts arbitrarily large Lua files (the old 880-char per-file limit no longer applies). Memory footprint still matters — keep modules small, prefer compact compiled-data layouts.
 
 ## Dev environment (macOS)
 
@@ -56,7 +57,7 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - Run the live-edit stack (descriptor → in-memory compile → lite player): `lua main.lua | python3 bridge.py`
 - Run the ship-mirror stack (precompiled song + lite player): `lua main_lite.lua | python3 bridge.py`
 - Compile a song to `compiled/`: `lua tools/song_compile.lua songs/<name>.lua`
-- Build the Grid upload bundle: `rm -rf grid && lua tools/gridsplit.lua --require-prefix /player --outdir grid/player player/player.lua && lua tools/song_compile.lua --require-prefix /<song> --outdir grid/<song> songs/<song>.lua`
+- Build the Grid upload bundle: `rm -rf grid && mkdir -p grid/player grid/<song> && lua tools/strip.lua player/player.lua --out grid/player/player.lua && lua tools/song_compile.lua songs/<song>.lua --outdir grid/<song>`
 - Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
 - `python-rtmidi` installed system-wide via `pip3 install python-rtmidi --break-system-packages`
@@ -159,17 +160,17 @@ player/                        -- TAPE-DECK PLAYER (runs on Grid; ~180 lines)
 songs/                         -- terse song descriptors (authoring inputs, pure-data tables)
   dark_groove.lua
 
-compiled/                      -- output of tools/song_compile.lua (no prefix, for macOS dev)
-  <name>.lua + <name>_<arr>_<n>.lua sidecars
+compiled/                      -- output of tools/song_compile.lua (single self-contained file)
+  <name>.lua
 
-grid/                          -- final upload bundle (output with --require-prefix)
-  player/*.lua                 -- → /player/  on device
-  <song>/*.lua                 -- → /<song>/  on device
+grid/                          -- final upload bundle (one file per library, in its own folder)
+  player/player.lua            -- → /player/player.lua  on device
+  <song>/<song>.lua            -- → /<song>/<song>.lua  on device
 
 tools/
-  song_compile.lua             -- engine → compiled song (schema v2) + sidecars
-  gridsplit.lua                -- module → ≤800-char chunks, prefix-aware require rewrites
-  charcheck.lua                -- per-file char count audit
+  song_compile.lua             -- engine → compiled song (schema v2), single inlined file
+  strip.lua                    -- comment + statement-assert remover for shipping
+  charcheck.lua                -- raw + minified char count reporter
   memprofile.lua               -- on-device memory footprint estimator
 
 tests/
@@ -207,7 +208,7 @@ Recommended split when parallelising work. Note the authoring-engine vs. tape-de
 - **Step agent** — `sequencer/step.lua`, `sequencer/pattern.lua` (ratchet, scale quantizer, pattern ops). Authoring side.
 - **Utils agent** — `utils.lua` (scale tables, math helpers).
 - **Player/writer agent** — `player/player.lua`, `sequencer/song_writer.lua` (tape-deck playback + per-loop probability re-roll). Strict size budget; the player runs on device.
-- **Tooling agent** — `tools/song_compile.lua`, `tools/gridsplit.lua` (compile + chunk pipeline; schema v2 owner).
+- **Tooling agent** — `tools/song_compile.lua` (compile pipeline; schema v2 owner).
 - **Harness agent** — `main.lua`, `main_lite.lua`, `grid_module.lua`, `bridge.py` (timer tuning, MIDI clock sync, INIT/TIMER blocks).
 
 Each agent owns its files and only calls the public functions of other modules.

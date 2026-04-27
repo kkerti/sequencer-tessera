@@ -1,5 +1,8 @@
 # 2026-04-24 — Grid upload-ready
 
+> **SUPERSEDED (2026-04-27).** The 880-char limit and `gridsplit` chunking workflow described here no longer apply. Files of any size now upload to the Grid filesystem; compiled songs are single self-contained files. See `docs/ARCHITECTURE.md`.
+
+
 ## Status
 The full sequencer + player + song-loader stack now compiles to a clean upload bundle in `grid/` with **zero over-limit warnings**. End-to-end load and tick verified against a flat-namespace simulation (`/tmp/gridsim/`) using only the emitted files — the same pattern the Grid firmware will use.
 

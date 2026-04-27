@@ -1,299 +1,178 @@
 -- player/player.lua
--- MIDI playback engine. Consumes a song table produced by the sequencer engine
--- and emits MIDI events via a caller-supplied emit callback.
+-- Tiny on-device player for compiled songs. Pure tape-deck: walks the song's
+-- pre-rendered event arrays and emits MIDI. No probability, no scale, no
+-- swing, no gate math, no active-note bookkeeping.
 --
--- Responsibilities (player only):
---   - Pulse clock: BPM → interval, single tick entry point
---   - Per-track clock div/mult accumulator
---   - Swing hold (pulse skip on off-beats)
---   - Probability gate per step
---   - Scale quantization at output time
---   - NOTE_ON emission with wall-clock timestamp
---   - NOTE_OFF emission driven by wall-clock (off_at), not pulse counter
---   - Active note tracking and allNotesOff for safe shutdown
+-- All live decisions (probability rolls, future jitter, scene moves) belong
+-- in the song writer (sequencer/song_writer.lua), which mutates the song
+-- in place at every loop boundary via `song.onLoopBoundary(song, loopIndex)`.
+-- A static song leaves `onLoopBoundary` nil and pays zero cost per loop.
 --
--- Wall-clock source:
---   The player requires a `clockFn` at construction time — a zero-argument
---   function returning a monotonic millisecond counter (integer or float).
---   On macOS dev (luv): pass `require("luv").now`  (uv.now() in ms)
---   On Grid firmware:   pass the equivalent firmware ms function
---   This keeps the player free of host-specific requires.
+-- Two clock modes:
+--   1. Internal (software) clock — call Player.tick(p, emit) on a timer;
+--      derives elapsed pulses from clockFn() and advances accordingly.
+--   2. External clock (e.g. MIDI 0xF8) — call Player.externalPulse(p, emit)
+--      once per player pulse. clockFn / pulseMs / startMs are unused.
 --
--- The engine (sequencer/engine.lua) owns cursor advancement, direction modes,
--- loop points, scene chains, and all data-shaping operations. The player only
--- reads what the engine exposes via Engine.advanceTrack().
+-- The only mutable runtime knob is BPM (Player.setBpm).
 --
--- Emitted event tables (passed to the emit callback supplied by the host):
---   { type = "NOTE_ON",  pitch = 60, velocity = 100, channel = 1 }
---   { type = "NOTE_OFF", pitch = 60, velocity = 0,   channel = 1 }
-
-local Engine      = require("sequencer/engine")
-local Performance = require("sequencer/performance")
-local Probability = require("sequencer/probability")
-local Step        = require("sequencer/step")
-local Utils       = require("utils")
+-- Emit callback signature:
+--   emit(eventType, pitch, velocity, channel)
+--     eventType: "NOTE_ON" | "NOTE_OFF"
+--
+-- Compiled song schema (see tools/song_compile.lua):
+--   { bpm, pulsesPerBeat, durationPulses, loop, eventCount,
+--     atPulse[], kind[], pitch[], velocity[], channel[],
+--     -- writer-only (present iff hasProbability):
+--     hasProbability, pairOff[], srcStepProb[], srcVelocity[],
+--     onLoopBoundary = function(song, loopIndex) end | nil }
+--
+-- kind[] values:
+--   1 = NOTE_ON  (emit)
+--   0 = NOTE_OFF (emit)
+--   2 = NOTE_ON  muted by writer this loop (skip)
+--   3 = NOTE_OFF muted by writer this loop (skip)
 
 local Player = {}
 
 -- ---------------------------------------------------------------------------
--- Private helpers
+-- Construction
 -- ---------------------------------------------------------------------------
 
--- Converts BPM and pulsesPerBeat to a pulse interval in milliseconds.
-local function playerBpmToMs(bpm, pulsesPerBeat)
-    return (60000 / bpm) / pulsesPerBeat
-end
-
--- Converts a gate value in pulses to milliseconds.
-local function playerGateToMs(gate, pulsesPerBeat, bpm)
-    local pulseMs = (60000 / bpm) / pulsesPerBeat
-    return gate * pulseMs
-end
-
--- String key for the active notes table: "pitch:channel".
-local function playerNoteKey(pitch, channel)
-    return pitch .. ":" .. channel
-end
-
--- Emits NOTE_OFF and removes one expired note at index i (swap-remove).
--- Returns the next index to check (same i after swap, i+1 if no swap needed).
-local function playerExpireNote(player, i, emit)
-    local key = player.activeNoteKeys[i]
-    local pitch, channel = key:match("^(%d+):(%d+)$")
-    emit({ type="NOTE_OFF", pitch=tonumber(pitch), velocity=0, channel=tonumber(channel) })
-    local last = player.activeNoteCount
-    if i ~= last then
-        player.activeNoteKeys[i]  = player.activeNoteKeys[last]
-        player.activeNoteOffAt[i] = player.activeNoteOffAt[last]
-    end
-    player.activeNoteKeys[last]  = nil
-    player.activeNoteOffAt[last] = nil
-    player.activeNoteCount       = last - 1
-    return i
-end
-
--- Scans active notes and emits NOTE_OFF for any whose off_at time has passed.
-local function playerFlushExpiredNotes(player, nowMs, emit)
-    local i = 1
-    while i <= player.activeNoteCount do
-        if nowMs >= player.activeNoteOffAt[i] then
-            i = playerExpireNote(player, i, emit)
-        else
-            i = i + 1
-        end
-    end
-end
-
--- Registers a new sounding note in the active note arrays.
-local function playerTrackNoteOn(player, pitch, channel, offAtMs)
-    local n = player.activeNoteCount + 1
-    player.activeNoteKeys[n]  = playerNoteKey(pitch, channel)
-    player.activeNoteOffAt[n] = offAtMs
-    player.activeNoteCount    = n
-end
-
--- Resolves channel, quantized pitch, and gate-off timestamp for a step.
-local function playerResolveNoteOn(player, trackIndex, step, nowMs)
-    local track   = player.engine.tracks[trackIndex]
-    local channel = track.midiChannel or trackIndex
-    local pitch   = Step.resolvePitch(step, player.scaleTable, player.rootNote)
-    local offAtMs = nowMs + playerGateToMs(Step.getGate(step), player.engine.pulsesPerBeat, player.bpm)
-    return channel, pitch, offAtMs
-end
-
--- Handles a NOTE_ON raw event from the engine for one track slot.
-local function playerHandleNoteOn(player, trackIndex, step, nowMs, emit)
-    if not Probability.shouldPlay(step) then
-        player.probSuppressed[trackIndex] = true
-        return
-    end
-    player.probSuppressed[trackIndex] = false
-    local channel, pitch, offAtMs = playerResolveNoteOn(player, trackIndex, step, nowMs)
-    playerTrackNoteOn(player, pitch, channel, offAtMs)
-    emit({ type="NOTE_ON", pitch=pitch, velocity=Step.getVelocity(step), channel=channel })
-end
-
--- Handles a NOTE_OFF raw event from the engine.
--- Wall-clock drives actual NOTE_OFF; only the probability flag needs clearing.
-local function playerHandleNoteOff(player, trackIndex)
-    if player.probSuppressed[trackIndex] then
-        player.probSuppressed[trackIndex] = false
-    end
-end
-
--- Advances a single track by its clock accumulator, dispatching events.
-local function playerAdvanceTrack(player, trackIndex, nowMs, emit)
-    local engine = player.engine
-    local track  = engine.tracks[trackIndex]
-
-    track.clockAccum = track.clockAccum + track.clockMult
-    local advanceCount = math.floor(track.clockAccum / track.clockDiv)
-    track.clockAccum   = track.clockAccum % track.clockDiv
-
-    for _ = 1, advanceCount do
-        local step, event = Engine.advanceTrack(engine, trackIndex)
-        if event == "NOTE_ON" then
-            playerHandleNoteOn(player, trackIndex, step, nowMs, emit)
-        elseif event == "NOTE_OFF" then
-            playerHandleNoteOff(player, trackIndex)
-        end
-    end
-end
-
--- ---------------------------------------------------------------------------
--- Constructor
--- ---------------------------------------------------------------------------
-
--- Creates a new Player bound to an engine.
--- `engine`  : Engine table (sequencer/engine.lua instance)
--- `bpm`     : tempo in BPM (default: engine.bpm)
--- `clockFn` : function() → millisecond wall-clock counter (monotonic)
---             On macOS/luv: pass `require("luv").now`
---             On Grid:      pass the firmware ms clock function
-function Player.new(engine, bpm, clockFn)
-    assert(type(engine) == "table" and engine.tracks ~= nil,
-        "playerNew: engine must be an engine table")
-
-    bpm = bpm or engine.bpm
-    assert(type(bpm) == "number" and bpm > 0, "playerNew: bpm must be positive")
-    assert(type(clockFn) == "function", "playerNew: clockFn must be a function returning ms")
-
-    local trackCount     = engine.trackCount
-    local probSuppressed = {}
-    for i = 1, trackCount do
-        probSuppressed[i] = false
-    end
-
+function Player.new(song, clockFn, bpm)
+    bpm = bpm or song.bpm
     return {
-        engine           = engine,
-        bpm              = bpm,
-        clockFn          = clockFn,
-        pulseIntervalMs  = playerBpmToMs(bpm, engine.pulsesPerBeat),
-        pulseCount       = 0,
-        swingPercent     = 50,
-        swingCarry       = 0,
-        scaleName        = nil,
-        scaleTable       = nil,
-        rootNote         = 0,
-        running          = false,
-        activeNoteKeys   = {},
-        activeNoteOffAt  = {},
-        activeNoteCount  = 0,
-        probSuppressed   = probSuppressed,
+        song       = song,
+        clockFn    = clockFn,
+        bpm        = bpm,
+        pulseMs    = 60000 / bpm / song.pulsesPerBeat,
+        startMs    = 0,
+        pulseCount = 0,
+        cursor     = 1,
+        loopIndex  = 0,
+        running    = false,
     }
-end
-
--- ---------------------------------------------------------------------------
--- Configuration
--- ---------------------------------------------------------------------------
-
-function Player.setBpm(player, bpm)
-    assert(type(bpm) == "number" and bpm > 0, "playerSetBpm: bpm must be positive")
-    player.bpm             = bpm
-    player.pulseIntervalMs = playerBpmToMs(bpm, player.engine.pulsesPerBeat)
-end
-
-function Player.getBpm(player)
-    return player.bpm
-end
-
-function Player.setSwing(player, percent)
-    assert(type(percent) == "number" and percent >= 50 and percent <= 72,
-        "playerSetSwing: percent out of range 50-72")
-    player.swingPercent = percent
-end
-
-function Player.getSwing(player)
-    return player.swingPercent
-end
-
-function Player.setScale(player, scaleName, rootNote)
-    assert(type(scaleName) == "string", "playerSetScale: scaleName must be a string")
-    assert(Utils.SCALES[scaleName] ~= nil, "playerSetScale: unknown scale")
-    rootNote = rootNote or 0
-    assert(type(rootNote) == "number" and rootNote >= 0 and rootNote <= 11,
-        "playerSetScale: rootNote out of range 0-11")
-    player.scaleName  = scaleName
-    player.scaleTable = Utils.SCALES[scaleName]
-    player.rootNote   = rootNote
-end
-
-function Player.clearScale(player)
-    player.scaleName  = nil
-    player.scaleTable = nil
-    player.rootNote   = 0
 end
 
 -- ---------------------------------------------------------------------------
 -- Transport
 -- ---------------------------------------------------------------------------
 
-function Player.start(player)
-    player.running = true
+function Player.start(p)
+    if p.clockFn then p.startMs = p.clockFn() end
+    p.pulseCount = 0
+    p.cursor     = 1
+    p.loopIndex  = 0
+    p.running    = true
 end
 
-function Player.stop(player)
-    player.running = false
+function Player.stop(p)
+    p.running = false
 end
 
--- Returns NOTE_OFF events for all currently sounding notes and clears arrays.
-function Player.allNotesOff(player)
-    local events = {}
-    for i = 1, player.activeNoteCount do
-        local key = player.activeNoteKeys[i]
-        local pitch, channel = key:match("^(%d+):(%d+)$")
-        events[#events + 1] = {
-            type     = "NOTE_OFF",
-            pitch    = tonumber(pitch),
-            velocity = 0,
-            channel  = tonumber(channel),
-        }
-        player.activeNoteKeys[i]  = nil
-        player.activeNoteOffAt[i] = nil
+-- Sets BPM at runtime, preserving current pulse position so playback doesn't
+-- jump. Only meaningful for internal-clock mode (Player.tick).
+function Player.setBpm(p, bpm)
+    p.bpm     = bpm
+    p.pulseMs = 60000 / bpm / p.song.pulsesPerBeat
+    if p.clockFn then
+        p.startMs = p.clockFn() - p.pulseCount * p.pulseMs
     end
-    player.activeNoteCount = 0
-    return events
+end
+
+-- Emergency drain: scans events [1..cursor] and emits NOTE_OFF for any
+-- NOTE_ON that hasn't been paired yet. O(cursor); call only on stop/panic.
+-- Returns the count of NOTE_OFFs emitted.
+function Player.allNotesOff(p, emit)
+    local song    = p.song
+    local kind    = song.kind
+    local pairOff = song.pairOff   -- may be nil for static songs
+    local atPulse = song.atPulse
+    local pitch   = song.pitch
+    local channel = song.channel
+    local pc      = p.pulseCount
+    local count   = 0
+
+    for i = 1, p.cursor - 1 do
+        local k = kind[i]
+        if k == 1 then
+            -- NOTE_ON was emitted; check whether its NOTE_OFF has played.
+            local off
+            if pairOff then
+                off = pairOff[i]
+            else
+                -- Static song: linear-scan forward for the matching NOTE_OFF.
+                -- Acceptable because allNotesOff is an emergency path.
+                for j = i + 1, song.eventCount do
+                    if kind[j] == 0 and pitch[j] == pitch[i]
+                       and channel[j] == channel[i] then
+                        off = j
+                        break
+                    end
+                end
+            end
+            if not off or off == 0 or atPulse[off] > pc then
+                emit("NOTE_OFF", pitch[i], 0, channel[i])
+                count = count + 1
+            end
+        end
+    end
+    return count
 end
 
 -- ---------------------------------------------------------------------------
--- Tick
+-- External-clock entry point
 -- ---------------------------------------------------------------------------
 
--- Called once per firmware timer callback (one clock pulse).
--- `emit` : function(event) — host-supplied callback, called for each MIDI event.
---
--- Per tick:
---   1. Sample wall-clock via clockFn() once — used for both flush and NOTE_ON timestamps.
---   2. Flush expired active notes (NOTE_OFFs).
---   3. Advance cursors (unless swing-held), emitting NOTE_ONs.
-function Player.tick(player, emit)
-    if not player.running then
-        return
+-- Advances the player by exactly one pulse. Call once per MIDI clock pulse
+-- (after dividing 24 ppq down to song.pulsesPerBeat ppq).
+function Player.externalPulse(p, emit)
+    if not p.running then return end
+
+    p.pulseCount = p.pulseCount + 1
+    local song   = p.song
+    local pc     = p.pulseCount
+    local atPulse = song.atPulse
+    local kind    = song.kind
+
+    while p.cursor <= song.eventCount and atPulse[p.cursor] <= pc do
+        local i = p.cursor
+        local k = kind[i]
+        if k == 1 then
+            emit("NOTE_ON",  song.pitch[i], song.velocity[i], song.channel[i])
+        elseif k == 0 then
+            emit("NOTE_OFF", song.pitch[i], 0,                 song.channel[i])
+        end
+        -- kind 2 / 3 are muted — skip silently.
+        p.cursor = i + 1
     end
 
-    local nowMs = player.clockFn()
-
-    playerFlushExpiredNotes(player, nowMs, emit)
-
-    player.pulseCount = player.pulseCount + 1
-
-    local shouldHold
-    shouldHold, player.swingCarry = Performance.nextSwingHold(
-        player.pulseCount,
-        player.engine.pulsesPerBeat,
-        player.swingPercent,
-        player.swingCarry
-    )
-
-    if shouldHold then
-        return
+    if song.loop and p.cursor > song.eventCount and pc >= song.durationPulses then
+        p.pulseCount = pc - song.durationPulses
+        p.cursor     = 1
+        p.loopIndex  = p.loopIndex + 1
+        if p.clockFn then
+            p.startMs = p.startMs + song.durationPulses * p.pulseMs
+        end
+        if song.onLoopBoundary then
+            song.onLoopBoundary(song, p.loopIndex)
+        end
     end
+end
 
-    for trackIndex = 1, player.engine.trackCount do
-        playerAdvanceTrack(player, trackIndex, nowMs, emit)
+-- ---------------------------------------------------------------------------
+-- Internal-clock entry point
+-- ---------------------------------------------------------------------------
+
+-- Called once per firmware timer callback in software-clock mode.
+-- Derives the target pulse from clockFn() and advances pulseCount up to it.
+function Player.tick(p, emit)
+    if not p.running then return end
+    local target = math.floor((p.clockFn() - p.startMs) / p.pulseMs)
+    while p.pulseCount < target do
+        Player.externalPulse(p, emit)
+        if not p.running then return end
     end
-
-    Engine.onPulse(player.engine, player.pulseCount)
 end
 
 return Player

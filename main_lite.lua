@@ -11,7 +11,7 @@
 local uv     = require("luv")
 -- Sidecar arrays live next to the compiled song.
 package.path = "compiled/?.lua;" .. package.path
-local Player = require("player_lite/player")
+local Player = require("player/player")
 local song   = require("compiled/dark_groove")
 
 -- ── Clock + emit ─────────────────────────────────────────────────────────────
@@ -39,10 +39,7 @@ local timer  = uv.new_timer()
 local sigint = uv.new_signal()
 
 local function flushAllNotes()
-    local offs = Player.allNotesOff(player)
-    for _, e in ipairs(offs) do
-        io.write("NOTE_OFF " .. e.pitch .. " " .. e.channel .. "\n")
-    end
+    Player.allNotesOff(player, emit)
     io.flush()
 end
 

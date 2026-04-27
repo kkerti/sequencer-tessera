@@ -1,37 +1,34 @@
 local Player=require("/player/seq_player")
-function Player.new(song, clockFn, bpm)
-    bpm = bpm or song.bpm
-    local pulseMs = 60000 / bpm / song.pulsesPerBeat
-    return {
-        song            = song,
-        clockFn         = clockFn,
-        bpm             = bpm,
-        pulseMs         = pulseMs,
-        startMs         = 0,
-        pulseCount      = 0,
-        cursor          = 1,
-        running         = false,
-        -- Active notes scheduled for NOTE_OFF, parallel arrays.
-        activePitch     = {},
-        activeChannel   = {},
-        activeOffPulse  = {},
-        activeCount     = 0,
-    }
-end
-function Player.start(p)
-    if p.clockFn then p.startMs = p.clockFn() end
-    p.pulseCount  = 0
-    p.cursor      = 1
-    p.running     = true
-    p.activeCount = 0
-end
-function Player.stop(p)
-    p.running = false
-end
-function Player.setBpm(p, bpm)
-    p.bpm     = bpm
-    p.pulseMs = 60000 / bpm / p.song.pulsesPerBeat
-    if p.clockFn then
-        p.startMs = p.clockFn() - p.pulseCount * p.pulseMs
+function Player.externalPulse(p, emit)
+    if not p.running then return end
+
+    p.pulseCount = p.pulseCount + 1
+    local song   = p.song
+    local pc     = p.pulseCount
+    local atPulse = song.atPulse
+    local kind    = song.kind
+
+    while p.cursor <= song.eventCount and atPulse[p.cursor] <= pc do
+        local i = p.cursor
+        local k = kind[i]
+        if k == 1 then
+            emit("NOTE_ON",  song.pitch[i], song.velocity[i], song.channel[i])
+        elseif k == 0 then
+            emit("NOTE_OFF", song.pitch[i], 0,                 song.channel[i])
+        end
+        -- kind 2 / 3 are muted — skip silently.
+        p.cursor = i + 1
+    end
+
+    if song.loop and p.cursor > song.eventCount and pc >= song.durationPulses then
+        p.pulseCount = pc - song.durationPulses
+        p.cursor     = 1
+        p.loopIndex  = p.loopIndex + 1
+        if p.clockFn then
+            p.startMs = p.startMs + song.durationPulses * p.pulseMs
+        end
+        if song.onLoopBoundary then
+            song.onLoopBoundary(song, p.loopIndex)
+        end
     end
 end

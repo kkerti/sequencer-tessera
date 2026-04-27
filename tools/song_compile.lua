@@ -12,21 +12,34 @@
 --
 -- Output schema (compiled/<name>.lua):
 --   {
---     formatVersion  = 1,
---     name           = "<name>",
+--     formatVersion  = 2,
 --     bpm            = <integer>,
 --     pulsesPerBeat  = <integer>,
 --     durationPulses = <integer>,           -- bars * beatsPerBar * ppb
 --     loop           = true,
 --     trackCount     = <integer>,
 --
+--     -- Player-facing arrays (interleaved NOTE_ON + NOTE_OFF, sorted by atPulse).
+--     -- kind values:
+--     --   1 = NOTE_ON  (active)
+--     --   0 = NOTE_OFF (active)
+--     --   2 = NOTE_ON  muted by writer this loop  (player skips)
+--     --   3 = NOTE_OFF muted by writer this loop  (player skips)
 --     eventCount  = <integer>,
---     atPulse     = { ... },                -- pulse offset of each NOTE_ON
+--     atPulse     = { ... },                -- pulse offset
+--     kind        = { ... },                -- 0/1/2/3 (numeric, cheap)
 --     pitch       = { ... },                -- MIDI pitch (already scale-quantized)
 --     velocity    = { ... },
 --     channel     = { ... },
---     gatePulses  = { ... },                -- length of note in pulses
---     probability = { ... },                -- 0-100, walker rolls per playback
+--
+--     -- Writer-only arrays (omitted entirely if song has no probability/jitter).
+--     -- pairOff[i] = index of the matching NOTE_OFF (or 0 for NOTE_OFF rows).
+--     -- srcStepProb[i] = original step probability 0..100 (NOTE_ON rows only).
+--     -- srcVelocity[i] = original (un-jittered) velocity for re-jitter.
+--     hasProbability = <bool>,
+--     pairOff        = { ... } | nil,
+--     srcStepProb    = { ... } | nil,
+--     srcVelocity    = { ... } | nil,
 --   }
 
 local SongLoader = require("song_loader")
@@ -44,15 +57,10 @@ local function compileTrackEvents(player, songBars, beatsPerBar)
     local pulsesPerBeat  = engine.pulsesPerBeat
     local durationPulses = songBars * beatsPerBar * pulsesPerBeat
 
-    local events = {
-        atPulse     = {},
-        pitch       = {},
-        velocity    = {},
-        channel     = {},
-        gatePulses  = {},
-        probability = {},
-    }
-    local count = 0
+    -- First pass: collect raw NOTE_ON records as the engine emits them.
+    -- We'll then interleave NOTE_OFFs (paired by gate length) and sort.
+    local raw = {}   -- list of { atPulse, pitch, vel, ch, gate, prob }
+    local hasProbability = false
 
     local pulseCount   = 0
     local swingCarry   = 0
@@ -82,18 +90,19 @@ local function compileTrackEvents(player, songBars, beatsPerBar)
                         local channel    = track.midiChannel or trackIndex
                         local pitch      = Step.resolvePitch(step, player.scaleTable, player.rootNote)
                         local gatePulses = Step.getGate(step)
-                        local prob       = Step.getProbability(step)
+                        local prob       = Step.getProbability(step) or 100
 
-                        count = count + 1
-                        events.atPulse[count]     = pulseCount
-                        events.pitch[count]       = pitch
-                        events.velocity[count]    = Step.getVelocity(step)
-                        events.channel[count]     = channel
-                        events.gatePulses[count]  = gatePulses
-                        events.probability[count] = prob
+                        if prob < 100 then hasProbability = true end
+
+                        raw[#raw + 1] = {
+                            atPulse = pulseCount,
+                            pitch   = pitch,
+                            vel     = Step.getVelocity(step),
+                            channel = channel,
+                            gate    = gatePulses,
+                            prob    = prob,
+                        }
                     end
-                    -- NOTE_OFF events from the engine are ignored: the
-                    -- compiled walker derives NOTE_OFF time from gatePulses.
                 end
             end
 
@@ -101,8 +110,69 @@ local function compileTrackEvents(player, songBars, beatsPerBar)
         end
     end
 
-    events.count          = count
+    -- Second pass: build interleaved (NOTE_ON, NOTE_OFF) sorted timeline.
+    -- We emit a row per NOTE_ON and a row per NOTE_OFF. Stable sort by
+    -- (atPulse asc, kind asc) so kind=0 (NOTE_OFF) fires before kind=1 at
+    -- the same pulse, giving correct retrigger semantics.
+    local interleaved = {}
+    for i, r in ipairs(raw) do
+        interleaved[#interleaved + 1] = {
+            at = r.atPulse, kind = 1, pitch = r.pitch, vel = r.vel,
+            ch = r.channel, srcIdx = i, prob = r.prob,
+        }
+        local offAt = r.atPulse + r.gate
+        -- Clamp NOTE_OFF that would land past loop end onto the last pulse
+        -- (matches old player behaviour where loop-wrap dropped the off).
+        if offAt > durationPulses then offAt = durationPulses end
+        interleaved[#interleaved + 1] = {
+            at = offAt, kind = 0, pitch = r.pitch, vel = 0,
+            ch = r.channel, srcIdx = i,
+        }
+    end
+
+    table.sort(interleaved, function(a, b)
+        if a.at ~= b.at then return a.at < b.at end
+        return a.kind < b.kind
+    end)
+
+    -- Build a map srcIdx -> off-event index in the sorted timeline so we can
+    -- compute pairOff for NOTE_ONs.
+    local offIdxBySrc = {}
+    for newIdx, e in ipairs(interleaved) do
+        if e.kind == 0 then offIdxBySrc[e.srcIdx] = newIdx end
+    end
+
+    local events = {
+        atPulse     = {},
+        kind        = {},
+        pitch       = {},
+        velocity    = {},
+        channel     = {},
+        pairOff     = {},
+        srcStepProb = {},
+        srcVelocity = {},
+    }
+
+    for newIdx, e in ipairs(interleaved) do
+        events.atPulse[newIdx]  = e.at
+        events.kind[newIdx]     = e.kind
+        events.pitch[newIdx]    = e.pitch
+        events.velocity[newIdx] = e.vel
+        events.channel[newIdx]  = e.ch
+        if e.kind == 1 then
+            events.pairOff[newIdx]     = offIdxBySrc[e.srcIdx] or 0
+            events.srcStepProb[newIdx] = e.prob
+            events.srcVelocity[newIdx] = e.vel
+        else
+            events.pairOff[newIdx]     = 0
+            events.srcStepProb[newIdx] = 0
+            events.srcVelocity[newIdx] = 0
+        end
+    end
+
+    events.count          = #interleaved
     events.durationPulses = durationPulses
+    events.hasProbability = hasProbability
     return events
 end
 
@@ -124,20 +194,23 @@ end
 
 -- Splits an integer array into N chunks of at most `maxItems` items each.
 -- Returns a list of joined comma-strings.
-local function chunkList(arr, count, maxItems)
-    local chunks = {}
+local function chunkPieces(arr, count, maxItems)
+    local pieces = {}
     local i = 1
     while i <= count do
         local last = math.min(i + maxItems - 1, count)
         local parts = {}
         for j = i, last do parts[#parts + 1] = tostring(arr[j]) end
-        chunks[#chunks + 1] = table.concat(parts, ",")
+        pieces[#pieces + 1] = table.concat(parts, ",")
         i = last + 1
     end
-    return chunks
+    return pieces
 end
 
-local ARRAY_FIELDS = { "atPulse", "pitch", "velocity", "channel", "gatePulses", "probability" }
+-- Player-facing arrays (always emitted).
+local PLAYER_FIELDS = { "atPulse", "kind", "pitch", "velocity", "channel" }
+-- Writer-only arrays (emitted only when song has probability/jitter).
+local WRITER_FIELDS = { "pairOff", "srcStepProb", "srcVelocity" }
 
 -- Grid per-file char limit (non-whitespace). Main song file must fit in this.
 local GRID_CHAR_LIMIT = 800
@@ -157,21 +230,6 @@ local function gridRequireName(prefix, name)
     return name
 end
 
--- Splits an integer array into N chunks of at most `maxItems` items each.
--- Returns a list of joined comma-strings.
-local function chunkPieces(arr, count, maxItems)
-    local pieces = {}
-    local i = 1
-    while i <= count do
-        local last = math.min(i + maxItems - 1, count)
-        local parts = {}
-        for j = i, last do parts[#parts + 1] = tostring(arr[j]) end
-        pieces[#pieces + 1] = table.concat(parts, ",")
-        i = last + 1
-    end
-    return pieces
-end
-
 -- Returns: mainSource, sidecarFiles (map of name → source).
 -- Strategy: emit a tight preamble + all arrays inline, then if the file
 -- exceeds the Grid char limit, externalise arrays to sidecars in descending
@@ -179,10 +237,17 @@ end
 -- If `noSplit` is true, all arrays stay inline regardless of file size
 -- (use this when the device tolerates a single large file).
 local function emitCompiledSources(name, song, ppb, durationPulses, events, requirePrefix, noSplit)
+    -- Decide which array fields to actually emit.
+    local fields = {}
+    for _, f in ipairs(PLAYER_FIELDS) do fields[#fields + 1] = f end
+    if events.hasProbability then
+        for _, f in ipairs(WRITER_FIELDS) do fields[#fields + 1] = f end
+    end
+
     -- Materialise each array as its inline literal text once.
     local literals = {}
     local sizes    = {}
-    for _, field in ipairs(ARRAY_FIELDS) do
+    for _, field in ipairs(fields) do
         literals[field] = intList(events[field], events.count)
         sizes[field]    = #literals[field]
     end
@@ -193,13 +258,19 @@ local function emitCompiledSources(name, song, ppb, durationPulses, events, requ
     local function buildMain()
         local lines = {}
         local function w(s) lines[#lines + 1] = s end
+        local needR = false
+        for _, field in ipairs(fields) do
+            if externalised[field] then needR = true; break end
+        end
         w("local s={}")
+        if needR then w("local R=require") end
         w(string.format("s.bpm=%d", song.bpm))
         w(string.format("s.pulsesPerBeat=%d", ppb))
         w(string.format("s.durationPulses=%d", durationPulses))
         w("s.loop=true")
+        if events.hasProbability then w("s.hasProbability=true") end
         w(string.format("s.eventCount=%d", events.count))
-        for _, field in ipairs(ARRAY_FIELDS) do
+        for _, field in ipairs(fields) do
             if externalised[field] then
                 -- Sidecar: split into <=150-item pieces.
                 local pieces = chunkPieces(events[field], events.count, 150)
@@ -207,9 +278,9 @@ local function emitCompiledSources(name, song, ppb, durationPulses, events, requ
                     local sidecarName = string.format("%s_%s_%d", name, field:lower(), pi)
                     local req = gridRequireName(requirePrefix, sidecarName)
                     if pi == 1 then
-                        w(string.format('s.%s=require("%s")', field, req))
+                        w(string.format('s.%s=R("%s")', field, req))
                     else
-                        w(string.format('do local x=require("%s")for i=1,#x do s.%s[#s.%s+1]=x[i] end end',
+                        w(string.format('do local x=R("%s")table.move(x,1,#x,#s.%s+1,s.%s)end',
                             req, field, field))
                     end
                 end
@@ -226,7 +297,7 @@ local function emitCompiledSources(name, song, ppb, durationPulses, events, requ
         while gridCharCount(mainSource) > GRID_CHAR_LIMIT do
             -- Pick largest still-inline field to externalise.
             local pickField, pickSize = nil, -1
-            for _, field in ipairs(ARRAY_FIELDS) do
+            for _, field in ipairs(fields) do
                 if not externalised[field] and sizes[field] > pickSize then
                     pickField, pickSize = field, sizes[field]
                 end
@@ -239,7 +310,7 @@ local function emitCompiledSources(name, song, ppb, durationPulses, events, requ
 
     -- Build sidecars only for fields actually externalised.
     local sidecars = {}
-    for _, field in ipairs(ARRAY_FIELDS) do
+    for _, field in ipairs(fields) do
         if externalised[field] then
             local pieces = chunkPieces(events[field], events.count, 150)
             for pi, piece in ipairs(pieces) do
@@ -278,7 +349,7 @@ function SongCompile.compile(song)
     local events = compileTrackEvents(player, song.bars, beatsPerBar)
 
     return {
-        formatVersion  = 1,
+        formatVersion  = 2,
         bpm            = song.bpm,
         pulsesPerBeat  = ppb,
         durationPulses = events.durationPulses,
@@ -286,11 +357,14 @@ function SongCompile.compile(song)
         trackCount     = #song.tracks,
         eventCount     = events.count,
         atPulse        = events.atPulse,
+        kind           = events.kind,
         pitch          = events.pitch,
         velocity       = events.velocity,
         channel        = events.channel,
-        gatePulses     = events.gatePulses,
-        probability    = events.probability,
+        hasProbability = events.hasProbability,
+        pairOff        = events.hasProbability and events.pairOff or nil,
+        srcStepProb    = events.hasProbability and events.srcStepProb or nil,
+        srcVelocity    = events.hasProbability and events.srcVelocity or nil,
     }
 end
 
@@ -308,13 +382,16 @@ function SongCompile.compileFile(sourcePath, outdir, requirePrefix, noSplit)
     local compiled = SongCompile.compile(song)
     local source, sidecars = emitCompiledSources(name, song, compiled.pulsesPerBeat,
         compiled.durationPulses, {
-            count       = compiled.eventCount,
-            atPulse     = compiled.atPulse,
-            pitch       = compiled.pitch,
-            velocity    = compiled.velocity,
-            channel     = compiled.channel,
-            gatePulses  = compiled.gatePulses,
-            probability = compiled.probability,
+            count          = compiled.eventCount,
+            atPulse        = compiled.atPulse,
+            kind           = compiled.kind,
+            pitch          = compiled.pitch,
+            velocity       = compiled.velocity,
+            channel        = compiled.channel,
+            pairOff        = compiled.pairOff,
+            srcStepProb    = compiled.srcStepProb,
+            srcVelocity    = compiled.srcVelocity,
+            hasProbability = compiled.hasProbability,
         }, requirePrefix, noSplit)
 
     os.execute("mkdir -p " .. outdir)

@@ -1,312 +1,276 @@
 -- tests/player.lua
--- Static analysis tests for player/player.lua.
--- No audio, no timer, no bridge — all assertions are deterministic.
+-- Tests for player/player.lua — the precompiled-song walker.
+-- Schema v2: interleaved NOTE_ON+NOTE_OFF events, kind[] field, no in-player
+-- probability or gate math.
 -- Run with: lua tests/player.lua
 
-local Engine = require("sequencer/engine")
 local Player = require("player/player")
-local Track  = require("sequencer/track")
-local Step   = require("sequencer/step")
 
 -- ---------------------------------------------------------------------------
--- Helper: run N ticks collecting all emitted events into a flat list.
--- Returns the event list.
-local function runTicks(player, n)
-    local events = {}
-    for _ = 1, n do
-        Player.tick(player, function(ev)
-            events[#events + 1] = ev
-        end)
+-- Helpers
+-- ---------------------------------------------------------------------------
+
+-- Builds a minimal compiled song from a NOTE_ON spec list.
+-- `notes` is { {atPulse, pitch, vel, ch, gate}, ... }. The helper auto-pairs
+-- a NOTE_OFF at atPulse+gate for each note and sorts the result.
+local function makeSong(notes, durationPulses, loop, ppb)
+    local interleaved = {}
+    for _, n in ipairs(notes) do
+        interleaved[#interleaved + 1] = { at = n[1],         k = 1, pitch = n[2], vel = n[3], ch = n[4] }
+        local off = n[1] + n[5]
+        if off > durationPulses then off = durationPulses end
+        interleaved[#interleaved + 1] = { at = off,           k = 0, pitch = n[2], vel = 0,    ch = n[4] }
     end
-    return events
+    table.sort(interleaved, function(a, b)
+        if a.at ~= b.at then return a.at < b.at end
+        return a.k < b.k
+    end)
+
+    local song = {
+        bpm            = 120,
+        pulsesPerBeat  = ppb or 4,
+        durationPulses = durationPulses,
+        loop           = (loop ~= false),
+        eventCount     = #interleaved,
+        atPulse        = {},
+        kind           = {},
+        pitch          = {},
+        velocity       = {},
+        channel        = {},
+    }
+    for i, e in ipairs(interleaved) do
+        song.atPulse[i]  = e.at
+        song.kind[i]     = e.k
+        song.pitch[i]    = e.pitch
+        song.velocity[i] = e.vel
+        song.channel[i]  = e.ch
+    end
+    return song
 end
 
--- Fake clock: always returns 0. Tests that need expiry force off_at manually.
-local function fakeClock() return 0 end
-
--- Helper: build a fresh engine + player with a single track and given steps.
--- steps is an array of Step tables (index 1..n).
-local function makePlayer(steps, bpm)
-    bpm = bpm or 120
-    local engine = Engine.new(bpm, 4, 1, #steps)
-    local track  = Engine.getTrack(engine, 1)
-    for i, s in ipairs(steps) do
-        Track.setStep(track, i, s)
+local function recordEmit()
+    local events = {}
+    return events, function(t, p, v, c)
+        events[#events + 1] = { type = t, pitch = p, velocity = v, channel = c }
     end
-    local player = Player.new(engine, bpm, fakeClock)
-    Player.start(player)
-    return player, engine
 end
 
 -- ---------------------------------------------------------------------------
 -- ── Construction ────────────────────────────────────────────────────────────
 
 do
-    local engine = Engine.new(120, 4, 1, 1)
-    local player = Player.new(engine, 120, fakeClock)
-    assert(player.bpm            == 120,  "bpm should be 120")
-    assert(player.pulseIntervalMs == 125, "interval should be 125ms")
-    assert(player.swingPercent   == 50,   "default swing 50")
-    assert(player.running        == false, "player starts stopped")
-    assert(player.activeNoteCount == 0,   "no active notes at start")
+    local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, true)
+    local p = Player.new(song, function() return 0 end, 120)
+    assert(p.bpm        == 120, "bpm")
+    assert(p.pulseMs    == 125, "pulseMs = 60000/120/4 = 125")
+    assert(p.pulseCount == 0,   "pulseCount starts 0")
+    assert(p.cursor     == 1,   "cursor starts 1")
+    assert(p.running    == false, "starts stopped")
+    assert(p.loopIndex  == 0,   "loopIndex starts 0")
 end
 
--- ── setBpm ───────────────────────────────────────────────────────────────────
+-- ── externalPulse: NOTE_ON fires at atPulse, NOTE_OFF at atPulse+gate ────────
 
 do
-    local engine = Engine.new(120, 4, 1, 1)
-    local player = Player.new(engine, 120, fakeClock)
-    Player.setBpm(player, 60)
-    assert(player.bpm             == 60,  "bpm updated")
-    assert(player.pulseIntervalMs == 250, "interval recalculated")
+    -- One note: atPulse 0, gate 4.
+    local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, false)
+    local p = Player.new(song, nil, 120)
+    Player.start(p)
+
+    local events, emit = recordEmit()
+    Player.externalPulse(p, emit)         -- pulseCount -> 1, fires NOTE_ON at 0
+    assert(events[1].type    == "NOTE_ON", "NOTE_ON on first pulse")
+    assert(events[1].pitch   == 60,        "pitch")
+    assert(events[1].velocity == 100,      "velocity")
+    assert(events[1].channel == 1,         "channel")
+
+    -- Pulses 2, 3 — no NOTE_OFF yet (NOTE_OFF is at pulse 4).
+    for _ = 2, 3 do Player.externalPulse(p, emit) end
+    assert(#events == 1, "no NOTE_OFF before pulse 4")
+
+    -- Pulse 4: NOTE_OFF fires.
+    Player.externalPulse(p, emit)
+    assert(events[2].type    == "NOTE_OFF", "NOTE_OFF after gate")
+    assert(events[2].pitch   == 60, "NOTE_OFF pitch")
+    assert(events[2].channel == 1,  "NOTE_OFF channel")
 end
 
--- ── NOTE_ON emitted on pulse 0 of a playable step ────────────────────────────
+-- ── kind=2/3 (muted by writer) skip silently ─────────────────────────────────
 
 do
-    local player = makePlayer({ Step.new(60, 100, 4, 2) })
-    local events = runTicks(player, 1)
-    assert(#events == 1,                   "one event on pulse 0")
-    assert(events[1].type    == "NOTE_ON", "should be NOTE_ON")
-    assert(events[1].pitch   == 60,        "pitch 60")
-    assert(events[1].velocity == 100,      "velocity 100")
-    assert(events[1].channel == 1,         "default channel = trackIndex = 1")
+    local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, false)
+    -- Manually mute as the writer would: flip kind 1->2 and 0->3.
+    song.kind[1] = 2
+    song.kind[2] = 3
+
+    local p = Player.new(song, nil, 120)
+    Player.start(p)
+    local events, emit = recordEmit()
+    for _ = 1, 8 do Player.externalPulse(p, emit) end
+    assert(#events == 0, "muted events emit nothing")
+    assert(p.cursor == song.eventCount + 1, "cursor still advanced past muted")
 end
 
--- ── NOTE_OFF emitted via wall-clock (off_at) not pulse counter ───────────────
--- We cannot truly test wall-clock expiry in a synchronous test, but we can
--- verify that after enough ticks for the gate to expire in real time,
--- a NOTE_OFF is emitted.  We force this by manipulating off_at directly.
+-- ── externalPulse: loop wrap rewinds cursor and pulseCount ───────────────────
 
 do
-    local player = makePlayer({ Step.new(60, 100, 4, 2) })
+    local song = makeSong({
+        { 0, 60, 100, 1, 2 },
+        { 4, 62, 100, 1, 2 },
+    }, 8, true)
+    local p = Player.new(song, nil, 120)
+    Player.start(p)
+    local events, emit = recordEmit()
 
-    -- Tick once: NOTE_ON registered.
-    local ev1 = {}
-    Player.tick(player, function(ev) ev1[#ev1 + 1] = ev end)
-    assert(#ev1 == 1 and ev1[1].type == "NOTE_ON", "NOTE_ON on tick 1")
-    assert(player.activeNoteCount == 1, "note registered in active arrays")
+    for _ = 1, 8 do Player.externalPulse(p, emit) end
 
-    -- Force off_at to the past so the next tick flushes it.
-    player.activeNoteOffAt[1] = -1
-
-    local ev2 = {}
-    Player.tick(player, function(ev) ev2[#ev2 + 1] = ev end)
-
-    -- The flush happens at the start of the tick; there may also be a new
-    -- NOTE_ON from advancing the cursor (step loops). Filter by type.
-    local noteOffs = {}
-    for _, ev in ipairs(ev2) do
-        if ev.type == "NOTE_OFF" then noteOffs[#noteOffs + 1] = ev end
+    local noteOns = 0
+    for _, e in ipairs(events) do
+        if e.type == "NOTE_ON" then noteOns = noteOns + 1 end
     end
-    assert(#noteOffs == 1,                    "one NOTE_OFF emitted after off_at expires")
-    assert(noteOffs[1].pitch   == 60,         "NOTE_OFF pitch 60")
-    assert(noteOffs[1].channel == 1,          "NOTE_OFF channel 1")
-    assert(player.activeNoteCount == 0 or
-        player.activeNoteCount == 1,          -- re-registered if cursor looped
-        "active note count consistent")
-end
+    assert(noteOns == 2, "two NOTE_ONs in first loop, got " .. noteOns)
+    assert(p.cursor     == 1, "cursor wrapped to 1")
+    assert(p.pulseCount == 0, "pulseCount wrapped to 0, got " .. p.pulseCount)
+    assert(p.loopIndex  == 1, "loopIndex incremented to 1")
 
--- ── activeNoteCount tracks multiple simultaneous notes ───────────────────────
-
-do
-    local engine = Engine.new(120, 4, 2, 1)
-    local t1 = Engine.getTrack(engine, 1)
-    local t2 = Engine.getTrack(engine, 2)
-    Track.setStep(t1, 1, Step.new(60, 100, 4, 3))
-    Track.setStep(t2, 1, Step.new(72, 100, 4, 3))
-    Track.setMidiChannel(t1, 1)
-    Track.setMidiChannel(t2, 2)
-
-    local player = Player.new(engine, 120, fakeClock)
-    Player.start(player)
-
-    runTicks(player, 1)
-    assert(player.activeNoteCount == 2, "two notes should be active after tick 1")
-end
-
--- ── allNotesOff clears active arrays and returns NOTE_OFF events ──────────────
-
-do
-    local player = makePlayer({ Step.new(60, 100, 4, 3) })
-    runTicks(player, 1)
-    assert(player.activeNoteCount == 1, "one active note before allNotesOff")
-
-    local offEvents = Player.allNotesOff(player)
-    assert(#offEvents == 1,                     "one NOTE_OFF returned")
-    assert(offEvents[1].type  == "NOTE_OFF",    "event type")
-    assert(offEvents[1].pitch == 60,            "event pitch")
-    assert(player.activeNoteCount == 0,         "active arrays cleared")
-    assert(player.activeNoteKeys[1]  == nil,    "key slot nil")
-    assert(player.activeNoteOffAt[1] == nil,    "offAt slot nil")
-end
-
--- ── allNotesOff on empty player returns empty list ────────────────────────────
-
-do
-    local engine = Engine.new(120, 4, 1, 1)
-    local player = Player.new(engine, 120, fakeClock)
-    local evs = Player.allNotesOff(player)
-    assert(#evs == 0, "allNotesOff on empty player returns nothing")
-end
-
--- ── Player.stop halts cursor advancement ─────────────────────────────────────
-
-do
-    local player, engine = makePlayer({ Step.new(60, 100, 4, 2) })
-    runTicks(player, 1)               -- NOTE_ON
-    Player.stop(player)
-    local evs = runTicks(player, 4)  -- should produce nothing (player halted)
-    local noteOns = {}
-    for _, ev in ipairs(evs) do
-        if ev.type == "NOTE_ON" then noteOns[#noteOns + 1] = ev end
+    -- Second loop fires events again.
+    for _ = 1, 8 do Player.externalPulse(p, emit) end
+    local noteOns2 = 0
+    for _, e in ipairs(events) do
+        if e.type == "NOTE_ON" then noteOns2 = noteOns2 + 1 end
     end
-    assert(#noteOns == 0, "no new NOTE_ONs after stop")
+    assert(noteOns2 == 4, "four total NOTE_ONs after two loops, got " .. noteOns2)
+    assert(p.loopIndex == 2, "loopIndex incremented to 2")
 end
 
--- ── Player.start resumes after stop ──────────────────────────────────────────
+-- ── onLoopBoundary callback fires at loop wrap ───────────────────────────────
 
 do
-    local player = makePlayer({ Step.new(60, 100, 4, 2) })
-    Player.stop(player)
-    Player.start(player)
-    assert(player.running == true, "running after start")
-    local evs = runTicks(player, 1)
-    assert(#evs >= 1, "events produced after start")
+    local song = makeSong({ { 0, 60, 100, 1, 2 } }, 4, true)
+    local calls = {}
+    song.onLoopBoundary = function(s, idx) calls[#calls + 1] = idx end
+
+    local p = Player.new(song, nil, 120)
+    Player.start(p)
+    local _, emit = recordEmit()
+    -- Two full loops.
+    for _ = 1, 8 do Player.externalPulse(p, emit) end
+    assert(#calls == 2, "callback fired twice, got " .. #calls)
+    assert(calls[1] == 1 and calls[2] == 2, "loopIndex passed to callback")
 end
 
--- ── Probability suppression: 0% never fires ──────────────────────────────────
+-- ── externalPulse: stopped player is a no-op ─────────────────────────────────
 
 do
-    local s = Step.new(60, 100, 4, 2)
-    Step.setProbability(s, 0)
-    local player = makePlayer({ s })
-    local evs = runTicks(player, 4)
-    local noteOns = {}
-    for _, ev in ipairs(evs) do
-        if ev.type == "NOTE_ON" then noteOns[#noteOns + 1] = ev end
+    local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, true)
+    local p = Player.new(song, nil, 120)
+    local events, emit = recordEmit()
+    Player.externalPulse(p, emit)
+    assert(#events == 0, "stopped player emits nothing")
+    assert(p.pulseCount == 0, "stopped player does not advance")
+end
+
+-- ── Player.start resets pulseCount, cursor, loopIndex ────────────────────────
+
+do
+    local song = makeSong({
+        { 0, 60, 100, 1, 2 },
+        { 4, 62, 100, 1, 2 },
+    }, 8, true)
+    local p = Player.new(song, nil, 120)
+    Player.start(p)
+    local _, emit = recordEmit()
+    for _ = 1, 12 do Player.externalPulse(p, emit) end
+    assert(p.loopIndex >= 1, "advanced through a loop")
+    Player.start(p)
+    assert(p.pulseCount == 0, "pulseCount reset")
+    assert(p.cursor     == 1, "cursor reset")
+    assert(p.loopIndex  == 0, "loopIndex reset")
+end
+
+-- ── Player.tick (internal clock) drives pulses from clockFn ──────────────────
+
+do
+    local song = makeSong({
+        { 0, 60, 100, 1, 2 },
+        { 4, 62, 100, 1, 2 },
+    }, 8, true)
+
+    local nowMs = 0
+    local clock = function() return nowMs end
+    local p = Player.new(song, clock, 120)   -- pulseMs = 125
+    Player.start(p)                          -- startMs = 0
+
+    nowMs = 500
+    local events, emit = recordEmit()
+    Player.tick(p, emit)
+    assert(p.pulseCount == 4, "tick advanced pulseCount to 4, got " .. p.pulseCount)
+
+    local noteOns = 0
+    for _, e in ipairs(events) do
+        if e.type == "NOTE_ON" then noteOns = noteOns + 1 end
     end
-    assert(#noteOns == 0, "probability=0 should suppress all NOTE_ONs")
+    assert(noteOns == 2, "tick fired both events, got " .. noteOns)
 end
 
--- ── Scale quantization applied at player output ───────────────────────────────
--- Pitch 61 (C#4) should quantize to 60 (C4) in C major.
+-- ── Player.tick is a no-op when no time has passed ───────────────────────────
 
 do
-    local engine = Engine.new(120, 4, 1, 1)
-    local track  = Engine.getTrack(engine, 1)
-    Track.setStep(track, 1, Step.new(61, 100, 1, 1))
-
-    local player = Player.new(engine, 120, fakeClock)
-    Player.setScale(player, "major", 0)
-    Player.start(player)
-
-    local events = {}
-    Player.tick(player, function(ev) events[#events + 1] = ev end)
-    local noteOns = {}
-    for _, ev in ipairs(events) do
-        if ev.type == "NOTE_ON" then noteOns[#noteOns + 1] = ev end
-    end
-    assert(#noteOns == 1,          "one NOTE_ON")
-    assert(noteOns[1].pitch == 60, "61 quantized to 60 in C major")
+    local song = makeSong({ { 0, 60, 100, 1, 2 } }, 8, true)
+    local nowMs = 0
+    local p = Player.new(song, function() return nowMs end, 120)
+    Player.start(p)
+    local events, emit = recordEmit()
+    Player.tick(p, emit)
+    assert(p.pulseCount == 0, "no time elapsed -> no advance")
+    assert(#events == 0, "no time elapsed -> no events")
 end
 
--- ── MIDI channel: track override takes priority over trackIndex ───────────────
+-- ── allNotesOff drains in-flight notes via callback ─────────────────────────
 
 do
-    local engine = Engine.new(120, 4, 1, 1)
-    local track  = Engine.getTrack(engine, 1)
-    Track.setStep(track, 1, Step.new(60, 100, 1, 1))
-    Track.setMidiChannel(track, 10)
+    local song = makeSong({ { 0, 60, 100, 5, 8 } }, 16, true)
+    local p = Player.new(song, nil, 120)
+    Player.start(p)
+    local _, emit = recordEmit()
+    Player.externalPulse(p, emit)            -- emits NOTE_ON only (gate=8)
 
-    local player = Player.new(engine, 120, fakeClock)
-    Player.start(player)
-
-    local events = {}
-    Player.tick(player, function(ev) events[#events + 1] = ev end)
-    assert(events[1].channel == 10, "midiChannel override should be 10")
+    local offs = {}
+    local count = Player.allNotesOff(p, function(t, pitch, vel, ch)
+        offs[#offs + 1] = { type = t, pitch = pitch, channel = ch }
+    end)
+    assert(count == 1, "one NOTE_OFF returned, got " .. count)
+    assert(offs[1].type    == "NOTE_OFF", "type")
+    assert(offs[1].pitch   == 60, "pitch")
+    assert(offs[1].channel == 5,  "channel")
 end
 
--- ── Clock division: div=2 advances once every 2 ticks ────────────────────────
+-- ── allNotesOff on idle player emits nothing ────────────────────────────────
 
 do
-    local engine = Engine.new(120, 4, 1, 2)
-    local track  = Engine.getTrack(engine, 1)
-    Track.setStep(track, 1, Step.new(60, 100, 1, 1))
-    Track.setStep(track, 2, Step.new(62, 100, 1, 1))
-    Track.setClockDiv(track, 2)
-
-    local player = Player.new(engine, 120, fakeClock)
-    Player.start(player)
-
-    local ev1 = {}
-    Player.tick(player, function(ev) ev1[#ev1 + 1] = ev end)
-    assert(#ev1 == 0, "div=2: no event on first tick")
-
-    local ev2 = {}
-    Player.tick(player, function(ev) ev2[#ev2 + 1] = ev end)
-    local noteOns = {}
-    for _, ev in ipairs(ev2) do
-        if ev.type == "NOTE_ON" then noteOns[#noteOns + 1] = ev end
-    end
-    assert(#noteOns == 1 and noteOns[1].pitch == 60,
-        "div=2: NOTE_ON on second tick")
+    local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, true)
+    local p = Player.new(song, nil, 120)
+    local count = Player.allNotesOff(p, function() error("should not emit") end)
+    assert(count == 0, "idle player -> zero NOTE_OFFs")
 end
 
--- ── Clock multiplication: mult=2 advances twice per tick ─────────────────────
+-- ── setBpm preserves pulse position (internal-clock mode) ────────────────────
 
 do
-    local engine = Engine.new(120, 4, 1, 2)
-    local track  = Engine.getTrack(engine, 1)
-    Track.setStep(track, 1, Step.new(60, 100, 1, 1))
-    Track.setStep(track, 2, Step.new(62, 100, 1, 1))
-    Track.setClockMult(track, 2)
+    local song = makeSong({ { 0, 60, 100, 1, 4 } }, 16, true)
+    local nowMs = 0
+    local p = Player.new(song, function() return nowMs end, 120)
+    Player.start(p)
+    nowMs = 500
+    local _, emit = recordEmit()
+    Player.tick(p, emit)
+    assert(p.pulseCount == 4, "advanced 4 pulses")
 
-    local player = Player.new(engine, 120, fakeClock)
-    Player.start(player)
+    Player.setBpm(p, 60)
+    assert(p.pulseMs == 250, "pulseMs recalculated")
 
-    local evs = {}
-    Player.tick(player, function(ev) evs[#evs + 1] = ev end)
-    local noteOns = {}
-    for _, ev in ipairs(evs) do
-        if ev.type == "NOTE_ON" then noteOns[#noteOns + 1] = ev end
-    end
-    assert(#noteOns == 2, "mult=2: two NOTE_ONs in one tick")
-    assert(noteOns[1].pitch == 60 and noteOns[2].pitch == 62,
-        "mult=2: both steps advanced")
-end
-
--- ── Swing holds off-beat pulses ───────────────────────────────────────────────
-
-do
-    local player = makePlayer({ Step.new(60, 100, 1, 1) })
-    Player.setSwing(player, 72)
-
-    local ev1 = {}
-    Player.tick(player, function(ev) ev1[#ev1 + 1] = ev end)
-    local ev1noteOns = {}
-    for _, ev in ipairs(ev1) do
-        if ev.type == "NOTE_ON" then ev1noteOns[#ev1noteOns + 1] = ev end
-    end
-    assert(#ev1noteOns == 1, "swing: beat-1 (downbeat) fires normally")
-
-    local ev2 = {}
-    Player.tick(player, function(ev) ev2[#ev2 + 1] = ev end)
-    local ev2noteOns = {}
-    for _, ev in ipairs(ev2) do
-        if ev.type == "NOTE_ON" then ev2noteOns[#ev2noteOns + 1] = ev end
-    end
-    assert(#ev2noteOns == 0, "swing: off-beat pulse held (no NOTE_ON)")
-end
-
--- ── No per-tick table allocation: emit callback pattern ──────────────────────
--- Verify tick accepts a callback (not returning a table).
-
-do
-    local player = makePlayer({ Step.new(60, 100, 4, 2) })
-    local called = 0
-    Player.tick(player, function(_) called = called + 1 end)
-    assert(called >= 1, "emit callback should be called at least once")
+    Player.tick(p, emit)
+    assert(p.pulseCount == 4, "setBpm did not jump pulseCount")
 end
 
 print("player: all tests passed")

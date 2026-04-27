@@ -1,29 +1,32 @@
 local Player=require("/player/seq_player")
-function Player._playerFlushExpired(p, currentPulse, emit)
-    local i = 1
-    while i <= p.activeCount do
-        if p.activeOffPulse[i] <= currentPulse then
-            emit("NOTE_OFF", p.activePitch[i], 0, p.activeChannel[i])
-            -- swap-remove
-            local last = p.activeCount
-            if i ~= last then
-                p.activePitch[i]    = p.activePitch[last]
-                p.activeChannel[i]  = p.activeChannel[last]
-                p.activeOffPulse[i] = p.activeOffPulse[last]
-            end
-            p.activePitch[last]    = nil
-            p.activeChannel[last]  = nil
-            p.activeOffPulse[last] = nil
-            p.activeCount          = last - 1
-        else
-            i = i + 1
-        end
-    end
+function Player.new(song, clockFn, bpm)
+    bpm = bpm or song.bpm
+    return {
+        song       = song,
+        clockFn    = clockFn,
+        bpm        = bpm,
+        pulseMs    = 60000 / bpm / song.pulsesPerBeat,
+        startMs    = 0,
+        pulseCount = 0,
+        cursor     = 1,
+        loopIndex  = 0,
+        running    = false,
+    }
 end
-function Player._playerTrackNoteOn(p, pitch, channel, offPulse)
-    local n = p.activeCount + 1
-    p.activePitch[n]    = pitch
-    p.activeChannel[n]  = channel
-    p.activeOffPulse[n] = offPulse
-    p.activeCount       = n
+function Player.start(p)
+    if p.clockFn then p.startMs = p.clockFn() end
+    p.pulseCount = 0
+    p.cursor     = 1
+    p.loopIndex  = 0
+    p.running    = true
+end
+function Player.stop(p)
+    p.running = false
+end
+function Player.setBpm(p, bpm)
+    p.bpm     = bpm
+    p.pulseMs = 60000 / bpm / p.song.pulsesPerBeat
+    if p.clockFn then
+        p.startMs = p.clockFn() - p.pulseCount * p.pulseMs
+    end
 end

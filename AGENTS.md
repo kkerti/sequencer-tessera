@@ -4,7 +4,7 @@
 
 Lua 5.5 step sequencer library targeting the **Grid modular controller platform** (ESP32 + luaVM, which runs Lua 5.4). Development and validation happen on macOS first, then code runs unmodified on device.
 
-Reference designs: `docs/manuals/er-101.md`, `docs/manuals/metropolis.md`. Goal document: `docs/2026-03-09-init-goal.md`.
+Reference designs: `docs/manuals/er-101.md`, `docs/manuals/metropolis.md`. Goal document: `docs/2026-03-09-init-goal.md`. **Big-picture system map: `docs/ARCHITECTURE.md`** — read it before starting non-trivial work; it describes the authoring-engine vs. tape-deck-player split, the compiled song schema, and the build/upload pipeline.
 
 ---
 
@@ -53,8 +53,11 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - Timer/event loop in dev: `luv` (already installed)
 - **`lua-rtmidi` does not build on this machine** (Lua 5.5 ABI mismatch) — use the Python bridge instead
 - MIDI bridge: `python3 bridge.py` — reads the line protocol from stdin, opens a virtual port named `"Sequencer"`
-- Run the full stack: `lua main.lua | python3 bridge.py`
-- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/tui.lua && lua tests/probability.lua`
+- Run the live-edit stack (descriptor → in-memory compile → lite player): `lua main.lua | python3 bridge.py`
+- Run the ship-mirror stack (precompiled song + lite player): `lua main_lite.lua | python3 bridge.py`
+- Compile a song to `compiled/`: `lua tools/song_compile.lua songs/<name>.lua`
+- Build the Grid upload bundle: `rm -rf grid && lua tools/gridsplit.lua --require-prefix /player --outdir grid/player player/player.lua && lua tools/song_compile.lua --require-prefix /<song> --outdir grid/<song> songs/<song>.lua`
+- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
 - `python-rtmidi` installed system-wide via `pip3 install python-rtmidi --break-system-packages`
 
@@ -76,7 +79,7 @@ In Ableton: Preferences → MIDI → enable **"Sequencer"** as a MIDI input sour
 
 ## Testing
 
-- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/performance.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/tui.lua`, `tests/probability.lua`
+- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/performance.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/scene.lua`, `tests/probability.lua`, `tests/song_writer.lua`, `tests/player.lua`, `tests/tui.lua`
 - Feature scenario files live in `tests/sequences/` and are executed via `tests/sequence_runner.lua`
 - Run a test file directly: `lua tests/track.lua` — asserts fire and print `OK` on success
 - Module files contain **input validation `assert()` guards only** (wrong type, out-of-range) — no behavioural tests in module files
@@ -128,36 +131,60 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 
 ## File layout
 
+See `docs/ARCHITECTURE.md` for the full system map and rationale. Quick reference:
+
 ```
-main.lua                    -- dev harness: luv timer + line-protocol MIDI emit
-bridge.py                   -- Python MIDI bridge: stdin → virtual port "Sequencer"
-utils.lua                   -- shared helpers: tableNew, tableCopy, clamp
-tui.lua                     -- terminal renderer for sequencer state snapshots
-sequencer/
-  step.lua                  -- Step.new, getters/setters, Step.isPlayable
-  pattern.lua               -- Pattern.new, getters/setters, Pattern.getStepCount
-  track.lua                 -- Track.new, Track.advance, direction/loop/clock controls
-  engine.lua                -- Engine.new, Engine.tick, BPM/swing/scale, Engine.reset
-  performance.lua           -- swing pulse-delay helper for playback timing
-  mathops.lua               -- transpose/jitter/random operations on step params
-  snapshot.lua              -- save/load full engine state via io
-  scene.lua                 -- Scene chain: automated loop-point sequencing
-  probability.lua           -- non-destructive per-step probability evaluation
+main.lua                       -- live-edit harness: descriptor → in-memory compile → lite player + luv
+main_lite.lua                  -- ship-mirror harness: precompiled song + lite player + luv
+bridge.py                      -- Python MIDI bridge: stdin → virtual port "Sequencer"
+grid_module.lua                -- copy-paste INIT / TIMER / rtmidi-callback blocks for the Grid module
+utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, scale tables
+tui.lua                        -- terminal renderer for engine state snapshots
+
+sequencer/                     -- AUTHORING ENGINE (macOS only)
+  step.lua                     -- Step.new, getters/setters, Step.isPlayable, Step.resolvePitch
+  pattern.lua                  -- Pattern.new, named contiguous slices of a track's step list
+  track.lua                    -- Track.new, Track.advance, direction/loop/clock controls
+  engine.lua                   -- Engine.new, Engine.tick, BPM/swing/scale, Engine.reset
+  performance.lua              -- swing pulse-delay helper for playback timing
+  mathops.lua                  -- transpose/jitter/random operations on step params
+  snapshot.lua                 -- save/load full engine state via io
+  scene.lua                    -- Scene chain: automated loop-point sequencing
+  probability.lua              -- non-destructive per-step probability evaluation
+  song_writer.lua              -- bridge to player: rollNextLoop on loop boundary
+
+player/                        -- TAPE-DECK PLAYER (runs on Grid; ~180 lines)
+  player.lua                   -- walks compiled event arrays; internal + external (MIDI 0xF8) clock modes
+
+songs/                         -- terse song descriptors (authoring inputs, pure-data tables)
+  dark_groove.lua
+
+compiled/                      -- output of tools/song_compile.lua (no prefix, for macOS dev)
+  <name>.lua + <name>_<arr>_<n>.lua sidecars
+
+grid/                          -- final upload bundle (output with --require-prefix)
+  player/*.lua                 -- → /player/  on device
+  <song>/*.lua                 -- → /<song>/  on device
+
+tools/
+  song_compile.lua             -- engine → compiled song (schema v2) + sidecars
+  gridsplit.lua                -- module → ≤800-char chunks, prefix-aware require rewrites
+  charcheck.lua                -- per-file char count audit
+  memprofile.lua               -- on-device memory footprint estimator
+
 tests/
-  utils.lua                 -- behavioural tests for utils
-  step.lua                  -- behavioural tests for step
-  pattern.lua               -- behavioural tests for pattern
-  track.lua                 -- behavioural tests for track (loop points, clock, patterns)
-  engine.lua                -- behavioural tests for engine (clock/swing/scale/direction)
-  performance.lua           -- behavioural tests for swing helper
-  mathops.lua               -- behavioural tests for parameter math operations
-  snapshot.lua              -- behavioural tests for snapshot serialization
-  tui.lua                   -- behavioural tests for terminal renderer
-  probability.lua           -- behavioural tests for per-step probability
+  utils.lua  step.lua  pattern.lua  track.lua  engine.lua
+  performance.lua  mathops.lua  snapshot.lua  scene.lua
+  probability.lua  song_writer.lua  player.lua  tui.lua
+  sequence_runner.lua          -- runs scenarios in tests/sequences/
+  sequences/                   -- end-to-end feature scenarios
+
 docs/
-  2026-03-09-init-goal.md   -- project goal and architecture decisions
-  manuals/er-101.md         -- ER-101 feature reference (engine architecture)
-  manuals/metropolis.md     -- Metropolis reference (selective feature adoption)
+  ARCHITECTURE.md              -- full system map: pipeline, schema v2, deployment, clock modes
+  2026-03-09-init-goal.md      -- project goal and architecture decisions
+  manuals/er-101.md            -- ER-101 feature reference (engine architecture)
+  manuals/metropolis.md        -- Metropolis reference (selective feature adoption)
+  2026-04-*.md                 -- chronological session notes
 ```
 
 ## Bridge line protocol
@@ -174,11 +201,13 @@ NOTE_OFF <pitch> <channel>
 
 ## Multiple agents
 
-Recommended split when parallelising work:
+Recommended split when parallelising work. Note the authoring-engine vs. tape-deck-player boundary (see `docs/ARCHITECTURE.md`):
 
-- **Engine agent** — `sequencer/engine.lua`, `sequencer/track.lua` (clock, patterns, loop points)
-- **Step agent** — `sequencer/step.lua`, `sequencer/pattern.lua` (ratchet, scale quantizer, pattern ops)
-- **Utils agent** — `utils.lua` (scale tables, math helpers)
-- **Harness agent** — `main.lua`, `bridge.py` (timer tuning, multi-track emit)
+- **Engine agent** — `sequencer/engine.lua`, `sequencer/track.lua` (clock, patterns, loop points). Authoring side.
+- **Step agent** — `sequencer/step.lua`, `sequencer/pattern.lua` (ratchet, scale quantizer, pattern ops). Authoring side.
+- **Utils agent** — `utils.lua` (scale tables, math helpers).
+- **Player/writer agent** — `player/player.lua`, `sequencer/song_writer.lua` (tape-deck playback + per-loop probability re-roll). Strict size budget; the player runs on device.
+- **Tooling agent** — `tools/song_compile.lua`, `tools/gridsplit.lua` (compile + chunk pipeline; schema v2 owner).
+- **Harness agent** — `main.lua`, `main_lite.lua`, `grid_module.lua`, `bridge.py` (timer tuning, MIDI clock sync, INIT/TIMER blocks).
 
 Each agent owns its files and only calls the public functions of other modules.

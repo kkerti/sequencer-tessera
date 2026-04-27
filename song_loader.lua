@@ -1,6 +1,9 @@
 -- song_loader.lua
--- Constructs and returns a configured { engine, player } pair from a song table.
--- Split into three public functions so gridsplit can chunk it under 800 chars.
+-- Builds an Engine + lightweight playback context from a song descriptor.
+-- Used by tools/song_compile.lua to walk the engine pulse-by-pulse and
+-- record events. The returned `player` is a stub table holding only the
+-- fields the compiler reads (engine, swingPercent, scaleTable, rootNote);
+-- there is no on-device player wrapper any more.
 --
 -- Usage:
 --   local SongLoader = require("song_loader")
@@ -9,7 +12,7 @@
 local Engine = require("sequencer/engine")
 local Track  = require("sequencer/track")
 local Step   = require("sequencer/step")
-local Player = require("player/player")
+local Utils  = require("utils")
 
 local SongLoader = {}
 
@@ -51,9 +54,10 @@ function SongLoader.loadTracks(engine, song)
     end
 end
 
--- Load a song table and return { engine, player }.
+-- Load a song table and return { engine, player } where `player` is a
+-- lightweight stub holding the fields the compiler walker reads.
 -- `song`    : song descriptor table (see songs/dark_groove.lua)
--- `clockFn` : zero-argument function returning monotonic ms
+-- `clockFn` : kept for API compatibility; not consulted by the loader
 function SongLoader.load(song, clockFn)
     assert(type(song)    == "table",    "SongLoader.load: song must be a table")
     assert(type(clockFn) == "function", "SongLoader.load: clockFn must be a function")
@@ -61,9 +65,19 @@ function SongLoader.load(song, clockFn)
     local bpm = song.bpm or 120
     local eng = Engine.new(bpm, song.ppb or 4, #(song.tracks or {}), 0)
     SongLoader.loadTracks(eng, song)
-    local pl = Player.new(eng, bpm, clockFn)
-    if song.swing then Player.setSwing(pl, song.swing) end
-    if song.scale then Player.setScale(pl, song.scale, song.root or 0) end
+
+    local scaleTable = nil
+    if song.scale then
+        scaleTable = Utils.SCALES and Utils.SCALES[song.scale] or nil
+    end
+
+    local pl = {
+        engine        = eng,
+        swingPercent  = song.swing or 50,
+        scaleTable    = scaleTable,
+        rootNote      = song.root or 0,
+    }
+
     return { engine = eng, player = pl }
 end
 

@@ -52,6 +52,17 @@ local I_RATCH    = 5
 local I_PROB     = 6
 local I_ACTIVE   = 7
 
+local PITCH_MIN    = 0
+local PITCH_MAX    = 127
+local VELOCITY_MIN = 0
+local VELOCITY_MAX = 127
+local DURATION_MIN = 0
+local DURATION_MAX = 99
+local GATE_MIN     = 0
+local GATE_MAX     = 99
+local PROB_MIN     = 0
+local PROB_MAX     = 100
+
 function Step.new(pitch, velocity, duration, gate, ratch, probability)
     pitch       = pitch or 60
     velocity    = velocity or 100

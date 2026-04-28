@@ -55,7 +55,7 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - Run the ship-mirror stack (precompiled song + lite player): `lua main_lite.lua | python3 bridge.py`
 - Compile a song to `compiled/`: `lua tools/song_compile.lua patches/<name>.lua`
 - Build the Grid upload bundle: see README.md `Build the Grid upload bundle`. Includes `/player/`, `/utils/`, `/sequencer_lite/`, `/live/` and per-song folders.
-- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua && lua tests/sequencer_lite.lua && lua tests/live_edit.lua`
+- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua && lua tests/sequencer_lite.lua && lua tests/live_edit.lua`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
 - `python-rtmidi` installed system-wide via `pip3 install python-rtmidi --break-system-packages`
 
@@ -77,7 +77,7 @@ In Ableton: Preferences → MIDI → enable **"Sequencer"** as a MIDI input sour
 
 ## Testing
 
-- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/performance.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/scene.lua`, `tests/probability.lua`, `tests/song_writer.lua`, `tests/player.lua`, `tests/tui.lua`
+- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/scene.lua`, `tests/probability.lua`, `tests/song_writer.lua`, `tests/player.lua`, `tests/tui.lua`
 - Feature scenario files live in `tests/sequences/` and are executed via `tests/sequence_runner.lua`
 - Run a test file directly: `lua tests/track.lua` — asserts fire and print `OK` on success
 - Module files contain **input validation `assert()` guards only** (wrong type, out-of-range) — no behavioural tests in module files
@@ -184,7 +184,7 @@ tools/
 
 tests/
   utils.lua  step.lua  pattern.lua  track.lua  engine.lua
-  performance.lua  mathops.lua  snapshot.lua  scene.lua
+  mathops.lua  snapshot.lua  scene.lua
   probability.lua  song_writer.lua  player.lua  tui.lua
   sequencer_lite.lua           -- smoke test for the lite engine carve
   live_edit.lua                -- behavioural tests for live/edit.lua

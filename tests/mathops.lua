@@ -22,21 +22,6 @@ end
 
 do
     local t = Track.new()
-    Track.addPattern(t, 4)
-    for i = 1, 4 do
-        Track.setStep(t, i, Step.new(60, 100, 4, 2))
-    end
-
-    math.randomseed(11)
-    MathOps.randomize(t, "ratchet", 2, 4)
-    for i = 1, 4 do
-        local r = Step.getRatchet(Track.getStep(t, i))
-        assert(r >= 2 and r <= 4)
-    end
-end
-
-do
-    local t = Track.new()
     Track.addPattern(t, 2)
     Track.setStep(t, 1, Step.new(60, 100, 4, 2))
     Track.setStep(t, 2, Step.new(60, 100, 4, 2))

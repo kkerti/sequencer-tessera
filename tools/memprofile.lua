@@ -41,7 +41,6 @@ local Pattern = require("sequencer/pattern")
 local MathOps = require("sequencer/mathops")
 local Snapshot = require("sequencer/snapshot")
 local Scene = require("sequencer/scene")
-local Performance = require("sequencer/performance")
 local Probability = require("sequencer/probability")
 local Utils = require("utils")
 local Helpers = require("tests.sequences._helpers")
@@ -53,8 +52,6 @@ local SCENARIOS = {
     "01_basic_patterns",
     "02_direction_modes",
     "03_ratchet_showcase",
-    "04_swing_showcase",
-    "05_scale_quantizer",
     "06_clock_div_mult_polyrhythm",
     "07_mathops_mutation",
     "08_snapshot_roundtrip",

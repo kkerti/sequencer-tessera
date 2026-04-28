@@ -1,19 +1,20 @@
 -- sequencer/engine.lua
 -- The sequencer engine. Owns tracks, patterns, steps, loop points,
--- direction modes, scene chains, scale and snapshot state.
+-- direction modes, and scene chains.
 --
 -- Engine.advance() is the cursor tick: called by the player once per
 -- logical pulse per track (after clock div/mult has been applied by
 -- the player). It returns raw step events ("NOTE_ON" / "NOTE_OFF" / nil)
--- with no MIDI, no probability, no scale logic — those are player concerns.
+-- with no MIDI and no probability logic — those are player concerns.
 --
 -- The player (player/player.lua) owns:
---   BPM, swing, NOTE_ON/OFF emission, os.clock() gate timing,
---   active note tracking, probability evaluation, scale quantization.
+--   BPM, NOTE_ON/OFF emission, os.clock() gate timing,
+--   active note tracking, probability evaluation.
+-- Pitch quantization, swing, and other timing/harmony shaping are
+-- intentionally not part of this engine — apply them downstream of MIDI.
 
 local Track  = require("sequencer/track")
 local Scene  = require("sequencer/scene")
-local Utils  = require("utils")
 
 local Engine = {}
 
@@ -71,9 +72,6 @@ function Engine.new(bpm, pulsesPerBeat, trackCount, stepCount)
         pulseIntervalMs = Engine.bpmToMs(bpm, pulsesPerBeat),
         tracks          = engineInitTracks(trackCount, stepCount),
         trackCount      = trackCount,
-        scaleName       = nil,
-        scaleTable      = nil,
-        rootNote        = 0,
         sceneChain      = nil,
     }
 end
@@ -86,27 +84,6 @@ function Engine.getTrack(engine, index)
     assert(type(index) == "number" and index >= 1 and index <= engine.trackCount,
         "engineGetTrack: index out of range")
     return engine.tracks[index]
-end
-
--- ---------------------------------------------------------------------------
--- Scale
--- ---------------------------------------------------------------------------
-
-function Engine.setScale(engine, scaleName, rootNote)
-    assert(type(scaleName) == "string", "engineSetScale: scaleName must be a string")
-    assert(Utils.SCALES[scaleName] ~= nil, "engineSetScale: unknown scale")
-    rootNote = rootNote or 0
-    assert(type(rootNote) == "number" and rootNote >= 0 and rootNote <= 11,
-        "engineSetScale: rootNote out of range 0-11")
-    engine.scaleName  = scaleName
-    engine.scaleTable = Utils.SCALES[scaleName]
-    engine.rootNote   = rootNote
-end
-
-function Engine.clearScale(engine)
-    engine.scaleName  = nil
-    engine.scaleTable = nil
-    engine.rootNote   = 0
 end
 
 -- ---------------------------------------------------------------------------

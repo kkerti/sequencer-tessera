@@ -1,18 +1,17 @@
 -- tests/sequence_runner.lua
 -- Runs listenable + assertable sequence scenarios.
--- Drives the engine directly with an inline pulse loop (the old rich player's
--- responsibilities — swing, probability, scale quantizer — are inlined here
--- because they're test-runner concerns, not on-device player concerns).
+-- Drives the engine directly with an inline pulse loop. Probability is the
+-- only live-decision the runner inlines (it's a per-step engine concern);
+-- swing and scale quantization were intentionally removed — apply them
+-- downstream of MIDI if you need them.
 --
 -- Usage:
 --   lua tests/sequence_runner.lua 01_basic_patterns
 --   lua tests/sequence_runner.lua all
 
 local Engine      = require("sequencer/engine")
-local Performance = require("sequencer/performance")
 local Probability = require("sequencer/probability")
 local Step        = require("sequencer/step")
-local Utils       = require("utils")
 local Tui         = require("tui")
 local Helpers     = require("tests.sequences._helpers")
 
@@ -23,8 +22,6 @@ local SCENARIOS = {
     "01_basic_patterns",
     "02_direction_modes",
     "03_ratchet_showcase",
-    "04_swing_showcase",
-    "05_scale_quantizer",
     "06_clock_div_mult_polyrhythm",
     "07_mathops_mutation",
     "08_snapshot_roundtrip",
@@ -40,21 +37,12 @@ end
 -- Minimal pulse driver — replaces the old rich player for test purposes.
 -- Returns a function `tick(emit)` that emits event tables {type,pitch,velocity,channel}.
 local function makeDriver(engine)
-    local swingPercent = (engine.swingPercent and engine.swingPercent > 50)
-                            and engine.swingPercent or 50
-    local scaleTable   = engine.scaleName and Utils.SCALES[engine.scaleName] or nil
-    local rootNote     = engine.rootNote or 0
     local pulseCount   = 0
-    local swingCarry   = 0
     local probSuppressed = {}
     for i = 1, engine.trackCount do probSuppressed[i] = false end
 
     return function(emit)
         pulseCount = pulseCount + 1
-        local shouldHold
-        shouldHold, swingCarry = Performance.nextSwingHold(
-            pulseCount, engine.pulsesPerBeat, swingPercent, swingCarry)
-        if shouldHold then return end
 
         for ti = 1, engine.trackCount do
             local track = engine.tracks[ti]
@@ -68,7 +56,7 @@ local function makeDriver(engine)
                     if Probability.shouldPlay(step) then
                         probSuppressed[ti] = false
                         local channel = track.midiChannel or ti
-                        local pitch   = Step.resolvePitch(step, scaleTable, rootNote)
+                        local pitch   = Step.getPitch(step)
                         emit({
                             type = "NOTE_ON", pitch = pitch,
                             velocity = Step.getVelocity(step), channel = channel,
@@ -81,7 +69,7 @@ local function makeDriver(engine)
                         probSuppressed[ti] = false
                     else
                         local channel = track.midiChannel or ti
-                        local pitch   = Step.resolvePitch(step, scaleTable, rootNote)
+                        local pitch   = Step.getPitch(step)
                         emit({
                             type = "NOTE_OFF", pitch = pitch,
                             velocity = 0, channel = channel,

@@ -177,7 +177,7 @@ end
 do
     local t = Track.new()
     Track.addPattern(t, 1)
-    local st = Step.new(60, 100, 4, 1, 2)
+    local st = Step.new(60, 100, 4, 1, true)
     Track.setStep(t, 1, st)
 
     local ev

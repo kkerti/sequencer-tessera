@@ -14,7 +14,7 @@ These modules are not loaded on device. Their features are macOS-authoring conce
 
 ### `snapshot.lua` — full engine state serialization
 
-- **What it did:** save/load the full live-engine state (all tracks, patterns, steps, loop points, clock, scale, scene chain) to disk via `io`.
+- **What it did:** save/load the full live-engine state (all tracks, patterns, steps, loop points, clock, scene chain) to disk via `io`.
 - **Why dropped:** the device receives precompiled songs. There is no live "engine state" to snapshot — the compiled song *is* the persistent state.
 - **Revive when:** you want on-device "presets" that are richer than swapping which compiled song is loaded — e.g. live tweaks that should survive a power cycle without re-compiling.
 - **Revival recipe:** copy `sequencer/snapshot.lua` into `sequencer_lite/`. No other changes needed; it depends only on `Track`, `Step`, `Pattern`, `Scene`, `Engine` (the last two would need to be present too if you want the full payload).
@@ -105,12 +105,12 @@ These are *not yet dropped* from `sequencer_lite/`, but listed here so the next 
 |---|---|---|
 | Direction modes (keep only `forward`) | ~2 KB | Reverse / ping-pong / random / brownian playback. Most sequencers use forward exclusively. |
 | Per-step probability | ~0.6 KB code | Songs become deterministic — every pass identical. |
-| Swing | ~1 KB (in `performance.lua`, currently a player concern, not loaded by lite engine) | Always-straight timing. |
 | Per-track clock div/mult | ~1 KB | All tracks lock to the same clock. Loses polyrhythm support. |
-| Live scale quantizer | ~3 KB (lives in `utils.lua`) | Pitches are baked at compile time anyway, so this only hurts on-device transposition. |
 | Ratchet | ~0.5 KB | No per-step repeat count. |
 
-If the lite engine still doesn't fit comfortably, attack these in this order: **swing → ratchet → direction modes → quantizer → probability → clock div/mult**. (The order roughly matches "least musical loss first".)
+If the lite engine still doesn't fit comfortably, attack these in this order: **ratchet → direction modes → probability → clock div/mult**. (The order roughly matches "least musical loss first".)
+
+> **Already dropped from the project entirely** (not just from lite): swing and live scale quantization. These are timing-feel and harmony-shaping concerns; apply them downstream of MIDI in your DAW or via a dedicated MIDI processor. See `docs/2026-04-28-drop-swing-and-scales.md`.
 
 ---
 

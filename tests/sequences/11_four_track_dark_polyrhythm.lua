@@ -1,12 +1,11 @@
 local Track = require("sequencer/track")
 local Step = require("sequencer/step")
-local Engine = require("sequencer/engine")
 local MathOps = require("sequencer/mathops")
 
 local Scenario = {}
 
 Scenario.name = "11_four_track_dark_polyrhythm"
-Scenario.description = "4-track dark scene: slow swing, minor harmony, sparse-heavy contrast"
+Scenario.description = "4-track dark scene: minor harmony, sparse-heavy contrast"
 Scenario.defaultPulses = 64
 
 function Scenario.build(helpers)
@@ -16,9 +15,6 @@ function Scenario.build(helpers)
     local t2 = engine.tracks[2] -- ominous lead fragments
     local t3 = engine.tracks[3] -- slow reversed harmonic anchor
     local t4 = engine.tracks[4] -- metallic/percussive accents
-
-    engine.swingPercent = 60
-    Engine.setScale(engine, "harmonicMinor", 0)
 
     Track.setMidiChannel(t1, 1)
     Track.setMidiChannel(t2, 2)
@@ -30,14 +26,14 @@ function Scenario.build(helpers)
     -- C harm. minor in octave 1: C1=24 D1=26 Eb1=27 F1=29 G1=31 Ab1=32 B1=35
     -- ---------------------------------------------------------------------
     Track.addPattern(t1, 8)
-    Track.setStep(t1, 1, Step.new(31, 118, 2, 1, 1))  -- G1
-    Track.setStep(t1, 2, Step.new(31, 114, 2, 1, 1))  -- G1
-    Track.setStep(t1, 3, Step.new(32, 110, 2, 1, 1))  -- Ab1
-    Track.setStep(t1, 4, Step.new(35, 108, 2, 1, 1))  -- B1
-    Track.setStep(t1, 5, Step.new(31, 120, 2, 1, 1))  -- G1
-    Track.setStep(t1, 6, Step.new(29, 112, 2, 1, 1))  -- F1
-    Track.setStep(t1, 7, Step.new(31, 116, 2, 1, 1))  -- G1
-    Track.setStep(t1, 8, Step.new(32, 100, 2, 0, 1))  -- Ab1 rest
+    Track.setStep(t1, 1, Step.new(31, 118, 2, 1, false))  -- G1
+    Track.setStep(t1, 2, Step.new(31, 114, 2, 1, false))  -- G1
+    Track.setStep(t1, 3, Step.new(32, 110, 2, 1, false))  -- Ab1
+    Track.setStep(t1, 4, Step.new(35, 108, 2, 1, false))  -- B1
+    Track.setStep(t1, 5, Step.new(31, 120, 2, 1, false))  -- G1
+    Track.setStep(t1, 6, Step.new(29, 112, 2, 1, false))  -- F1
+    Track.setStep(t1, 7, Step.new(31, 116, 2, 1, false))  -- G1
+    Track.setStep(t1, 8, Step.new(32, 100, 2, 0, false))  -- Ab1 rest
     Track.setLoopStart(t1, 3)
     Track.setLoopEnd(t1, 8)
 
@@ -48,14 +44,14 @@ function Scenario.build(helpers)
     Track.addPattern(t2, 8)
     Track.setDirection(t2, "pingpong")
 
-    Track.setStep(t2, 1, Step.new(55, 88, 2, 1, 1))   -- G3
-    Track.setStep(t2, 2, Step.new(59, 86, 2, 1, 2))   -- B3
-    Track.setStep(t2, 3, Step.new(60, 82, 2, 1, 1))   -- C4
-    Track.setStep(t2, 4, Step.new(65, 84, 2, 1, 3))   -- F4
-    Track.setStep(t2, 5, Step.new(60, 82, 2, 1, 1))   -- C4
-    Track.setStep(t2, 6, Step.new(59, 86, 2, 1, 2))   -- B3
-    Track.setStep(t2, 7, Step.new(55, 88, 2, 1, 1))   -- G3
-    Track.setStep(t2, 8, Step.new(51, 76, 2, 0, 1))   -- Eb3 rest
+    Track.setStep(t2, 1, Step.new(55, 88, 2, 1, false))   -- G3
+    Track.setStep(t2, 2, Step.new(59, 86, 2, 1, true))   -- B3
+    Track.setStep(t2, 3, Step.new(60, 82, 2, 1, false))   -- C4
+    Track.setStep(t2, 4, Step.new(65, 84, 2, 1, true))   -- F4
+    Track.setStep(t2, 5, Step.new(60, 82, 2, 1, false))   -- C4
+    Track.setStep(t2, 6, Step.new(59, 86, 2, 1, true))   -- B3
+    Track.setStep(t2, 7, Step.new(55, 88, 2, 1, false))   -- G3
+    Track.setStep(t2, 8, Step.new(51, 76, 2, 0, false))   -- Eb3 rest
 
     -- ---------------------------------------------------------------------
     -- T3: very slow reverse progression, gives dark bed
@@ -65,12 +61,12 @@ function Scenario.build(helpers)
     Track.setClockDiv(t3, 4)
     Track.setDirection(t3, "reverse")
 
-    Track.setStep(t3, 1, Step.new(43, 78, 6, 3, 1))   -- G2
-    Track.setStep(t3, 2, Step.new(47, 76, 6, 3, 1))   -- B2
-    Track.setStep(t3, 3, Step.new(48, 74, 6, 3, 1))   -- C3
-    Track.setStep(t3, 4, Step.new(53, 72, 6, 3, 1))   -- F3
-    Track.setStep(t3, 5, Step.new(48, 74, 6, 3, 1))   -- C3
-    Track.setStep(t3, 6, Step.new(47, 76, 6, 3, 1))   -- B2
+    Track.setStep(t3, 1, Step.new(43, 78, 6, 3, false))   -- G2
+    Track.setStep(t3, 2, Step.new(47, 76, 6, 3, false))   -- B2
+    Track.setStep(t3, 3, Step.new(48, 74, 6, 3, false))   -- C3
+    Track.setStep(t3, 4, Step.new(53, 72, 6, 3, false))   -- F3
+    Track.setStep(t3, 5, Step.new(48, 74, 6, 3, false))   -- C3
+    Track.setStep(t3, 6, Step.new(47, 76, 6, 3, false))   -- B2
 
     -- ---------------------------------------------------------------------
     -- T4: off-grid metallic lane, fast and jittery
@@ -80,17 +76,18 @@ function Scenario.build(helpers)
     Track.setClockMult(t4, 2)
     Track.setDirection(t4, "forward")
 
-    Track.setStep(t4, 1, Step.new(72, 72, 1, 1, 1))   -- C5
-    Track.setStep(t4, 2, Step.new(71, 68, 1, 1, 1))   -- B4
-    Track.setStep(t4, 3, Step.new(67, 70, 1, 1, 1))   -- G4
-    Track.setStep(t4, 4, Step.new(65, 66, 1, 1, 1))   -- F4
-    Track.setStep(t4, 5, Step.new(63, 70, 1, 1, 1))   -- Eb4
-    Track.setStep(t4, 6, Step.new(65, 66, 1, 1, 1))   -- F4
-    Track.setStep(t4, 7, Step.new(67, 70, 1, 1, 1))   -- G4
-    Track.setStep(t4, 8, Step.new(71, 62, 1, 0, 1))   -- B4 rest
+    Track.setStep(t4, 1, Step.new(72, 72, 1, 1, false))   -- C5
+    Track.setStep(t4, 2, Step.new(71, 68, 1, 1, false))   -- B4
+    Track.setStep(t4, 3, Step.new(67, 70, 1, 1, false))   -- G4
+    Track.setStep(t4, 4, Step.new(65, 66, 1, 1, false))   -- F4
+    Track.setStep(t4, 5, Step.new(63, 70, 1, 1, false))   -- Eb4
+    Track.setStep(t4, 6, Step.new(65, 66, 1, 1, false))   -- F4
+    Track.setStep(t4, 7, Step.new(67, 70, 1, 1, false))   -- G4
+    Track.setStep(t4, 8, Step.new(71, 62, 1, 0, false))   -- B4 rest
 
     math.randomseed(1111)
-    MathOps.randomize(t4, "ratchet", 1, 2)
+    -- Boolean ratchet: enable a single step's ratch flag for stab accent.
+    Step.setRatch(Track.getStep(t4, 3), true)
     MathOps.jitter(t4, "velocity", 6)
 
     return engine

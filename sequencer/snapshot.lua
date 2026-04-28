@@ -43,7 +43,7 @@ local function snapshotSerializeStep(step)
         velocity = Step.getVelocity(step),
         duration = Step.getDuration(step),
         gate = Step.getGate(step),
-        ratchet = Step.getRatchet(step),
+        ratch = Step.getRatch(step),
         probability = Step.getProbability(step),
         active = Step.getActive(step),
     }
@@ -89,8 +89,6 @@ function Snapshot.toTable(engine)
     local data = {
         bpm = engine.bpm,
         pulsesPerBeat = engine.pulsesPerBeat,
-        scaleName = engine.scaleName,
-        rootNote = engine.rootNote,
         tracks = {},
     }
 
@@ -111,12 +109,14 @@ local function snapshotRestorePattern(track, patternIndex, patternData)
     local startFlat = Track.patternStartIndex(track, patternIndex)
     for stepIndex = 1, #patternData.steps do
         local stepData = patternData.steps[stepIndex]
+        local ratchValue = stepData.ratch
+        if ratchValue == nil then ratchValue = false end
         local step = Step.new(
             stepData.pitch,
             stepData.velocity,
             stepData.duration,
             stepData.gate,
-            stepData.ratchet or 1,
+            ratchValue,
             stepData.probability or 100
         )
         Step.setActive(step, stepData.active ~= false)
@@ -161,10 +161,6 @@ end
 function Snapshot.fromTable(data)
     local trackCount = #data.tracks
     local engine = Engine.new(data.bpm, data.pulsesPerBeat, trackCount, 0)
-
-    if data.scaleName ~= nil then
-        Engine.setScale(engine, data.scaleName, data.rootNote or 0)
-    end
 
     for trackIndex = 1, trackCount do
         snapshotRestoreTrack(engine, trackIndex, data.tracks[trackIndex])

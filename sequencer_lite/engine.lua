@@ -11,7 +11,6 @@
 -- need to special-case lite-vs-full.
 
 local Track  = require("sequencer_lite/track")
-local Utils  = require("utils")
 
 local Engine = {}
 
@@ -63,9 +62,6 @@ function Engine.new(bpm, pulsesPerBeat, trackCount, stepCount)
         pulseIntervalMs = Engine.bpmToMs(bpm, pulsesPerBeat),
         tracks          = engineInitTracks(trackCount, stepCount),
         trackCount      = trackCount,
-        scaleName       = nil,
-        scaleTable      = nil,
-        rootNote        = 0,
     }
 end
 
@@ -74,31 +70,6 @@ function Engine.getTrack(engine, index)
         "engineGetTrack: index out of range")
     return engine.tracks[index]
 end
-
--- ---------------------------------------------------------------------------
--- Scale
--- ---------------------------------------------------------------------------
-
-function Engine.setScale(engine, scaleName, rootNote)
-    assert(type(scaleName) == "string", "engineSetScale: scaleName must be a string")
-    assert(Utils.SCALES[scaleName] ~= nil, "engineSetScale: unknown scale")
-    rootNote = rootNote or 0
-    assert(type(rootNote) == "number" and rootNote >= 0 and rootNote <= 11,
-        "engineSetScale: rootNote out of range 0-11")
-    engine.scaleName  = scaleName
-    engine.scaleTable = Utils.SCALES[scaleName]
-    engine.rootNote   = rootNote
-end
-
-function Engine.clearScale(engine)
-    engine.scaleName  = nil
-    engine.scaleTable = nil
-    engine.rootNote   = 0
-end
-
--- NOTE: Scene chain hooks (setSceneChain/getSceneChain/clearSceneChain,
--- activateSceneChain/deactivateSceneChain) are intentionally absent.
--- See docs/dropped-features.md tier 1.
 
 -- ---------------------------------------------------------------------------
 -- Advance (pure cursor tick — no MIDI, no player logic)

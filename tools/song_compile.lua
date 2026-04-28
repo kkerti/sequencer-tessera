@@ -4,8 +4,8 @@
 -- player can walk without any sequencer engine code.
 --
 -- Usage:
---   lua tools/song_compile.lua songs/dark_groove.lua
---   lua tools/song_compile.lua songs/dark_groove.lua --outdir compiled
+--   lua tools/song_compile.lua patches/dark_groove.lua
+--   lua tools/song_compile.lua patches/dark_groove.lua --outdir compiled
 --
 -- The source song must declare `bars` (length in bars). `beatsPerBar` is
 -- optional and defaults to 4.
@@ -29,7 +29,7 @@
 --     eventCount  = <integer>,
 --     atPulse     = { ... },                -- pulse offset
 --     kind        = { ... },                -- 0/1/2/3 (numeric, cheap)
---     pitch       = { ... },                -- MIDI pitch (already scale-quantized)
+--     pitch       = { ... },                -- MIDI pitch
 --     velocity    = { ... },
 --     channel     = { ... },
 --
@@ -47,7 +47,6 @@ local SongLoader = require("song_loader")
 local Engine     = require("sequencer/engine")
 local Track      = require("sequencer/track")
 local Step       = require("sequencer/step")
-local Performance = require("sequencer/performance")
 
 -- ---------------------------------------------------------------------------
 -- Pulse-driven walker — mirrors Player.tick but records pulse positions.
@@ -64,51 +63,40 @@ local function compileTrackEvents(player, songBars, beatsPerBar)
     local hasProbability = false
 
     local pulseCount   = 0
-    local swingCarry   = 0
 
     while pulseCount < durationPulses do
         pulseCount = pulseCount + 1
 
-        local shouldHold
-        shouldHold, swingCarry = Performance.nextSwingHold(
-            pulseCount,
-            pulsesPerBeat,
-            player.swingPercent,
-            swingCarry
-        )
+        for trackIndex = 1, engine.trackCount do
+            local track = engine.tracks[trackIndex]
 
-        if not shouldHold then
-            for trackIndex = 1, engine.trackCount do
-                local track = engine.tracks[trackIndex]
+            track.clockAccum = track.clockAccum + track.clockMult
+            local advanceCount = math.floor(track.clockAccum / track.clockDiv)
+            track.clockAccum   = track.clockAccum % track.clockDiv
 
-                track.clockAccum = track.clockAccum + track.clockMult
-                local advanceCount = math.floor(track.clockAccum / track.clockDiv)
-                track.clockAccum   = track.clockAccum % track.clockDiv
+            for _ = 1, advanceCount do
+                local step, event = Engine.advanceTrack(engine, trackIndex)
+                if event == "NOTE_ON" then
+                    local channel    = track.midiChannel or trackIndex
+                    local pitch      = Step.getPitch(step)
+                    local gatePulses = Step.getGate(step)
+                    local prob       = Step.getProbability(step) or 100
 
-                for _ = 1, advanceCount do
-                    local step, event = Engine.advanceTrack(engine, trackIndex)
-                    if event == "NOTE_ON" then
-                        local channel    = track.midiChannel or trackIndex
-                        local pitch      = Step.resolvePitch(step, player.scaleTable, player.rootNote)
-                        local gatePulses = Step.getGate(step)
-                        local prob       = Step.getProbability(step) or 100
+                    if prob < 100 then hasProbability = true end
 
-                        if prob < 100 then hasProbability = true end
-
-                        raw[#raw + 1] = {
-                            atPulse = pulseCount,
-                            pitch   = pitch,
-                            vel     = Step.getVelocity(step),
-                            channel = channel,
-                            gate    = gatePulses,
-                            prob    = prob,
-                        }
-                    end
+                    raw[#raw + 1] = {
+                        atPulse = pulseCount,
+                        pitch   = pitch,
+                        vel     = Step.getVelocity(step),
+                        channel = channel,
+                        gate    = gatePulses,
+                        prob    = prob,
+                    }
                 end
             end
-
-            Engine.onPulse(engine, pulseCount)
         end
+
+        Engine.onPulse(engine, pulseCount)
     end
 
     -- Second pass: build interleaved (NOTE_ON, NOTE_OFF) sorted timeline.

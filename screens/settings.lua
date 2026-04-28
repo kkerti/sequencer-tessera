@@ -4,7 +4,7 @@
 
 -- INIT START
 n=0
-PL={"CLK SRC","RUN MODE","START","STOP","CONTINUE","RESET MODE","CLK LOSS","BPM","PPQN IN","SWING","SCALE","ROOT"}
+PL={"CLK SRC","RUN MODE","START","STOP","CONTINUE","RESET MODE","CLK LOSS","BPM","PPQN IN"}
 PM=#PL
 SP=1
 BTN_LEFT=9
@@ -39,10 +39,7 @@ onContinue={opts={"RUN","RESET+RUN"},ix=1},
 resetMode={opts={"IMMEDIATE","NEXT PULSE"},ix=1},
 clockLoss={opts={"HOLD","STOP+OFF","INTERNAL"},ix=2},
 bpm=120,
-ppqnIn={opts={"24","12","4"},ix=1},
-swing=58,
-scale={opts={"OFF","MAJOR","MINOR PENT","DORIAN","CHROMATIC"},ix=3},
-root={opts={"C","C#","D","Eb","E","F","F#","G","G#","A","Bb","B"},ix=1}
+ppqnIn={opts={"24","12","4"},ix=1}
 }
 
 print("settings init ok")
@@ -67,9 +64,6 @@ if SP==6 then CFG.resetMode.ix=optionIndexFromSlider(#CFG.resetMode.opts) end
 if SP==7 then CFG.clockLoss.ix=optionIndexFromSlider(#CFG.clockLoss.opts) end
 if SP==8 then CFG.bpm=math.floor(sliderValue/255*270)+30 end
 if SP==9 then CFG.ppqnIn.ix=optionIndexFromSlider(#CFG.ppqnIn.opts) end
-if SP==10 then CFG.swing=math.floor(sliderValue/255*22)+50 end
-if SP==11 then CFG.scale.ix=optionIndexFromSlider(#CFG.scale.opts) end
-if SP==12 then CFG.root.ix=optionIndexFromSlider(#CFG.root.opts) end
 
 -- colors
 local bg={18,18,24}
@@ -175,9 +169,6 @@ drawOptionRow(6,"RESET",CFG.resetMode.opts,CFG.resetMode.ix,rc)
 drawOptionRow(7,"CLK LOSS",CFG.clockLoss.opts,CFG.clockLoss.ix,rd)
 drawValueRow(8,"BPM",CFG.bpm,300,tostring(CFG.bpm),cb)
 drawOptionRow(9,"PPQN IN",CFG.ppqnIn.opts,CFG.ppqnIn.ix,rc)
-drawValueRow(10,"SWING",CFG.swing,72,tostring(CFG.swing).."%",ch)
-drawOptionRow(11,"SCALE",CFG.scale.opts,CFG.scale.ix,gn)
-drawOptionRow(12,"ROOT",CFG.root.opts,CFG.root.ix,cb)
 
 -- footer
 local fy=H-FH

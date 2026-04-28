@@ -21,7 +21,7 @@ The ER-101 governs the **data model and playback engine**. Its `Snapshot → Tra
 - Clock div/mult is **per-track** (not global), using an accumulator to handle any integer ratio without drift.
 - Math operations (jitter, random, transpose) act on individual step parameters, scoped to a step, pattern, or track.
 - Snapshots save full engine state (all tracks, all patterns, all steps, loop points, clock settings).
-- Ratchet in the ER-101 is binary on/off; the repeat count is implied by `gate / duration` ratio — **we will not follow this**; see Metropolis below.
+- Ratchet is **per-step boolean** (ER-101 style). When true, the gate cycles inside the step with period = 2 × `gate` pulses (ON for `gate` pulses, OFF for `gate` pulses, repeated until `duration` ends). When false, the step fires once.
 
 ### Metropolis — feature design (selective adoption)
 
@@ -29,12 +29,9 @@ The Metropolis's strength is **playability**: its hardware interface (faders, sw
 
 | Feature | Metropolis design | Why adopt it over ER-101 |
 |---|---|---|
-| **Ratchet count** | Explicit integer 1–4 per step | More musical and directly controllable than ER-101's implied binary count |
 | **Direction modes** | Forward, Reverse, Ping-Pong, Brownian, Random | ER-101 is forward-only; direction modes are valuable for Grid performance |
-| **Live scale quantizer** | 30 built-in scales, applied in real time | We output MIDI (not CV); a live `pitch → scale degree` mapper is more practical than pre-baked voltage tables |
-| **Swing** | Global percentage (50–72%), delays odd-numbered pulses | Cleaner than ER-101's manual boundary-transfer approach |
 
-Features **not** adopted from the Metropolis: its "pattern = complete saved sequence" concept, global-only clock division, fixed 8-stage limit, AUX CV modulation inputs (no equivalent on Grid), and hardware-slider pitch editing.
+Features **not** adopted from the Metropolis: its "pattern = complete saved sequence" concept, global-only clock division, fixed 8-stage limit, AUX CV modulation inputs (no equivalent on Grid), hardware-slider pitch editing, the global swing percentage, the live scale quantizer, and the integer ratchet count (1–4) — we use the ER-101's boolean ratchet flag instead. Swing and scale quantization are timing-feel and harmony-shaping concerns; this project intentionally leaves both to downstream MIDI processors. See `docs/2026-04-28-drop-swing-and-scales.md`.
 
 ---
 
@@ -56,7 +53,7 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - MIDI bridge: `python3 bridge.py` — reads the line protocol from stdin, opens a virtual port named `"Sequencer"`
 - Run the live-edit stack (descriptor → in-memory compile → lite player): `lua main.lua | python3 bridge.py`
 - Run the ship-mirror stack (precompiled song + lite player): `lua main_lite.lua | python3 bridge.py`
-- Compile a song to `compiled/`: `lua tools/song_compile.lua songs/<name>.lua`
+- Compile a song to `compiled/`: `lua tools/song_compile.lua patches/<name>.lua`
 - Build the Grid upload bundle: see README.md `Build the Grid upload bundle`. Includes `/player/`, `/utils/`, `/sequencer_lite/`, `/live/` and per-song folders.
 - Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/performance.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua && lua tests/sequencer_lite.lua && lua tests/live_edit.lua`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
@@ -76,7 +73,7 @@ In Ableton: Preferences → MIDI → enable **"Sequencer"** as a MIDI input sour
 - Module tables use **dot-notation**: `Step.new`, `Track.advance`, `Engine.tick`
 - Prefer expanded readable code over shorthands (author background: JS/TS/NestJS)
 - Keep functions short and isolated; split into new files when a file grows large
-- Utility/helper functions (table ops, math, scale helpers) **must live in `utils.lua`** — not inlined in sequencer modules
+- Utility/helper functions (table ops, math helpers) **must live in `utils.lua`** — not inlined in sequencer modules
 
 ## Testing
 
@@ -104,11 +101,11 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 - `velocity` — MIDI velocity
 - `duration` — step length in clock pulses (0 = skip this step)
 - `gate`     — note-on length in clock pulses (0 = rest; `gate >= duration` = legato)
-- `ratchet`  — repeat count per step (1–4, Metropolis-style)
+- `ratch`    — boolean; when true, gate cycles inside duration (ER-101 style)
 - `probability` — chance this step fires (0–100, 100 = always; Blackbox-style, non-destructive)
 - `active`   — boolean mute without deleting the step
 
-**Pitch is stored as direct MIDI note number and can be quantized live at engine output time.** `Step.resolvePitch(step, scaleTable, rootNote)` is the hook used by the engine.
+**Pitch is stored as a raw MIDI note number.** Harmony shaping (scale quantization, transposition) is intentionally out of scope for the engine — apply it downstream of MIDI if you need it.
 
 ## Key engine behaviours — implementation status
 
@@ -120,9 +117,9 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 | Per-track clock division / multiplication | Done |
 | Loop points (loopStart / loopEnd) | Done |
 | Patterns (sub-grouping of steps into named slices) | Done |
-| Ratcheting (explicit count 1–4, Metropolis-style) | Done |
+| Ratcheting (boolean per-step, ER-101 style) | Done |
 | Direction modes (forward/reverse/ping-pong/random/Brownian) | Done |
-| Live scale quantizer (Metropolis-style, 30 scales) | Done |
+| Live scale quantizer (Metropolis-style, 30 scales) | Removed (downstream concern) |
 | Swing (global percentage, Metropolis-style) | Done |
 | Math operations (add/jitter/random on params) | Done |
 | Snapshots (serialize full state via `io`) | Done |
@@ -139,15 +136,14 @@ main.lua                       -- live-edit harness: descriptor → in-memory co
 main_lite.lua                  -- ship-mirror harness: precompiled song + lite player + luv
 bridge.py                      -- Python MIDI bridge: stdin → virtual port "Sequencer"
 grid_module.lua                -- copy-paste INIT / TIMER / rtmidi-callback blocks for the Grid module
-utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, scale tables
+utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, pitchToName
 tui.lua                        -- terminal renderer for engine state snapshots
 
 sequencer/                     -- AUTHORING ENGINE (macOS only)
-  step.lua                     -- Step.new, getters/setters, Step.isPlayable, Step.resolvePitch
+  step.lua                     -- Step.new, getters/setters, Step.isPlayable, Step.getPitch
   pattern.lua                  -- Pattern.new, named contiguous slices of a track's step list
   track.lua                    -- Track.new, Track.advance, direction/loop/clock controls
-  engine.lua                   -- Engine.new, Engine.tick, BPM/swing/scale, Engine.reset
-  performance.lua              -- swing pulse-delay helper for playback timing
+  engine.lua                   -- Engine.new, Engine.tick, BPM, Engine.reset
   mathops.lua                  -- transpose/jitter/random operations on step params
   snapshot.lua                 -- save/load full engine state via io
   scene.lua                    -- Scene chain: automated loop-point sequencing
@@ -161,12 +157,12 @@ sequencer_lite/                -- ON-DEVICE AUTHORING ENGINE (carve of sequencer
   -- See docs/dropped-features.md.
 
 live/                          -- ON-DEVICE LIVE EDITOR (operates on compiled songs)
-  edit.lua                     -- O(1) pitch/velocity/mute; queued ratchet splice on loop boundary
+  edit.lua                     -- O(1) pitch/velocity/mute
 
 player/                        -- TAPE-DECK PLAYER (runs on Grid; ~180 lines)
   player.lua                   -- walks compiled event arrays; internal + external (MIDI 0xF8) clock modes
 
-songs/                         -- terse song descriptors (authoring inputs, pure-data tables)
+patches/                       -- terse patch descriptors (authoring inputs, pure-data tables)
   dark_groove.lua
 
 compiled/                      -- output of tools/song_compile.lua (single self-contained file)
@@ -221,8 +217,8 @@ NOTE_OFF <pitch> <channel>
 Recommended split when parallelising work. Note the authoring-engine vs. tape-deck-player boundary (see `docs/ARCHITECTURE.md`):
 
 - **Engine agent** — `sequencer/engine.lua`, `sequencer/track.lua` (clock, patterns, loop points). Authoring side.
-- **Step agent** — `sequencer/step.lua`, `sequencer/pattern.lua` (ratchet, scale quantizer, pattern ops). Authoring side.
-- **Utils agent** — `utils.lua` (scale tables, math helpers).
+- **Step agent** — `sequencer/step.lua`, `sequencer/pattern.lua` (ratchet, pattern ops). Authoring side.
+- **Utils agent** — `utils.lua` (table/math helpers).
 - **Player/writer agent** — `player/player.lua`, `sequencer/song_writer.lua` (tape-deck playback + per-loop probability re-roll). Strict size budget; the player runs on device.
 - **Tooling agent** — `tools/song_compile.lua` (compile pipeline; schema v2 owner).
 - **Harness agent** — `main.lua`, `main_lite.lua`, `grid_module.lua`, `bridge.py` (timer tuning, MIDI clock sync, INIT/TIMER blocks).

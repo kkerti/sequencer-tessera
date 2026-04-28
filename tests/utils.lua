@@ -23,8 +23,4 @@ assert(Utils.pitchToName(51) == "Eb3")
 assert(Utils.pitchToName(69) == "A4")
 assert(Utils.pitchToName(0) == "C-1")
 
-assert(Utils.quantizePitch(61, 0, Utils.SCALES.major) == 60)
-assert(Utils.quantizePitch(63, 0, Utils.SCALES.major) == 62)
-assert(Utils.quantizePitch(70, 0, Utils.SCALES.minorPentatonic) == 70)
-
 print("utils: all tests passed")

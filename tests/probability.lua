@@ -11,7 +11,7 @@ local Probability = require("sequencer/probability")
 
 -- probability = 100 always plays
 do
-    local s = Step.new(60, 100, 4, 2, 1, 100)
+    local s = Step.new(60, 100, 4, 2, false, 100)
     for _ = 1, 100 do
         assert(Probability.shouldPlay(s) == true,
             "probability 100 should always play")
@@ -20,7 +20,7 @@ end
 
 -- probability = 0 never plays
 do
-    local s = Step.new(60, 100, 4, 2, 1, 0)
+    local s = Step.new(60, 100, 4, 2, false, 0)
     for _ = 1, 100 do
         assert(Probability.shouldPlay(s) == false,
             "probability 0 should never play")
@@ -29,7 +29,7 @@ end
 
 -- nil probability (legacy steps) always plays
 do
-    local s = { pitch = 60, velocity = 100, duration = 4, gate = 2, ratchet = 1, active = true }
+    local s = { pitch = 60, velocity = 100, duration = 4, gate = 2, ratch = false, active = true }
     for _ = 1, 100 do
         assert(Probability.shouldPlay(s) == true,
             "nil probability should default to always play")
@@ -39,7 +39,7 @@ end
 -- probability = 50 should produce a mix over many trials
 do
     math.randomseed(12345)
-    local s = Step.new(60, 100, 4, 2, 1, 50)
+    local s = Step.new(60, 100, 4, 2, false, 50)
     local played = 0
     local trials = 1000
     for _ = 1, trials do
@@ -85,7 +85,7 @@ end
 -- ── Probability is non-destructive: step data unchanged ─────────────────────
 
 do
-    local s = Step.new(60, 100, 4, 2, 1, 50)
+    local s = Step.new(60, 100, 4, 2, false, 50)
     local origPitch = s.pitch
     local origProb = s.probability
     for _ = 1, 100 do

@@ -11,12 +11,12 @@ A **rich authoring engine** runs on macOS, **compiles songs to flat event arrays
 ```
 ┌──────────────── macOS (authoring) ────────────────┐    ┌──────── Grid module (playback) ────────┐
 │                                                   │    │                                        │
-│  songs/<name>.lua          (terse descriptor)     │    │   /player/player.lua                   │
+│  patches/<name>.lua          (terse descriptor)     │    │   /player/player.lua                   │
 │        │                                          │    │   /<song>/<song>.lua                   │
 │        ▼                                          │    │        │                               │
 │  sequencer/  (full ER-101 + Metropolis engine)    │    │        ▼                               │
 │        │   step / pattern / track / engine        │    │   tape-deck Player                     │
-│        │   mathops / scene / probability / swing  │    │   (no engine, no scale, no swing)      │
+│        │   mathops / scene / probability          │    │   (no engine, no extras)               │
 │        ▼                                          │    │        │                               │
 │  tools/song_compile.lua                           │    │        ▼                               │
 │        │   walk engine for `bars * beatsPerBar`   │    │   midi_send()  →  MIDI out             │
@@ -37,7 +37,7 @@ The **boundary** is `tools/song_compile.lua`. Everything left of it is rich and 
 
 ## Why this split
 
-The Grid module is an ESP32 with tight memory. A full multi-track sequencer engine running per-pulse — with scale quantization, swing, ratchet expansion, direction logic, probability rolls — does not fit comfortably and is not necessary.
+The Grid module is an ESP32 with tight memory. A full multi-track sequencer engine running per-pulse — with ratchet expansion, direction logic, probability rolls — does not fit comfortably and is not necessary.
 
 **Insight:** for a fixed-length song, every NOTE_ON / NOTE_OFF time can be precomputed once, in order, then replayed. The only per-loop randomness we care about is per-step probability, which is cheap to re-roll in place against a sidecar `srcStepProb[]` array.
 
@@ -55,11 +55,10 @@ The full ER-101 + Metropolis-inspired engine. Lives in `sequencer/`; runs only o
 
 | Module | Role |
 |---|---|
-| `step.lua`        | Step record (pitch, velocity, duration, gate, ratchet, probability, active). `Step.resolvePitch(step, scaleTable, rootNote)` for live quantization. |
+| `step.lua`        | Step record (pitch, velocity, duration, gate, ratch, probability, active). `ratch` is boolean (ER-101 style). Pitch is raw MIDI; harmony shaping is downstream. |
 | `pattern.lua`     | Named contiguous slice of a track's step list. Pure organisational layer. |
 | `track.lua`       | Per-track state: patterns, loop points, clock div/mult, direction mode (forward / reverse / pingpong / random / Brownian). `Track.advance` returns the next step. |
-| `engine.lua`      | Top-level: BPM, swing %, scale, root note, multi-track tick. `Engine.tick(eng, emit)` produces NOTE_ON/NOTE_OFF events for one pulse. |
-| `performance.lua` | Swing pulse-delay helper (global percentage, Metropolis-style). |
+| `engine.lua`      | Top-level: BPM, multi-track tick. `Engine.tick(eng, emit)` produces NOTE_ON/NOTE_OFF events for one pulse. |
 | `mathops.lua`     | Transpose / jitter / random on step parameters (one step, one pattern, or one track). |
 | `scene.lua`       | Scene chain — automated loop-point sequencing (per-track scene queue). |
 | `probability.lua` | Per-step probability evaluation (non-destructive, Blackbox-style). |
@@ -81,7 +80,7 @@ A carved-down copy of the authoring engine sized to fit on the Grid module. The 
 | `track.lua`   | carved from `sequencer/track.lua`          | drops `copyPattern`, `duplicatePattern`, `insertPattern`, `deletePattern`, `swapPatterns`, `pastePattern` |
 | `engine.lua`  | carved from `sequencer/engine.lua`         | drops scene-chain hooks; `Engine.onPulse` becomes a no-op |
 
-Modules **not** included in lite at all: `snapshot.lua`, `mathops.lua`, `scene.lua`, `song_writer.lua`, `performance.lua`, `probability.lua`. (`probability.lua` and `performance.lua` are player-side concerns at runtime; the lite engine doesn't need them at authoring time. `snapshot`/`mathops`/`scene` are intentional drops — see `docs/dropped-features.md` for the full rationale and revival recipes.)
+Modules **not** included in lite at all: `snapshot.lua`, `mathops.lua`, `scene.lua`, `song_writer.lua`, `probability.lua`. (`probability.lua` is a player-side concern at runtime; the lite engine doesn't need it at authoring time. `snapshot`/`mathops`/`scene` are intentional drops — see `docs/dropped-features.md` for the full rationale and revival recipes.)
 
 Sizes (raw / stripped):
 
@@ -106,11 +105,10 @@ Operation classes:
 | `setVelocity(song, idx, vel)` | O(1) | any time |
 | `mute(song, idx)` / `mutePair(song, idx)` | O(1) plus mate scan | any time |
 | `unmute(song, idx)` / `unmutePair(song, idx)` | O(1) plus mate scan | any time |
-| `setRatchet(song, spec)` | O(N) splice + O(N²) `pairOff` rebuild | **only at loop boundary** |
 
-Splice operations are queued via `queueRatchetEdit` / `applyQueue`; chain `applyQueue` into the song's `onLoopBoundary` hook so edits land between loops, never mid-cursor.
+All operations are O(1) edits safe at any pulse. Ratcheting is now a per-step boolean flag in the source patch (ER-101 style); the compiled-song editor no longer splices ratchet groups.
 
-Addressing model: **event-index-based, caller-tracks-groups.** The compiled schema does not preserve source-step boundaries (a 4-ratchet step looks identical to four sequential 1-ratchet steps). For ratchet edits the caller passes a spec describing both the current and the new geometry — the editor is the splicing primitive, not the source of truth for "what is a step".
+Addressing model: **event-index-based.** The compiled schema is a flat parallel-array timeline; the editor mutates events in place and finds the matching NOTE_OFF for a NOTE_ON via either the optional `pairOff[]` sidecar or a forward scan on (pitch, channel).
 
 Size: ~6.6 KB stripped. Bundled as `grid/edit.lua`. Tested in `tests/live_edit.lua` (11 checks).
 
@@ -118,7 +116,7 @@ Size: ~6.6 KB stripped. Bundled as `grid/edit.lua`. Tested in `tests/live_edit.l
 
 ## Compiled song schema (v2)
 
-Produced by `tools/song_compile.lua` from a song descriptor. The descriptor is a pure-data Lua table (see `songs/dark_groove.lua`); the compiler instantiates the engine, walks it for `bars * beatsPerBar` beats, captures every emitted event, and flattens to:
+Produced by `tools/song_compile.lua` from a song descriptor. The descriptor is a pure-data Lua table (see `patches/dark_groove.lua`); the compiler instantiates the engine, walks it for `bars * beatsPerBar` beats, captures every emitted event, and flattens to:
 
 ```
 song = {
@@ -131,7 +129,7 @@ song = {
     -- five parallel arrays of length N, sorted by (atPulse asc, kind asc):
     atPulse[],             -- pulse index (1-based) when this event fires
     kind[],                -- 1=NOTE_ON, 0=NOTE_OFF, 2=muted ON, 3=muted OFF
-    pitch[],               -- MIDI note (already scale-quantized at compile time)
+    pitch[],               -- MIDI note (raw, as authored)
     velocity[],            -- 0–127
     channel[],             -- 1-based MIDI channel
 
@@ -148,7 +146,7 @@ song = {
 
 Key properties:
 - **Interleaved & sorted.** A single cursor walks the arrays linearly per pulse — no separate ON/OFF queues, no priority heap.
-- **Scale and swing are baked in.** `pitch[]` is already the post-scale MIDI note; `atPulse[]` already includes swing delay. The player has zero knowledge of either.
+- **Player has no harmony or timing-feel logic.** The compiled arrays are exactly what gets emitted. Apply scale quantization, swing, or other shaping downstream of MIDI if needed.
 - **Static songs cost nothing per loop.** Without `hasProbability`, the writer arrays don't ship and `onLoopBoundary` is `nil`.
 - **Single self-contained file.** All five player arrays (and the optional three writer arrays) inline into one Lua module. `dark_groove` compiles to ~2.3 KB.
 
@@ -253,7 +251,7 @@ Minimal (player + one song):
 ```sh
 rm -rf grid && mkdir -p grid
 lua tools/strip.lua player/player.lua --out grid/player.lua
-lua tools/song_compile.lua songs/dark_groove.lua --outdir grid
+lua tools/song_compile.lua patches/dark_groove.lua --outdir grid
 ```
 
 Full bundle (player + utils + lite engine + live editor + 3 songs):
@@ -272,9 +270,9 @@ lua tools/bundle.lua --out /tmp/sequencer_lite.lua \
     --expose Utils --expose Step --expose Pattern --expose Track \
     --main Engine
 lua tools/strip.lua /tmp/sequencer_lite.lua --out grid/sequencer_lite.lua
-lua tools/song_compile.lua songs/empty.lua          --outdir grid
-lua tools/song_compile.lua songs/four_on_floor.lua  --outdir grid
-lua tools/song_compile.lua songs/dark_groove.lua    --outdir grid
+lua tools/song_compile.lua patches/empty.lua          --outdir grid
+lua tools/song_compile.lua patches/four_on_floor.lua  --outdir grid
+lua tools/song_compile.lua patches/dark_groove.lua    --outdir grid
 ```
 
 `tools/strip.lua` removes comments and statement-form `assert(...)` guards. Asserts are an authoring-time test-coverage tool; they are dead weight on device, since every code path that reaches the player has already passed the same checks during macOS dev. Stripping cuts the player from ~6 KB to ~3 KB.
@@ -284,7 +282,7 @@ lua tools/song_compile.lua songs/dark_groove.lua    --outdir grid
 For macOS dev (uses `compiled/<name>.lua` directly, asserts retained):
 
 ```sh
-lua tools/song_compile.lua songs/dark_groove.lua
+lua tools/song_compile.lua patches/dark_groove.lua
 lua main_lite.lua | python3 bridge.py
 ```
 
@@ -312,7 +310,7 @@ main.lua                       -- live-edit harness: descriptor → compile → 
 main_lite.lua                  -- ship-mirror harness: precompiled song + lite player + luv
 bridge.py                      -- Python MIDI bridge: stdin → virtual port "Sequencer"
 grid_module.lua                -- INIT / TIMER / rtmidi-callback copy-paste blocks
-utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, scale tables
+utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, pitchToName
 tui.lua                        -- terminal renderer for engine state snapshots
 
 sequencer/                     -- AUTHORING ENGINE (macOS only)
@@ -320,7 +318,6 @@ sequencer/                     -- AUTHORING ENGINE (macOS only)
   pattern.lua
   track.lua
   engine.lua
-  performance.lua              -- swing pulse-delay helper
   mathops.lua                  -- transpose/jitter/random ops
   scene.lua                    -- automated loop-point sequencing
   probability.lua              -- per-step probability eval
@@ -335,12 +332,12 @@ sequencer_lite/                -- ON-DEVICE AUTHORING ENGINE (carve of sequencer
   -- See docs/dropped-features.md for the carve rationale + revival recipes.
 
 live/                          -- ON-DEVICE LIVE EDITOR (mutates compiled songs)
-  edit.lua                     -- O(1) pitch/velocity/mute; queued ratchet splice on loop boundary
+  edit.lua                     -- O(1) pitch/velocity/mute
 
 player/                        -- TAPE-DECK PLAYER (runs on Grid)
   player.lua                   -- ~180 lines, walks compiled event arrays
 
-songs/                         -- terse song descriptors (authoring inputs)
+patches/                         -- terse song descriptors (authoring inputs)
   dark_groove.lua
 
 compiled/                      -- output of tools/song_compile.lua (single self-contained file)
@@ -361,12 +358,12 @@ tools/
 
 tests/                         -- behavioural tests
   utils.lua  step.lua  pattern.lua  track.lua  engine.lua
-  performance.lua  mathops.lua  snapshot.lua  scene.lua
+  mathops.lua  snapshot.lua  scene.lua
   probability.lua  song_writer.lua  player.lua  tui.lua
   sequencer_lite.lua           -- smoke test for the lite engine carve
   live_edit.lua                -- behavioural tests for live/edit.lua
   sequence_runner.lua          -- runs scenarios in tests/sequences/
-  sequences/                   -- 11 end-to-end feature scenarios
+  sequences/                   -- 9 end-to-end feature scenarios
 
 docs/
   ARCHITECTURE.md              -- this file

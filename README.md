@@ -48,9 +48,9 @@ lua tools/bundle.lua --out /tmp/sequencer_lite.lua \
 lua tools/strip.lua /tmp/sequencer_lite.lua --out grid/sequencer_lite.lua
 
 # Compiled songs (one file each)
-lua tools/song_compile.lua songs/empty.lua          --outdir grid
-lua tools/song_compile.lua songs/four_on_floor.lua  --outdir grid
-lua tools/song_compile.lua songs/dark_groove.lua    --outdir grid
+lua tools/song_compile.lua patches/empty.lua          --outdir grid
+lua tools/song_compile.lua patches/four_on_floor.lua  --outdir grid
+lua tools/song_compile.lua patches/dark_groove.lua    --outdir grid
 ```
 
 `tools/strip.lua` removes comments and statement-form `assert(...)` guards (cuts the player roughly in half). Value-returning asserts like `local f = assert(io.open(p))` are preserved.
@@ -63,7 +63,7 @@ Three songs ship as memory-footprint datapoints:
 - `dark_groove` — 232 events across 4 channels (bass / keys / kick / hat), ~3.1 KB. Full song.
 
 Three editing-engine candidates are bundled for on-device RAM measurement:
-- `live/edit.lua` — ~6.6 KB stripped. In-place editor on compiled-song arrays. O(1) pitch/velocity/mute; ratchet via queued splice at loop boundary.
+- `live/edit.lua` — small in-place editor on compiled-song arrays. O(1) pitch/velocity/mute.
 - `sequencer_lite.lua` — ~17.8 KB stripped (5 source modules bundled into one). Carved authoring engine: Step/Pattern/Track/Engine, no scene chain, no pattern manipulation, no snapshot. The bundle returns the Engine table; Step/Pattern/Track/Utils are accessible as `Engine.Step` etc.
 - Load both for combined cost.
 

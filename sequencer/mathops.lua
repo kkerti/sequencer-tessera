@@ -12,7 +12,6 @@ local PARAM_BOUNDS = {
     velocity = { min = 0, max = 127 },
     duration = { min = 0, max = 99 },
     gate = { min = 0, max = 99 },
-    ratchet = { min = 1, max = 4 },
 }
 
 local function mathOpsGetRange(track, startIndex, endIndex)
@@ -34,7 +33,6 @@ local function mathOpsGetValue(step, param)
     if param == "velocity" then return Step.getVelocity(step) end
     if param == "duration" then return Step.getDuration(step) end
     if param == "gate" then return Step.getGate(step) end
-    if param == "ratchet" then return Step.getRatchet(step) end
     error("mathOps: unsupported param")
 end
 
@@ -43,7 +41,6 @@ local function mathOpsSetValue(step, param, value)
     if param == "velocity" then Step.setVelocity(step, value); return end
     if param == "duration" then Step.setDuration(step, value); return end
     if param == "gate" then Step.setGate(step, value); return end
-    if param == "ratchet" then Step.setRatchet(step, value); return end
     error("mathOps: unsupported param")
 end
 

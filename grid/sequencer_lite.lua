@@ -8,38 +8,6 @@ local NOTE_NAMES = {
     "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"
 }
 
-Utils.SCALES = {}
-Utils.SCALES.chromatic        = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
-Utils.SCALES.major            = { 0, 2, 4, 5, 7, 9, 11 }
-Utils.SCALES.naturalMinor     = { 0, 2, 3, 5, 7, 8, 10 }
-Utils.SCALES.harmonicMinor    = { 0, 2, 3, 5, 7, 8, 11 }
-Utils.SCALES.melodicMinor     = { 0, 2, 3, 5, 7, 9, 11 }
-Utils.SCALES.dorian           = { 0, 2, 3, 5, 7, 9, 10 }
-Utils.SCALES.phrygian         = { 0, 1, 3, 5, 7, 8, 10 }
-Utils.SCALES.lydian           = { 0, 2, 4, 6, 7, 9, 11 }
-Utils.SCALES.mixolydian       = { 0, 2, 4, 5, 7, 9, 10 }
-Utils.SCALES.locrian          = { 0, 1, 3, 5, 6, 8, 10 }
-Utils.SCALES.majorPentatonic  = { 0, 2, 4, 7, 9 }
-Utils.SCALES.minorPentatonic  = { 0, 3, 5, 7, 10 }
-Utils.SCALES.blues            = { 0, 3, 5, 6, 7, 10 }
-Utils.SCALES.wholeTone        = { 0, 2, 4, 6, 8, 10 }
-Utils.SCALES.diminished       = { 0, 2, 3, 5, 6, 8, 9, 11 }
-Utils.SCALES.arabic           = { 0, 1, 4, 5, 7, 8, 11 }
-Utils.SCALES.hungarianMinor   = { 0, 2, 3, 6, 7, 8, 11 }
-Utils.SCALES.persian          = { 0, 1, 4, 5, 6, 8, 11 }
-Utils.SCALES.japanese         = { 0, 1, 5, 7, 8 }
-Utils.SCALES.egyptian         = { 0, 2, 5, 7, 10 }
-Utils.SCALES.spanish          = { 0, 1, 3, 4, 5, 6, 8, 10 }
-Utils.SCALES.iwato            = { 0, 1, 5, 6, 10 }
-Utils.SCALES.hirajoshi        = { 0, 2, 3, 7, 8 }
-Utils.SCALES.inSen            = { 0, 1, 5, 7, 10 }
-Utils.SCALES.pelog            = { 0, 1, 3, 7, 8 }
-Utils.SCALES.prometheus       = { 0, 2, 4, 6, 9, 10 }
-Utils.SCALES.neapolitanMajor  = { 0, 1, 3, 5, 7, 9, 11 }
-Utils.SCALES.neapolitanMinor  = { 0, 1, 3, 5, 7, 8, 11 }
-Utils.SCALES.enigmatic        = { 0, 1, 4, 6, 8, 10, 11 }
-Utils.SCALES.leadingWholeTone = { 0, 2, 4, 6, 8, 10, 11 }
-
 function Utils.tableNew(n, default)
     local t = {}
     for i = 1, n do
@@ -69,39 +37,10 @@ function Utils.pitchToName(midiNote)
     return NOTE_NAMES[noteIndex] .. tostring(octave)
 end
 
-function Utils.quantizePitch(pitch, rootNote, scaleTable)
-
-    local best = nil
-    local bestDistance = nil
-
-    local baseOctave = math.floor(pitch / 12)
-    for octave = baseOctave - 1, baseOctave + 1 do
-        for i = 1, #scaleTable do
-            local degree = scaleTable[i]
-            local candidate = octave * 12 + ((rootNote + degree) % 12)
-            if candidate >= 0 and candidate <= 127 then
-                local distance = math.abs(candidate - pitch)
-                if best == nil or distance < bestDistance or (distance == bestDistance and candidate < best) then
-                    best = candidate
-                    bestDistance = distance
-                end
-            end
-        end
-    end
-
-    if best == nil then
-        return Utils.clamp(pitch, 0, 127)
-    end
-
-    return best
-end
-
     return Utils
 end)()
 
 Step = (function()
-
-local Utils        = (Utils)
 
 local Step         = {}
 
@@ -113,28 +52,15 @@ local I_RATCH    = 5
 local I_PROB     = 6
 local I_ACTIVE   = 7
 
-local PITCH_MIN    = 0
-local PITCH_MAX    = 127
-local VELOCITY_MIN = 0
-local VELOCITY_MAX = 127
-local DURATION_MIN = 0
-local DURATION_MAX = 99
-local GATE_MIN     = 0
-local GATE_MAX     = 99
-local RATCHET_MIN  = 1
-local RATCHET_MAX  = 4
-local PROB_MIN     = 0
-local PROB_MAX     = 100
-
-function Step.new(pitch, velocity, duration, gate, ratchet, probability)
+function Step.new(pitch, velocity, duration, gate, ratch, probability)
     pitch       = pitch or 60
     velocity    = velocity or 100
     duration    = duration or 4
     gate        = gate or 2
-    ratchet     = ratchet or 1
+    if ratch == nil then ratch = false end
     probability = probability or 100
 
-    return { pitch, velocity, duration, gate, ratchet, probability, true }
+    return { pitch, velocity, duration, gate, ratch, probability, true }
 end
 
 function Step.getPitch(step)       return step[I_PITCH] end
@@ -157,8 +83,8 @@ function Step.setGate(step, value)
     step[I_GATE] = value
 end
 
-function Step.getRatchet(step)     return step[I_RATCH] end
-function Step.setRatchet(step, value)
+function Step.getRatch(step)       return step[I_RATCH] end
+function Step.setRatch(step, value)
     step[I_RATCH] = value
 end
 
@@ -176,78 +102,38 @@ function Step.isPlayable(step)
     return step[I_ACTIVE] and step[I_DUR] > 0 and step[I_GATE] > 0
 end
 
-local function stepIsRatchetOnPulse(step, pulseCounter)
-    local ratch = step[I_RATCH]
-    local dur   = step[I_DUR]
-    for i = 0, ratch - 1 do
-        local startPulse = math.floor((i * dur) / ratch)
-        if pulseCounter == startPulse then
-            return true
-        end
-    end
-    return false
-end
-
-local function stepIsRatchetOffPulse(step, pulseCounter)
-    local ratch = step[I_RATCH]
-    local dur   = step[I_DUR]
-    local gate  = step[I_GATE]
-    for i = 0, ratch - 1 do
-        local startPulse    = math.floor((i * dur) / ratch)
-        local nextStartPulse = math.floor(((i + 1) * dur) / ratch)
-        local subDuration   = nextStartPulse - startPulse
-        if subDuration < 1 then
-            subDuration = 1
-        end
-
-        local offPulse = startPulse + gate
-        if offPulse > startPulse + subDuration then
-            offPulse = startPulse + subDuration
-        end
-        if offPulse >= dur then
-            offPulse = dur - 1
-        end
-
-        if pulseCounter == offPulse then
-            return true
-        end
-    end
-    return false
-end
-
 function Step.getPulseEvent(step, pulseCounter)
 
     if not Step.isPlayable(step) then
         return nil
     end
 
-    if step[I_RATCH] == 1 then
+    local gate = step[I_GATE]
+    local dur  = step[I_DUR]
+
+    if not step[I_RATCH] then
         if pulseCounter == 0 then
             return "NOTE_ON"
         end
-        if pulseCounter == step[I_GATE] then
+        if pulseCounter == gate then
             return "NOTE_OFF"
         end
         return nil
     end
 
-    if stepIsRatchetOnPulse(step, pulseCounter) then
+    if pulseCounter >= dur then
+        return nil
+    end
+
+    local period = gate * 2
+    local phase  = pulseCounter % period
+    if phase == 0 then
         return "NOTE_ON"
     end
-
-    if stepIsRatchetOffPulse(step, pulseCounter) then
+    if phase == gate then
         return "NOTE_OFF"
     end
-
     return nil
-end
-
-function Step.resolvePitch(step, scaleTable, rootNote)
-    if scaleTable == nil then
-        return step[I_PITCH]
-    end
-    rootNote = rootNote or 0
-    return Utils.quantizePitch(step[I_PITCH], rootNote, scaleTable)
 end
 
     return Step
@@ -616,7 +502,6 @@ end)()
 Engine = (function()
 
 local Track  = (Track)
-local Utils  = (Utils)
 
 local Engine = {}
 
@@ -649,27 +534,11 @@ function Engine.new(bpm, pulsesPerBeat, trackCount, stepCount)
         pulseIntervalMs = Engine.bpmToMs(bpm, pulsesPerBeat),
         tracks          = engineInitTracks(trackCount, stepCount),
         trackCount      = trackCount,
-        scaleName       = nil,
-        scaleTable      = nil,
-        rootNote        = 0,
     }
 end
 
 function Engine.getTrack(engine, index)
     return engine.tracks[index]
-end
-
-function Engine.setScale(engine, scaleName, rootNote)
-    rootNote = rootNote or 0
-    engine.scaleName  = scaleName
-    engine.scaleTable = Utils.SCALES[scaleName]
-    engine.rootNote   = rootNote
-end
-
-function Engine.clearScale(engine)
-    engine.scaleName  = nil
-    engine.scaleTable = nil
-    engine.rootNote   = 0
 end
 
 function Engine.advanceTrack(engine, trackIndex)

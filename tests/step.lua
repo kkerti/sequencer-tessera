@@ -10,7 +10,7 @@ assert(Step.getPitch(s)       == 60)
 assert(Step.getVelocity(s)    == 100)
 assert(Step.getDuration(s)    == 4)
 assert(Step.getGate(s)        == 2)
-assert(Step.getRatchet(s)     == 1)
+assert(Step.getRatch(s)       == false)
 assert(Step.getProbability(s) == 100)
 assert(Step.getActive(s)      == true)
 assert(Step.isPlayable(s)     == true)
@@ -28,8 +28,8 @@ assert(Step.getDuration(s) == 8)
 Step.setGate(s, 4)
 assert(Step.getGate(s) == 4)
 
-Step.setRatchet(s, 3)
-assert(Step.getRatchet(s) == 3)
+Step.setRatch(s, true)
+assert(Step.getRatch(s) == true)
 
 -- Muted step is not playable
 Step.setActive(s, false)
@@ -52,14 +52,11 @@ assert(not ok, "expected error for pitch > 127")
 ok = pcall(Step.new, 60, 200, 4, 2)
 assert(not ok, "expected error for velocity > 127")
 
--- Ratchet pulse events
-local r = Step.new(60, 100, 4, 1, 2)
+-- Ratchet pulse events (boolean: gate cycles inside duration)
+local r = Step.new(60, 100, 4, 1, true)
 assert(Step.getPulseEvent(r, 0) == "NOTE_ON")
+assert(Step.getPulseEvent(r, 1) == "NOTE_OFF")
 assert(Step.getPulseEvent(r, 2) == "NOTE_ON")
-
--- Scale resolution passthrough / quantized
-assert(Step.resolvePitch(r, nil, 0) == 60)
-local Utils = require("utils")
-assert(Step.resolvePitch(Step.new(61, 100, 4, 2), Utils.SCALES.major, 0) == 60)
+assert(Step.getPulseEvent(r, 3) == "NOTE_OFF")
 
 print("step: all tests passed")

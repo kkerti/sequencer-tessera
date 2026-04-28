@@ -18,8 +18,7 @@ local Player      = require("player/player")
 -- ── Song description ─────────────────────────────────────────────────────────
 
 local songSource = {
-    bpm = 120, ppb = 4, swing = 56,
-    scale = "minorPentatonic", root = 0,
+    bpm = 120, ppb = 4,
     bars = 4, beatsPerBar = 4,
     tracks = {
         -- Track 1 — bass line, 2 patterns

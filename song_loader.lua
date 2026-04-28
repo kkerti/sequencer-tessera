@@ -1,29 +1,30 @@
 -- song_loader.lua
--- Builds an Engine + lightweight playback context from a song descriptor.
+-- Builds an Engine + lightweight playback context from a patch descriptor.
 -- Used by tools/song_compile.lua to walk the engine pulse-by-pulse and
 -- record events. The returned `player` is a stub table holding only the
--- fields the compiler reads (engine, swingPercent, scaleTable, rootNote);
--- there is no on-device player wrapper any more.
+-- engine; there is no on-device player wrapper any more.
 --
 -- Usage:
 --   local SongLoader = require("song_loader")
---   local result = SongLoader.load(require("songs/dark_groove"), clockFn)
+--   local result = SongLoader.load(require("patches/dark_groove"), clockFn)
 
 local Engine = require("sequencer/engine")
 local Track  = require("sequencer/track")
 local Step   = require("sequencer/step")
-local Utils  = require("utils")
 
 local SongLoader = {}
 
 -- Build one Step from a packed descriptor { pitch, vel, dur, gate [,ratch [,prob]] }.
+-- `ratch` is a boolean (ER-101 style); omit or pass false for a non-ratcheted step.
 function SongLoader.buildStep(desc)
+    local ratchValue = desc[5]
+    if ratchValue == nil then ratchValue = false end
     return Step.new(
         desc[1] or 60,
         desc[2] or 100,
         desc[3] or 4,
         desc[4] or 2,
-        desc[5] or 1,
+        ratchValue,
         desc[6] or 100
     )
 end
@@ -56,7 +57,7 @@ end
 
 -- Load a song table and return { engine, player } where `player` is a
 -- lightweight stub holding the fields the compiler walker reads.
--- `song`    : song descriptor table (see songs/dark_groove.lua)
+-- `song`    : song descriptor table (see patches/dark_groove.lua)
 -- `clockFn` : kept for API compatibility; not consulted by the loader
 function SongLoader.load(song, clockFn)
     assert(type(song)    == "table",    "SongLoader.load: song must be a table")
@@ -66,16 +67,8 @@ function SongLoader.load(song, clockFn)
     local eng = Engine.new(bpm, song.ppb or 4, #(song.tracks or {}), 0)
     SongLoader.loadTracks(eng, song)
 
-    local scaleTable = nil
-    if song.scale then
-        scaleTable = Utils.SCALES and Utils.SCALES[song.scale] or nil
-    end
-
     local pl = {
-        engine        = eng,
-        swingPercent  = song.swing or 50,
-        scaleTable    = scaleTable,
-        rootNote      = song.root or 0,
+        engine = eng,
     }
 
     return { engine = eng, player = pl }

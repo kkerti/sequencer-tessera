@@ -1,12 +1,11 @@
 local Track = require("sequencer/track")
 local Step = require("sequencer/step")
-local Engine = require("sequencer/engine")
 local MathOps = require("sequencer/mathops")
 
 local Scenario = {}
 
 Scenario.name = "09_full_stack_performance"
-Scenario.description = "Multi-track performance blend of direction, ratchet, scale, swing"
+Scenario.description = "Multi-track performance blend of direction, ratchet, clock division"
 Scenario.defaultPulses = 32
 
 function Scenario.build(helpers)
@@ -15,33 +14,31 @@ function Scenario.build(helpers)
     local t2 = engine.tracks[2]
 
     Track.addPattern(t1, 8)
-    Track.setStep(t1, 1, Step.new(60, 100, 2, 1, 2))
-    Track.setStep(t1, 2, Step.new(63, 95, 2, 1, 1))
-    Track.setStep(t1, 3, Step.new(67, 100, 2, 1, 2))
-    Track.setStep(t1, 4, Step.new(70, 90, 2, 1, 1))
-    Track.setStep(t1, 5, Step.new(67, 95, 2, 1, 1))
-    Track.setStep(t1, 6, Step.new(63, 90, 2, 1, 2))
-    Track.setStep(t1, 7, Step.new(60, 100, 2, 1, 1))
-    Track.setStep(t1, 8, Step.new(58, 85, 2, 0, 1))
+    Track.setStep(t1, 1, Step.new(60, 100, 2, 1, true))
+    Track.setStep(t1, 2, Step.new(63, 95, 2, 1, false))
+    Track.setStep(t1, 3, Step.new(67, 100, 2, 1, true))
+    Track.setStep(t1, 4, Step.new(70, 90, 2, 1, false))
+    Track.setStep(t1, 5, Step.new(67, 95, 2, 1, false))
+    Track.setStep(t1, 6, Step.new(63, 90, 2, 1, true))
+    Track.setStep(t1, 7, Step.new(60, 100, 2, 1, false))
+    Track.setStep(t1, 8, Step.new(58, 85, 2, 0, false))
     Track.setDirection(t1, "pingpong")
 
     Track.addPattern(t2, 8)
-    Track.setStep(t2, 1, Step.new(48, 95, 2, 1, 1))
-    Track.setStep(t2, 2, Step.new(50, 90, 2, 1, 1))
-    Track.setStep(t2, 3, Step.new(52, 85, 2, 1, 1))
-    Track.setStep(t2, 4, Step.new(53, 80, 2, 0, 1))
-    Track.setStep(t2, 5, Step.new(55, 90, 2, 1, 1))
-    Track.setStep(t2, 6, Step.new(53, 85, 2, 1, 1))
-    Track.setStep(t2, 7, Step.new(52, 80, 2, 1, 1))
-    Track.setStep(t2, 8, Step.new(50, 75, 2, 0, 1))
+    Track.setStep(t2, 1, Step.new(48, 95, 2, 1, false))
+    Track.setStep(t2, 2, Step.new(50, 90, 2, 1, false))
+    Track.setStep(t2, 3, Step.new(52, 85, 2, 1, false))
+    Track.setStep(t2, 4, Step.new(53, 80, 2, 0, false))
+    Track.setStep(t2, 5, Step.new(55, 90, 2, 1, false))
+    Track.setStep(t2, 6, Step.new(53, 85, 2, 1, false))
+    Track.setStep(t2, 7, Step.new(52, 80, 2, 1, false))
+    Track.setStep(t2, 8, Step.new(50, 75, 2, 0, false))
     Track.setClockDiv(t2, 2)
     Track.setDirection(t2, "reverse")
     Track.setMidiChannel(t1, 1)
     Track.setMidiChannel(t2, 2)
 
     MathOps.transpose(t2, 12)
-    Engine.setScale(engine, "minorPentatonic", 0)
-    engine.swingPercent = 56
 
     return engine
 end

@@ -1,6 +1,6 @@
 -- trackconfig.lua
 -- Track Config screen: per-track settings editor
--- Direction, clock, loop points, MIDI channel, scale
+-- Direction, clock, loop points, MIDI channel
 
 -- INIT START
 n=0
@@ -13,7 +13,6 @@ T={
 }
 NT=4
 BPM=120
-SC="minPent"
 DR={"forward","reverse","pingpong","random","brownian"}
 PL={"DIR","CLK/","CLKx","LOOP S","LOOP E","MIDI CH","MUTE"}
 PM=7
@@ -95,7 +94,6 @@ ggdrf(0,0,0,W,H,bg)
 ggdrf(0,0,0,W,HH,hd)
 ggdft(0,t.nm.." CONFIG",4,4,8,wh)
 ggdft(0,tostring(BPM).."bpm",140,4,8,tx)
-ggdft(0,SC,220,4,8,td)
 ggdft(0,t.ns.." steps",270,4,8,td)
 
 -- track selector tabs

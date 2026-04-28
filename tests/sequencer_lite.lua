@@ -97,14 +97,7 @@ assert(Engine.setSceneChain == nil, "setSceneChain should be absent")
 assert(Engine.activateSceneChain == nil, "activateSceneChain should be absent")
 ok("Removed APIs are absent")
 
--- 8. Scale quantizer still works (kept in lite)
-Engine.setScale(engine, "minorPentatonic", 0)
-assert(engine.scaleTable ~= nil, "scaleTable set")
-local quantized = Step.resolvePitch(Track.getStep(track, 1), engine.scaleTable, engine.rootNote)
-assert(type(quantized) == "number", "resolvePitch returns number")
-ok("Scale quantizer functional in lite")
-
--- 9. Direction modes still work
+-- 8. Direction modes still work
 Track.setDirection(track, "reverse")
 assert(Track.getDirection(track) == "reverse", "setDirection")
 Track.setDirection(track, "pingpong")

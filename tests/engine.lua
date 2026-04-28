@@ -2,7 +2,7 @@
 -- Behavioural tests for sequencer/engine.lua.
 -- The engine is now a pure data/cursor layer. It owns tracks, patterns,
 -- steps, loop points, direction modes, and scene chains.
--- MIDI emission, active note tracking, BPM, swing, and scale are player concerns.
+-- MIDI emission, active note tracking, and BPM are player concerns.
 -- Run with: lua tests/engine.lua
 
 local Engine = require("sequencer/engine")
@@ -103,24 +103,6 @@ assert(tReset.cursor == 1 and tReset.pulseCounter == 0,
 -- After reset, advanceTrack should replay from step 1.
 local _, firstEv = Engine.advanceTrack(eReset, 1)
 assert(firstEv == "NOTE_ON", "after reset, first advance should be NOTE_ON")
-
--- ── Engine.setScale / clearScale ─────────────────────────────────────────────
-
--- Scale is stored on the engine; quantization is applied by the player.
--- Verify the scale table reference is set correctly.
-Engine.setScale(e, "major", 0)
-assert(e.scaleName  == "major",  "scaleName should be 'major'")
-assert(e.rootNote   == 0,        "rootNote should be 0")
-assert(type(e.scaleTable) == "table", "scaleTable should be a table")
-
-Engine.clearScale(e)
-assert(e.scaleName  == nil, "scaleName cleared")
-assert(e.scaleTable == nil, "scaleTable cleared")
-assert(e.rootNote   == 0,   "rootNote back to 0")
-
--- Unknown scale name raises an error.
-local okScale = pcall(Engine.setScale, e, "notAScale", 0)
-assert(not okScale, "unknown scale should error")
 
 -- ── Scene chain integration ───────────────────────────────────────────────────
 

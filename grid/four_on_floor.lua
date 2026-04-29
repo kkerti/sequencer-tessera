@@ -1,12 +1,12 @@
-local s={}
-s.bpm=120
-s.pulsesPerBeat=4
-s.durationPulses=64
-s.loop=true
-s.eventCount=32
-s.atPulse={1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63}
-s.kind={1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0}
-s.pitch={36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36}
-s.velocity={110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0,110,0}
-s.channel={10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10}
-return s
+-- patches/four_on_floor.lua
+-- Mid-size baseline: a single drum-channel kick on every beat for 4 bars.
+-- 16 NOTE_ON / NOTE_OFF pairs total. Roughly one third the event count of
+-- dark_groove. Useful as a middle data point for on-device footprint sweeps.
+return{bpm=120,ppb=4,bars=4,beatsPerBar=4,
+  tracks={
+    {channel=10,direction="forward",clockDiv=1,clockMult=1,
+      patterns={{name="K",steps={
+        {36,110,4,2},{36,110,4,2},{36,110,4,2},{36,110,4,2}
+      }}}}
+  }
+}

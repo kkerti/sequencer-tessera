@@ -4,7 +4,7 @@
 
 Lua 5.5 step sequencer library targeting the **Grid modular controller platform** (ESP32 + luaVM, which runs Lua 5.4). Development and validation happen on macOS first, then code runs unmodified on device.
 
-Reference designs: `docs/manuals/er-101.md`, `docs/manuals/metropolis.md`. Goal document: `docs/2026-03-09-init-goal.md`. **Big-picture system map: `docs/ARCHITECTURE.md`** — read it before starting non-trivial work; it describes the authoring-engine vs. tape-deck-player split, the compiled song schema, and the build/upload pipeline.
+Reference designs: `docs/manuals/er-101.md`, `docs/manuals/metropolis.md`. Goal document: `docs/2026-03-09-init-goal.md`. **Big-picture system map: `docs/ARCHITECTURE.md`** — read it before starting non-trivial work; it describes the engine-on-device CV+gate model, the Driver layer, the patch loader, and the build/upload pipeline.
 
 ---
 
@@ -51,11 +51,9 @@ Features **not** adopted from the Metropolis: its "pattern = complete saved sequ
 - Timer/event loop in dev: `luv` (already installed)
 - **`lua-rtmidi` does not build on this machine** (Lua 5.5 ABI mismatch) — use the Python bridge instead
 - MIDI bridge: `python3 bridge.py` — reads the line protocol from stdin, opens a virtual port named `"Sequencer"`
-- Run the live-edit stack (descriptor → in-memory compile → lite player): `lua main.lua | python3 bridge.py`
-- Run the ship-mirror stack (precompiled song + lite player): `lua main_lite.lua | python3 bridge.py`
-- Compile a song to `compiled/`: `lua tools/song_compile.lua patches/<name>.lua`
-- Build the Grid upload bundle: see README.md `Build the Grid upload bundle`. Includes `/player/`, `/utils/`, `/sequencer_lite/`, `/live/` and per-song folders.
-- Run tests: `lua tests/utils.lua && lua tests/step.lua && lua tests/pattern.lua && lua tests/track.lua && lua tests/engine.lua && lua tests/mathops.lua && lua tests/snapshot.lua && lua tests/scene.lua && lua tests/tui.lua && lua tests/probability.lua && lua tests/song_writer.lua && lua tests/player.lua && lua tests/sequencer_lite.lua && lua tests/live_edit.lua`
+- Run on macOS: `lua main.lua [patches/<name>] | python3 bridge.py` (default patch is `patches/dark_groove`)
+- Build the Grid upload bundle: `lua tools/build_grid.lua` (produces flat `grid/sequencer.lua` + per-patch `grid/<name>.lua`). See README.md for details.
+- Run unit tests: `for t in utils step pattern track engine mathops snapshot scene tui probability midi_translate patch_loader driver grid_bundle_smoke controls; do lua tests/$t.lua || break; done`
 - Run feature scenarios: `lua tests/sequence_runner.lua all`
 - `python-rtmidi` installed system-wide via `pip3 install python-rtmidi --break-system-packages`
 
@@ -71,13 +69,41 @@ In Ableton: Preferences → MIDI → enable **"Sequencer"** as a MIDI input sour
   - Correct: `stepGetGate`, `trackClockDiv`, `engineSetBpm`
   - Wrong: `get_gate`, `GetGate`, `step_get_gate`
 - Module tables use **dot-notation**: `Step.new`, `Track.advance`, `Engine.tick`
-- Prefer expanded readable code over shorthands (author background: JS/TS/NestJS)
+- Prefer expanded readable code over shorthands — but see "Style: zones, abbreviations, and the codebook" below for the zones where short names are required
 - Keep functions short and isolated; split into new files when a file grows large
 - Utility/helper functions (table ops, math helpers) **must live in `utils.lua`** — not inlined in sequencer modules
 
+## Style: zones, abbreviations, and the codebook
+
+This project is generated and maintained by LLM agents. Code is validated by running it (host harness, unit tests, scenario runner) and by loading the bundle into the Grid Lua VM — not by humans reviewing diffs line-by-line. The style rules below reflect that workflow.
+
+### Optimisation priority (in order)
+
+1. **On-device memory footprint.** Lite engine bundle ceiling ~140 KB; current ~129 KB. Every byte counts.
+2. **Clear module boundaries** (lite vs full engine, driver vs engine, controls vs driver).
+3. **DRY within a zone.** *Not* across the lite/full boundary — the carve is intentional.
+4. **Human readability.** Still valued: future LLMs grep for descriptive names, and humans inspect code when something breaks.
+
+### Zones
+
+| Zone | Audience | Naming style |
+|---|---|---|
+| `sequencer/`, `tests/`, `tools/`, `main.lua`, `driver/`, `utils.lua`, `tui.lua` | macOS dev + bundled to device | Full readable hungarianNotation. **LuaSrcDiet shortens locals at build for the device bundle.** Source stays clean. |
+| `controls.lua` paste blocks | Grid Editor (880-char per-event paste budget) | Short names mandatory. Document every short name in `docs/CODEBOOK.md`. |
+| Packed encodings (Step int, future snapshot wire format) | Lua VM | Encoded; bit layouts and constants documented in `docs/CODEBOOK.md`. |
+
+### Rules
+
+- **First resort: delete, don't abbreviate.** If a feature isn't needed, drop it from `sequencer/`. We've already done this for swing and live scale quantization. Bigger byte win than golfing names.
+- **Abbreviate only with a measured saving.** Either bytes-on-device after diet, or characters in a paste-budget-constrained block. No vibes-based shortening. If you can't quote a number, leave the name long.
+- **Source stays readable; the bundle is what ships short.** Never apply paste-block style (`s`, `EM`, `DR`) to non-paste source code. LuaSrcDiet does that work for you.
+- **Every short name or packed encoding gets a `docs/CODEBOOK.md` entry.** Single-letter param codes, packed-int bit layouts, single-char locals in paste blocks, alias short forms in `tools/build_grid.lua` `--as` — all of it. The codebook is the live mapping; date entries when added.
+
+See `docs/CODEBOOK.md` for the live mapping of every short name and packed encoding in the project.
+
 ## Testing
 
-- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/scene.lua`, `tests/probability.lua`, `tests/song_writer.lua`, `tests/player.lua`, `tests/tui.lua`
+- Tests live in `tests/` as separate files: `tests/utils.lua`, `tests/step.lua`, `tests/pattern.lua`, `tests/track.lua`, `tests/engine.lua`, `tests/mathops.lua`, `tests/snapshot.lua`, `tests/scene.lua`, `tests/probability.lua`, `tests/midi_translate.lua`, `tests/patch_loader.lua`, `tests/driver.lua`, `tests/grid_bundle_smoke.lua`, `tests/tui.lua`, `tests/controls.lua`
 - Feature scenario files live in `tests/sequences/` and are executed via `tests/sequence_runner.lua`
 - Run a test file directly: `lua tests/track.lua` — asserts fire and print `OK` on success
 - Module files contain **input validation `assert()` guards only** (wrong type, out-of-range) — no behavioural tests in module files
@@ -132,69 +158,57 @@ The hierarchy is: **Snapshot → Track → Pattern → Step**
 See `docs/ARCHITECTURE.md` for the full system map and rationale. Quick reference:
 
 ```
-main.lua                       -- live-edit harness: descriptor → in-memory compile → lite player + luv
-main_lite.lua                  -- ship-mirror harness: precompiled song + lite player + luv
+main.lua                       -- macOS harness: PatchLoader → Driver → libuv timer → bridge.py
 bridge.py                      -- Python MIDI bridge: stdin → virtual port "Sequencer"
-grid_module.lua                -- copy-paste INIT / TIMER / rtmidi-callback blocks for the Grid module
+grid_module.lua                -- copy-paste INIT / TIMER / BUTTON / rtmidi-callback blocks for the Grid module
 utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, pitchToName
 tui.lua                        -- terminal renderer for engine state snapshots
 
-sequencer/                     -- AUTHORING ENGINE (macOS only)
-  step.lua                     -- Step.new, getters/setters, Step.isPlayable, Step.getPitch
+sequencer/                     -- FULL AUTHORING ENGINE (macOS only)
+  step.lua                     -- Step.new, sampleCv, sampleGate (ER-101 boolean ratchet)
   pattern.lua                  -- Pattern.new, named contiguous slices of a track's step list
-  track.lua                    -- Track.new, Track.advance, direction/loop/clock controls
-  engine.lua                   -- Engine.new, Engine.tick, BPM, Engine.reset
+  track.lua                    -- Track.new, sample, advance; direction/loop/clock controls; per-step entry-probability roll
+  engine.lua                   -- Engine.new, sampleTrack, advanceTrack, onPulse, BPM, reset
   mathops.lua                  -- transpose/jitter/random operations on step params
   snapshot.lua                 -- save/load full engine state via io
   scene.lua                    -- Scene chain: automated loop-point sequencing
-  probability.lua              -- non-destructive per-step probability evaluation
-  song_writer.lua              -- bridge to player: rollNextLoop on loop boundary
+  probability.lua              -- shared probability helpers (used by mathops/scene)
+  midi_translate.lua           -- per-track edge detector: (cvA,cvB,gate) → NOTE_ON / NOTE_OFF (+ retrigger on pitch change, panic)
+  patch_loader.lua             -- patch descriptor (table) → fully populated Engine
 
-sequencer_lite/                -- ON-DEVICE AUTHORING ENGINE (carve of sequencer/)
-  step.lua / pattern.lua       -- byte-equivalent to sequencer/
-  track.lua                    -- pattern-manipulation ops removed
-  engine.lua                   -- scene-chain hooks removed
-  -- See docs/dropped-features.md.
+driver/                        -- DRIVER LAYER (runs on host AND device)
+  driver.lua                   -- per-pulse: sample → translate → advance, per track; clock div/mult accumulator inside externalPulse; tick() for internal clock, externalPulse() for MIDI 0xF8
 
-live/                          -- ON-DEVICE LIVE EDITOR (operates on compiled songs)
-  edit.lua                     -- O(1) pitch/velocity/mute
-
-player/                        -- TAPE-DECK PLAYER (runs on Grid; ~180 lines)
-  player.lua                   -- walks compiled event arrays; internal + external (MIDI 0xF8) clock modes
-
-patches/                       -- terse patch descriptors (authoring inputs, pure-data tables)
-  dark_groove.lua
-
-compiled/                      -- output of tools/song_compile.lua (single self-contained file)
-  <name>.lua
+patches/                       -- terse patch descriptors (pure-data Lua tables)
+  dark_groove.lua  four_on_floor.lua  empty.lua
 
 grid/                          -- final upload bundle (FLAT — one file per library at root)
-  player.lua                   -- → /player.lua            on device
-  utils.lua                    -- → /utils.lua             on device
-  sequencer_lite.lua           -- → /sequencer_lite.lua    on device (optional; bundled by tools/bundle.lua)
-  edit.lua                     -- → /edit.lua              on device (optional)
-  <song>.lua                   -- → /<song>.lua            on device
+  sequencer.lua                -- → /sequencer.lua  on device  (engine + Scene + MidiTranslate + PatchLoader + Driver, all bundled+stripped+dieted)
+  controls.lua                 -- → /controls.lua   on device  (UI module; lazy-loaded on first BUTTON event)
+  <patch>.lua                  -- → /<patch>.lua    on device  (pure-data descriptor, e.g. /four_on_floor.lua)
 
 tools/
-  song_compile.lua             -- engine → compiled song (schema v2), single inlined file
-  bundle.lua                   -- splice N modules into one file; rewrites cross-module require()
+  build_grid.lua               -- one-shot bundle + strip + patch-copy → grid/
+  bundle.lua                   -- splice N modules into one file; rewrites cross-module require(); --alias for cross-path keys
   strip.lua                    -- comment + statement-assert remover
   charcheck.lua                -- raw + minified char count reporter
   memprofile.lua               -- on-device memory footprint estimator
 
 tests/
   utils.lua  step.lua  pattern.lua  track.lua  engine.lua
-  mathops.lua  snapshot.lua  scene.lua
-  probability.lua  song_writer.lua  player.lua  tui.lua
-  sequencer_lite.lua           -- smoke test for the lite engine carve
-  live_edit.lua                -- behavioural tests for live/edit.lua
-  sequence_runner.lua          -- runs scenarios in tests/sequences/
+  mathops.lua  snapshot.lua  scene.lua  probability.lua  tui.lua
+  midi_translate.lua           -- edge detection + retrigger + panic
+  patch_loader.lua             -- descriptor → engine round-trip (incl. real patches/*)
+  driver.lua                   -- driver pulse loop + clock div/mult + start/stop/panic
+  grid_bundle_smoke.lua        -- loads grid/sequencer.lua exactly as device would; drives + asserts emit
+  controls.lua                 -- UI editing model + screen renderer
+  sequence_runner.lua          -- runs scenarios in tests/sequences/ via real Driver
   sequences/                   -- end-to-end feature scenarios
 
 docs/
-  ARCHITECTURE.md              -- full system map: pipeline, schema v2, deployment, clock modes
-  dropped-features.md          -- what sequencer_lite/ leaves out and how to revive it
+  ARCHITECTURE.md              -- full system map: engine-on-device, Driver, PatchLoader, deployment, clock modes
   2026-03-09-init-goal.md      -- project goal and architecture decisions
+  2026-04-28-cvgate-engine.md  -- CV+gate refactor brief and work plan
   manuals/er-101.md            -- ER-101 feature reference (engine architecture)
   manuals/metropolis.md        -- Metropolis reference (selective feature adoption)
   2026-04-*.md                 -- chronological session notes
@@ -214,13 +228,14 @@ NOTE_OFF <pitch> <channel>
 
 ## Multiple agents
 
-Recommended split when parallelising work. Note the authoring-engine vs. tape-deck-player boundary (see `docs/ARCHITECTURE.md`):
+Recommended split when parallelising work. A single engine in `sequencer/` is shared between host (macOS dev harness) and device (Grid module via the bundled `grid/sequencer.lua`); the Driver layer runs on both:
 
-- **Engine agent** — `sequencer/engine.lua`, `sequencer/track.lua` (clock, patterns, loop points). Authoring side.
-- **Step agent** — `sequencer/step.lua`, `sequencer/pattern.lua` (ratchet, pattern ops). Authoring side.
-- **Utils agent** — `utils.lua` (table/math helpers).
-- **Player/writer agent** — `player/player.lua`, `sequencer/song_writer.lua` (tape-deck playback + per-loop probability re-roll). Strict size budget; the player runs on device.
-- **Tooling agent** — `tools/song_compile.lua` (compile pipeline; schema v2 owner).
-- **Harness agent** — `main.lua`, `main_lite.lua`, `grid_module.lua`, `bridge.py` (timer tuning, MIDI clock sync, INIT/TIMER blocks).
+- **Engine agent** — `sequencer/engine.lua`, `sequencer/track.lua`, `sequencer/pattern.lua`, `sequencer/step.lua`, `sequencer/scene.lua`. Core playback model. Bundled to device.
+- **Authoring agent** — `sequencer/mathops.lua`, `sequencer/snapshot.lua`, `sequencer/probability.lua`. Host-only authoring features; not bundled to device.
+- **Driver agent** — `driver/driver.lua`, `sequencer/midi_translate.lua`, `sequencer/patch_loader.lua`. Glue layer that runs on both host and device. Owns the clock-div/mult accumulator and the rising/falling-gate edge detector.
+- **Utils agent** — `utils.lua` (table/math helpers; host-only — referenced by `sequencer/track.lua` and `sequencer/mathops.lua`, but those code paths are not exercised on device).
+- **UI agent** — `sequencer/controls.lua` (VSN1 control surface; bundled separately to `grid/controls.lua` and lazy-loaded on first BUTTON event).
+- **Tooling agent** — `tools/build_grid.lua`, `tools/bundle.lua`, `tools/strip.lua`, `tools/charcheck.lua`, `tools/memprofile.lua`. Owns the upload bundle and on-device size budget.
+- **Harness agent** — `main.lua`, `grid_module.lua`, `bridge.py` (libuv timer, MIDI clock sync, INIT/TIMER/BUTTON/RTMIDI blocks).
 
 Each agent owns its files and only calls the public functions of other modules.

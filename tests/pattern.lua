@@ -53,10 +53,13 @@ end
 do
     local pat = Pattern.new(3)
 
-    -- getStep returns the correct step.
+    -- getStep returns the correct step (steps are packed integers — equal-by-value
+    -- when defaults match, so identity is no longer meaningful; just verify both
+    -- decode to the expected default pitch).
     local s1 = Pattern.getStep(pat, 1)
     local s3 = Pattern.getStep(pat, 3)
-    assert(s1 ~= s3, "steps at different indices should be different tables")
+    assert(Step.getPitch(s1) == 60, "default pitch at index 1")
+    assert(Step.getPitch(s3) == 60, "default pitch at index 3")
 
     -- setStep replaces a step.
     local newStep = Step.new(72, 90, 8, 4)

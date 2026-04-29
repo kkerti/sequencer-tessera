@@ -90,8 +90,8 @@ function Scenario.build(helpers)
     math.randomseed(4242)
     -- Ratchet is now a boolean ER-101-style flag; toggle a couple of steps on
     -- to add fast accents on track 4.
-    Step.setRatch(Track.getStep(t4, 2), true)
-    Step.setRatch(Track.getStep(t4, 5), true)
+    Track.setStep(t4, 2, Step.setRatch(Track.getStep(t4, 2), true))
+    Track.setStep(t4, 5, Step.setRatch(Track.getStep(t4, 5), true))
 
     return engine
 end

@@ -119,7 +119,7 @@ local function snapshotRestorePattern(track, patternIndex, patternData)
             ratchValue,
             stepData.probability or 100
         )
-        Step.setActive(step, stepData.active ~= false)
+        step = Step.setActive(step, stepData.active ~= false)
         Track.setStep(track, startFlat + stepIndex - 1, step)
     end
 end

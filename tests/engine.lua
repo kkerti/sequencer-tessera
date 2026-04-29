@@ -36,7 +36,7 @@ assert(not ok, "getTrack with index 0 should error")
 local ok2 = pcall(Engine.getTrack, e, 2)
 assert(not ok2, "getTrack with index > trackCount should error")
 
--- ── Engine.advanceTrack — basic cursor advancement ───────────────────────────
+-- ── Engine.advanceTrack / Engine.sampleTrack — basic playback ────────────────
 
 local eAdv = Engine.new(120, 4, 1, 4)
 local tAdv = Engine.getTrack(eAdv, 1)
@@ -45,25 +45,30 @@ Track.setStep(tAdv, 2, Step.new(64, 100, 4, 2))
 Track.setStep(tAdv, 3, Step.new(67, 100, 4, 2))
 Track.setStep(tAdv, 4, Step.new(72, 100, 4, 2))
 
--- Pulse 0 of step 1 → NOTE_ON pitch 60
-local step, event = Engine.advanceTrack(eAdv, 1)
-assert(event == "NOTE_ON",          "pulse 0 should be NOTE_ON")
-assert(Step.getPitch(step) == 60,   "step pitch should be 60")
-
--- Pulse 1 → nil
-step, event = Engine.advanceTrack(eAdv, 1)
-assert(event == nil, "pulse 1 should produce no event")
-
--- Pulse 2 (gate boundary) → NOTE_OFF
-step, event = Engine.advanceTrack(eAdv, 1)
-assert(event == "NOTE_OFF",         "pulse 2 (gate) should be NOTE_OFF")
-assert(Step.getPitch(step) == 60,   "step pitch for NOTE_OFF should still be 60")
-
--- Pulse 3 → nil, then step 2 starts
+-- Pulse 0 of step 1: gate HIGH at pitch 60, velocity 100.
+local cvA, cvB, gate = Engine.sampleTrack(eAdv, 1)
+assert(cvA == 60 and cvB == 100 and gate == true,
+    "pulse 0 of step 1 should sample (60, 100, true)")
 Engine.advanceTrack(eAdv, 1)
-step, event = Engine.advanceTrack(eAdv, 1) -- pulse 0 of step 2
-assert(event == "NOTE_ON" and Step.getPitch(step) == 64,
-    "step 2 pulse 0 should be NOTE_ON pitch 64")
+
+-- Pulse 1: still HIGH (gate=2 → HIGH on pulses 0,1).
+_, _, gate = Engine.sampleTrack(eAdv, 1)
+assert(gate == true, "pulse 1 should still be gate HIGH")
+Engine.advanceTrack(eAdv, 1)
+
+-- Pulse 2: gate LOW (gate boundary).
+_, _, gate = Engine.sampleTrack(eAdv, 1)
+assert(gate == false, "pulse 2 should be gate LOW")
+Engine.advanceTrack(eAdv, 1)
+
+-- Pulse 3: still LOW.
+_, _, gate = Engine.sampleTrack(eAdv, 1)
+assert(gate == false, "pulse 3 should be gate LOW")
+Engine.advanceTrack(eAdv, 1)
+
+-- Pulse 0 of step 2: gate HIGH at pitch 64.
+cvA, _, gate = Engine.sampleTrack(eAdv, 1)
+assert(cvA == 64 and gate == true, "step 2 pulse 0 should sample (64, _, true)")
 
 -- ── Engine.advanceTrack — direction modes ─────────────────────────────────────
 
@@ -76,10 +81,11 @@ Track.setStep(tRev, 3, Step.new(64, 100, 1, 1))
 Track.setStep(tRev, 4, Step.new(65, 100, 1, 1))
 Track.setDirection(tRev, "reverse")
 
-local _, ev1 = Engine.advanceTrack(eRev, 1)
-assert(ev1 == "NOTE_ON", "reverse: step 1 NOTE_ON")
-local s2, ev2 = Engine.advanceTrack(eRev, 1)
-assert(ev2 == "NOTE_ON" and Step.getPitch(s2) == 65,
+cvA, _, gate = Engine.sampleTrack(eRev, 1)
+assert(cvA == 60 and gate == true, "reverse: step 1 sample is pitch 60 HIGH")
+Engine.advanceTrack(eRev, 1) -- after 1 pulse, dur=1 elapsed → cursor moves
+cvA, _, gate = Engine.sampleTrack(eRev, 1)
+assert(cvA == 65 and gate == true,
     "reverse: after step 1 should jump to step 4 (pitch 65)")
 
 -- ── Engine.reset ─────────────────────────────────────────────────────────────
@@ -92,17 +98,17 @@ Track.setStep(tReset, 2, Step.new(62, 100, 1, 1))
 Track.setStep(tReset, 3, Step.new(64, 100, 1, 1))
 Track.setStep(tReset, 4, Step.new(65, 100, 1, 1))
 
-Engine.advanceTrack(eReset, 1) -- step 1 → step 2
-Engine.advanceTrack(eReset, 1) -- step 2 → step 3
+Engine.advanceTrack(eReset, 1) -- cursor 1 → 2
+Engine.advanceTrack(eReset, 1) -- cursor 2 → 3
 assert(tReset.cursor == 3, "cursor should be on step 3 before reset")
 
 Engine.reset(eReset)
 assert(tReset.cursor == 1 and tReset.pulseCounter == 0,
     "reset should return cursor to step 1")
 
--- After reset, advanceTrack should replay from step 1.
-local _, firstEv = Engine.advanceTrack(eReset, 1)
-assert(firstEv == "NOTE_ON", "after reset, first advance should be NOTE_ON")
+-- After reset, sample should reflect step 1 again.
+cvA, _, gate = Engine.sampleTrack(eReset, 1)
+assert(cvA == 60 and gate == true, "after reset, sample should be step 1 (pitch 60 HIGH)")
 
 -- ── Scene chain integration ───────────────────────────────────────────────────
 

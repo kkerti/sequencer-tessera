@@ -50,7 +50,7 @@ end
 function Pattern.setStep(pattern, index, step)
     assert(type(index) == "number" and index >= 1 and index <= pattern.stepCount,
         "patternSetStep: index out of range 1-" .. pattern.stepCount)
-    assert(type(step) == "table", "patternSetStep: step must be a table")
+    assert(type(step) == "number", "patternSetStep: step must be a packed integer")
     pattern.steps[index] = step
 end
 

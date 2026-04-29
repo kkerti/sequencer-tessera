@@ -18,11 +18,13 @@ do
     assert(Track.getStepCount(t) == 0, "stepCount should be 0 on empty track")
 end
 
--- advance on empty track returns nil
+-- sample/advance on empty track returns gate=false
 do
-    local t  = Track.new()
-    local ev = Track.advance(t)
-    assert(ev == nil, "advance on empty track should return nil")
+    local t = Track.new()
+    local cvA, cvB, gate = Track.sample(t)
+    assert(cvA == 0 and cvB == 0 and gate == false,
+        "sample on empty track should return zeros and gate=false")
+    Track.advance(t) -- must not error
 end
 
 -- ---------------------------------------------------------------------------
@@ -92,7 +94,7 @@ do
 end
 
 -- ---------------------------------------------------------------------------
--- NOTE_ON / NOTE_OFF sequence — single pattern
+-- Sampled playback (gate state per pulse) — single pattern
 -- ---------------------------------------------------------------------------
 
 do
@@ -104,32 +106,31 @@ do
     Track.setStep(t, 3, Step.new(67, 100, 4, 2))
     Track.setStep(t, 4, Step.new(60, 100, 4, 0)) -- rest
 
-    -- Pulse 0 of step 1 → NOTE_ON
-    local ev = Track.advance(t)
-    assert(ev == "NOTE_ON",  "expected NOTE_ON at pulse 0")
-    assert(t.cursor == 1,    "cursor should still be on step 1")
+    local function sampleAdvance()
+        local cvA, cvB, gate = Track.sample(t)
+        Track.advance(t)
+        return cvA, cvB, gate
+    end
 
-    -- Pulse 1 → no event
-    ev = Track.advance(t)
-    assert(ev == nil, "expected no event on pulse 1")
+    -- Step 1: gate=2, dur=4 → HIGH HIGH LOW LOW
+    local cvA, _, gate = sampleAdvance()
+    assert(cvA == 60 and gate == true, "pulse 0 of step 1 should be gate HIGH at pitch 60")
+    assert(t.cursor == 1, "cursor should still be on step 1 after pulse 0")
+    _, _, gate = sampleAdvance()
+    assert(gate == true, "pulse 1 of step 1 should still be gate HIGH")
+    _, _, gate = sampleAdvance()
+    assert(gate == false, "pulse 2 of step 1 should be gate LOW (gate boundary)")
+    _, _, gate = sampleAdvance()
+    assert(gate == false, "pulse 3 of step 1 should be gate LOW")
+    assert(t.cursor == 2, "cursor should advance to step 2")
 
-    -- Pulse 2 → NOTE_OFF (gate == 2)
-    ev = Track.advance(t)
-    assert(ev == "NOTE_OFF", "expected NOTE_OFF at gate boundary")
-
-    -- Pulse 3 → no event; cursor advances to step 2
-    ev = Track.advance(t)
-    assert(ev == nil)
-    assert(t.cursor == 2, "expected cursor to advance to step 2")
-
-    -- Pulse 0 of step 2 → NOTE_ON E4
-    ev = Track.advance(t)
-    assert(ev == "NOTE_ON", "expected NOTE_ON for step 2")
-    assert(Step.getPitch(Track.getCurrentStep(t)) == 64, "expected pitch 64 on step 2")
+    -- Step 2: pitch should be 64, gate HIGH
+    cvA, _, gate = sampleAdvance()
+    assert(cvA == 64 and gate == true, "step 2 pulse 0 should be HIGH at pitch 64")
 end
 
 -- ---------------------------------------------------------------------------
--- Rest step fires no events
+-- Rest step is gate-low for entire duration
 -- ---------------------------------------------------------------------------
 
 do
@@ -137,8 +138,11 @@ do
     Track.addPattern(t, 1)
     Track.setStep(t, 1, Step.new(60, 100, 4, 0)) -- gate=0 = rest
 
-    local ev = Track.advance(t)
-    assert(ev == nil, "rest step should fire no NOTE_ON")
+    for p = 0, 3 do
+        local _, _, gate = Track.sample(t)
+        assert(gate == false, "rest step should never go gate HIGH (pulse " .. p .. ")")
+        Track.advance(t)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -165,13 +169,13 @@ do
     Track.setStep(t, 1, Step.new(60, 100, 0, 0)) -- skip
     Track.setStep(t, 2, Step.new(64, 100, 4, 2))
 
-    local ev = Track.advance(t)
-    assert(ev == "NOTE_ON" and t.cursor == 2,
-        "zero-duration step should be skipped; cursor should be on step 2")
+    local cvA, _, gate = Track.sample(t)
+    assert(t.cursor == 2, "zero-duration step should be skipped on first sample")
+    assert(cvA == 64 and gate == true, "sample should report step 2 (pitch 64, gate HIGH)")
 end
 
 -- ---------------------------------------------------------------------------
--- Ratchet in playback
+-- Ratchet in playback (ER-101: dur=4 gate=1 → HIGH LOW HIGH LOW)
 -- ---------------------------------------------------------------------------
 
 do
@@ -180,15 +184,12 @@ do
     local st = Step.new(60, 100, 4, 1, true)
     Track.setStep(t, 1, st)
 
-    local ev
-    ev = Track.advance(t)
-    assert(ev == "NOTE_ON", "ratchet step should NOTE_ON on pulse 0")
-    ev = Track.advance(t)
-    assert(ev == "NOTE_OFF", "ratchet step should NOTE_OFF on pulse 1")
-    ev = Track.advance(t)
-    assert(ev == "NOTE_ON", "ratchet step should NOTE_ON on pulse 2")
-    ev = Track.advance(t)
-    assert(ev == "NOTE_OFF", "ratchet step should NOTE_OFF on pulse 3")
+    local expected = { true, false, true, false }
+    for i, want in ipairs(expected) do
+        local _, _, gate = Track.sample(t)
+        assert(gate == want, "ratchet pulse " .. (i - 1) .. " expected " .. tostring(want))
+        Track.advance(t)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -434,8 +435,8 @@ do
     assert(Step.getPitch(Track.getStep(t, 5)) == 74, "copied step 2 pitch should be 74")
     assert(Step.getPitch(Track.getStep(t, 6)) == 76, "copied step 3 pitch should be 76")
 
-    -- Verify deep copy — mutating the copy should not affect the original.
-    Step.setPitch(Track.getStep(t, 4), 48)
+    -- Verify independence — mutating the copy via Track.setStep should not affect the original.
+    Track.setStep(t, 4, Step.setPitch(Track.getStep(t, 4), 48))
     assert(Step.getPitch(Track.getStep(t, 1)) == 72, "original should be unaffected by copy mutation")
 end
 
@@ -464,8 +465,8 @@ do
     assert(Step.getPitch(Track.getStep(t, 5)) == 64, "old pattern 2 step 1 shifted")
     assert(Step.getPitch(Track.getStep(t, 6)) == 66, "old pattern 2 step 2 shifted")
 
-    -- Deep copy verification.
-    Step.setPitch(Track.getStep(t, 3), 48)
+    -- Independence verification.
+    Track.setStep(t, 3, Step.setPitch(Track.getStep(t, 3), 48))
     assert(Step.getPitch(Track.getStep(t, 1)) == 60, "original unaffected by duplicated step mutation")
 end
 
@@ -599,8 +600,8 @@ do
     assert(Step.getPitch(Track.getStep(t, 3)) == 60, "pasted step 1 should match source")
     assert(Step.getPitch(Track.getStep(t, 4)) == 62, "pasted step 2 should match source")
 
-    -- Deep copy — mutating paste target should not affect source.
-    Step.setPitch(Track.getStep(t, 3), 48)
+    -- Independence — mutating paste target should not affect source.
+    Track.setStep(t, 3, Step.setPitch(Track.getStep(t, 3), 48))
     assert(Step.getPitch(Track.getStep(t, 1)) == 60, "source unaffected after pasting and mutating")
 end
 

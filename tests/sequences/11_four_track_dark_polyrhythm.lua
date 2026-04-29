@@ -87,7 +87,7 @@ function Scenario.build(helpers)
 
     math.randomseed(1111)
     -- Boolean ratchet: enable a single step's ratch flag for stab accent.
-    Step.setRatch(Track.getStep(t4, 3), true)
+    Track.setStep(t4, 3, Step.setRatch(Track.getStep(t4, 3), true))
     MathOps.jitter(t4, "velocity", 6)
 
     return engine

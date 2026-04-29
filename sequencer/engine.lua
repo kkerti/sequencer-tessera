@@ -147,16 +147,20 @@ local function engineTickSceneChain(engine, pulseCount)
     end
 end
 
--- Advances a single track by one clock pulse.
--- Returns the Step that was current before advancing, and the raw event string
--- ("NOTE_ON" / "NOTE_OFF" / nil). Both are needed by the player to emit MIDI.
+-- Advances a single track by one clock pulse. No return value — the caller
+-- samples track outputs separately via Engine.sampleTrack.
 function Engine.advanceTrack(engine, trackIndex)
     assert(type(trackIndex) == "number" and trackIndex >= 1 and trackIndex <= engine.trackCount,
         "engineAdvanceTrack: trackIndex out of range")
-    local track = engine.tracks[trackIndex]
-    local step  = Track.getCurrentStep(track)
-    local event = Track.advance(track)
-    return step, event
+    Track.advance(engine.tracks[trackIndex])
+end
+
+-- Returns (cvA, cvB, gate) for the track at its current pulse.
+-- Mirrors the ER-101's per-track CV-A / CV-B / GATE outputs.
+function Engine.sampleTrack(engine, trackIndex)
+    assert(type(trackIndex) == "number" and trackIndex >= 1 and trackIndex <= engine.trackCount,
+        "engineSampleTrack: trackIndex out of range")
+    return Track.sample(engine.tracks[trackIndex])
 end
 
 -- Called by the player once per logical pulse (after clock div/mult is applied).

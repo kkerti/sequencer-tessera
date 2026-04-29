@@ -37,10 +37,11 @@ local function mathOpsGetValue(step, param)
 end
 
 local function mathOpsSetValue(step, param, value)
-    if param == "pitch" then Step.setPitch(step, value); return end
-    if param == "velocity" then Step.setVelocity(step, value); return end
-    if param == "duration" then Step.setDuration(step, value); return end
-    if param == "gate" then Step.setGate(step, value); return end
+    -- Returns a new packed step. Steps are immutable integers; setters are pure.
+    if param == "pitch" then return Step.setPitch(step, value) end
+    if param == "velocity" then return Step.setVelocity(step, value) end
+    if param == "duration" then return Step.setDuration(step, value) end
+    if param == "gate" then return Step.setGate(step, value) end
     error("mathOps: unsupported param")
 end
 
@@ -51,7 +52,7 @@ function MathOps.transpose(track, semitones, startIndex, endIndex)
     for i = startIndex, endIndex do
         local step = Track.getStep(track, i)
         local nextPitch = Utils.clamp(Step.getPitch(step) + semitones, 0, 127)
-        Step.setPitch(step, nextPitch)
+        Track.setStep(track, i, Step.setPitch(step, nextPitch))
     end
 end
 
@@ -69,7 +70,7 @@ function MathOps.jitter(track, param, amount, startIndex, endIndex)
         local delta = math.random(-amount, amount)
         local nextValue = Utils.clamp(current + delta, min, max)
         nextValue = math.floor(nextValue)
-        mathOpsSetValue(step, param, nextValue)
+        Track.setStep(track, i, mathOpsSetValue(step, param, nextValue))
     end
 end
 
@@ -87,7 +88,7 @@ function MathOps.randomize(track, param, minValue, maxValue, startIndex, endInde
     for i = startIndex, endIndex do
         local step = Track.getStep(track, i)
         local nextValue = math.random(minValue, maxValue)
-        mathOpsSetValue(step, param, nextValue)
+        Track.setStep(track, i, mathOpsSetValue(step, param, nextValue))
     end
 end
 

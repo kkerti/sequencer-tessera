@@ -27,14 +27,8 @@ do
     end
 end
 
--- nil probability (legacy steps) always plays
-do
-    local s = { pitch = 60, velocity = 100, duration = 4, gate = 2, ratch = false, active = true }
-    for _ = 1, 100 do
-        assert(Probability.shouldPlay(s) == true,
-            "nil probability should default to always play")
-    end
-end
+-- nil probability case is no longer reachable: Step is now a packed integer
+-- and Step.new always sets probability (default 100). Test removed.
 
 -- probability = 50 should produce a mix over many trials
 do
@@ -63,11 +57,11 @@ end
 
 do
     local s = Step.new()
-    Step.setProbability(s, 50)
+    s = Step.setProbability(s, 50)
     assert(Step.getProbability(s) == 50)
-    Step.setProbability(s, 0)
+    s = Step.setProbability(s, 0)
     assert(Step.getProbability(s) == 0)
-    Step.setProbability(s, 100)
+    s = Step.setProbability(s, 100)
     assert(Step.getProbability(s) == 100)
 end
 
@@ -82,17 +76,20 @@ do
     assert(not ok, "expected error for setProbability > 100")
 end
 
--- ── Probability is non-destructive: step data unchanged ─────────────────────
+-- ── Probability is non-destructive: step value unchanged ───────────────────
 
 do
     local s = Step.new(60, 100, 4, 2, false, 50)
-    local origPitch = s.pitch
-    local origProb = s.probability
+    local origPitch = Step.getPitch(s)
+    local origProb  = Step.getProbability(s)
+    local origStep  = s
     for _ = 1, 100 do
         Probability.shouldPlay(s)
     end
-    assert(s.pitch == origPitch, "probability evaluation should not modify step pitch")
-    assert(s.probability == origProb, "probability evaluation should not modify step probability")
+    -- Step is an immutable integer; identity check is sufficient.
+    assert(s == origStep, "probability evaluation should not modify step value")
+    assert(Step.getPitch(s) == origPitch, "pitch unchanged")
+    assert(Step.getProbability(s) == origProb, "probability unchanged")
 end
 
 print("probability: all tests passed")

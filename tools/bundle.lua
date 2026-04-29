@@ -21,12 +21,12 @@
 --                    Defaults to the last --as.
 --
 -- Example:
---   lua tools/bundle.lua --out grid/sequencer_lite.lua \
---       --as Utils=utils.lua \
---       --as Step=sequencer_lite/step.lua \
---       --as Pattern=sequencer_lite/pattern.lua \
---       --as Track=sequencer_lite/track.lua \
---       --as Engine=sequencer_lite/engine.lua \
+--   lua tools/bundle.lua --out grid/sequencer.lua \
+--       --as Step=sequencer/step.lua \
+--       --as Pattern=sequencer/pattern.lua \
+--       --as Scene=sequencer/scene.lua \
+--       --as Track=sequencer/track.lua \
+--       --as Engine=sequencer/engine.lua \
 --       --main Engine
 --
 -- The bundle's final return value is the Engine module table. Other locals
@@ -59,6 +59,7 @@ local args = arg or {}
 local outPath
 local mainName
 local modules = {}    -- ordered list of {name, path, requireKey}
+local aliases = {}    -- list of {key, name} for extra require-key mappings
 local exposeSet = {}
 local i = 1
 while i <= #args do
@@ -77,6 +78,16 @@ while i <= #args do
         i = i + 2
     elseif a == "--expose" then
         exposeSet[args[i + 1]] = true; i = i + 2
+    elseif a == "--alias" then
+        -- Extra require-key -> local-name mapping (no source file).
+        -- Use when a module is required under multiple paths (e.g. the lite
+        -- engine is bundled as Engine but PatchLoader requires it under
+        -- "sequencer/engine"): --alias sequencer/engine=Engine
+        local spec = args[i + 1]
+        local key, name = spec:match("^(.+)=([%w_]+)$")
+        if not key then error("--alias expects KEY=NAME, got: " .. tostring(spec)) end
+        aliases[#aliases + 1] = { key = key, name = name }
+        i = i + 2
     else
         error("unknown arg: " .. a)
     end
@@ -91,6 +102,9 @@ exposeSet[mainName] = true
 local keyToLocal = {}
 for _, m in ipairs(modules) do
     keyToLocal[m.requireKey] = m.name
+end
+for _, a in ipairs(aliases) do
+    keyToLocal[a.key] = a.name
 end
 
 -- Rewrite any `require("KEY")` call in the source to reference the local.

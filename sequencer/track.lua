@@ -168,18 +168,19 @@ end
 -- Patterns are added after construction via Track.addPattern.
 function Track.new()
     return {
-        patterns     = {},
-        patternCount = 0,
-        cursor       = 1,  -- flat 1-based step index
-        pulseCounter = 0,  -- pulses elapsed within the current step
-        loopStart    = nil,
-        loopEnd      = nil,
-        clockDiv     = 1,
-        clockMult    = 1,
-        clockAccum   = 0,
-        direction    = DIRECTION_FORWARD,
-        pingPongDir  = 1,
-        midiChannel  = nil,
+        patterns                 = {},
+        patternCount             = 0,
+        cursor                   = 1,  -- flat 1-based step index
+        pulseCounter             = 0,  -- pulses elapsed within the current step
+        loopStart                = nil,
+        loopEnd                  = nil,
+        clockDiv                 = 1,
+        clockMult                = 1,
+        clockAccum               = 0,
+        direction                = DIRECTION_FORWARD,
+        pingPongDir              = 1,
+        midiChannel              = nil,
+        currentStepGateEnabled   = true,  -- per-pass probability roll result
     }
 end
 
@@ -251,7 +252,7 @@ function Track.copyPattern(track, srcIndex)
     newPat.steps     = {}
     newPat.stepCount = count
     for i = 1, count do
-        newPat.steps[i] = Utils.tableCopy(src.steps[i])
+        newPat.steps[i] = src.steps[i]
     end
 
     track.patternCount = track.patternCount + 1
@@ -273,7 +274,7 @@ function Track.duplicatePattern(track, srcIndex)
     newPat.steps     = {}
     newPat.stepCount = count
     for i = 1, count do
-        newPat.steps[i] = Utils.tableCopy(src.steps[i])
+        newPat.steps[i] = src.steps[i]
     end
 
     -- Shift patterns after srcIndex forward by one slot.
@@ -402,7 +403,7 @@ function Track.pastePattern(track, destIndex, srcPattern)
     dest.steps     = {}
     dest.stepCount = count
     for i = 1, count do
-        dest.steps[i] = Utils.tableCopy(srcPattern.steps[i])
+        dest.steps[i] = srcPattern.steps[i]
     end
     dest.name = srcPattern.name
 
@@ -433,7 +434,7 @@ function Track.setStep(track, index, step)
     local stepCount = trackComputeStepCount(track)
     assert(type(index) == "number" and index >= 1 and index <= stepCount,
         "trackSetStep: index out of range 1-" .. stepCount)
-    assert(type(step) == "table", "trackSetStep: step must be a table")
+    assert(type(step) == "number", "trackSetStep: step must be a packed integer")
 
     local offset = 0
     for i = 1, track.patternCount do
@@ -544,13 +545,42 @@ function Track.getDirection(track)
 end
 
 -- ---------------------------------------------------------------------------
--- Playback
+-- Playback (sampled-state model)
 -- ---------------------------------------------------------------------------
+--
+-- Per pulse, the engine performs:
+--      Track.sample(track) → cvA, cvB, gate
+--      Track.advance(track)
+--
+-- That is: SAMPLE first (read the present), then ADVANCE (move time
+-- forward by one pulse). The MIDI translator (sequencer/midi_translate.lua)
+-- consumes the (cvA, cvB, gate) stream and emits NOTE_ON / NOTE_OFF on
+-- gate edges and on pitch changes mid-gate.
+
+-- Rolls per-step probability (Blackbox-style: one chance per pass through
+-- the step). Stores the result on the track so the gate predicate can AND
+-- it with Step.sampleGate every pulse for free.
+local function trackRollEntryProbability(track, step)
+    if step == nil then
+        track.currentStepGateEnabled = false
+        return
+    end
+    local prob = Step.getProbability(step)
+    if prob == nil or prob >= 100 then
+        track.currentStepGateEnabled = true
+    elseif prob <= 0 then
+        track.currentStepGateEnabled = false
+    else
+        track.currentStepGateEnabled = math.random(1, 100) <= prob
+    end
+end
 
 -- Skips over steps with zero duration, advancing the cursor past them.
 -- Returns the step at the final cursor position, or nil if all steps
--- have zero duration (degenerate track).
+-- have zero duration (degenerate track). Re-rolls probability whenever
+-- the cursor lands on a fresh step.
 local function trackSkipZeroDuration(track, stepCount)
+    local startCursor = track.cursor
     local step = trackGetStepAtFlat(track, track.cursor)
     local skipGuard = 0
     while step ~= nil and Step.getDuration(step) == 0 do
@@ -562,44 +592,65 @@ local function trackSkipZeroDuration(track, stepCount)
             return nil
         end
     end
+    if track.cursor ~= startCursor then
+        trackRollEntryProbability(track, step)
+    end
     return step
 end
 
--- Advances the track by one clock pulse.
--- Returns "NOTE_ON", "NOTE_OFF", or nil.
--- Returns nil immediately if the track has no steps.
+-- Returns (cvA, cvB, gate) for the track at its current pulse.
+-- cvA = pitch, cvB = velocity. gate is boolean.
+-- Returns (0, 0, false) if the track has no steps.
+function Track.sample(track)
+    local stepCount = trackComputeStepCount(track)
+    if stepCount == 0 then
+        return 0, 0, false
+    end
+    local step = trackSkipZeroDuration(track, stepCount)
+    if step == nil then
+        return 0, 0, false
+    end
+    local cvA, cvB = Step.sampleCv(step)
+    local gate     = Step.sampleGate(step, track.pulseCounter)
+                     and track.currentStepGateEnabled
+    return cvA, cvB, gate
+end
+
+-- Advances the track by one clock pulse. Bumps pulseCounter; when it
+-- reaches the current step's duration, moves the cursor to the next step
+-- (respecting loop points, direction mode) and re-rolls probability for
+-- the newly entered step.
 function Track.advance(track)
     local stepCount = trackComputeStepCount(track)
     if stepCount == 0 then
-        return nil
+        return
     end
 
     local step = trackSkipZeroDuration(track, stepCount)
-
     if step == nil then
-        return nil
+        return
     end
-
-    local event = Step.getPulseEvent(step, track.pulseCounter)
 
     track.pulseCounter = track.pulseCounter + 1
 
-    -- Step duration elapsed: move to next step (respecting loop points).
     if track.pulseCounter >= Step.getDuration(step) then
         track.pulseCounter = 0
         track.cursor       = trackGetNextCursor(track, track.cursor)
+        local newStep      = trackGetStepAtFlat(track, track.cursor)
+        trackRollEntryProbability(track, newStep)
     end
-
-    return event
 end
 
 -- Resets the play cursor to step 1 of pattern 1 (flat index 1).
 -- Ignores loop points — matches ER-101 RESET behaviour.
+-- Rolls probability for the step the cursor lands on.
 function Track.reset(track)
     track.cursor       = 1
     track.pulseCounter = 0
     track.clockAccum   = 0
     track.pingPongDir  = 1
+    local step         = trackGetStepAtFlat(track, 1)
+    trackRollEntryProbability(track, step)
 end
 
 return Track

@@ -1,205 +1,166 @@
 # Architecture
 
-Snapshot of the system as of 2026-04-27. This document is the living big-picture reference. `AGENTS.md` remains the agent contract (style, constraints, data model); start there for rules, come here for shape.
+Snapshot of the system as of 2026-04-28 — after the CV+gate refactor that retired the compile pipeline. This document is the living big-picture reference. `AGENTS.md` remains the agent contract (style, constraints, data model); start there for rules, come here for shape.
 
 ---
 
 ## One-line shape
 
-A **rich authoring engine** runs on macOS, **compiles songs to flat event arrays**, which a **tiny tape-deck player** walks on the Grid module (ESP32 / Lua 5.4).
+A **single ER-101–style CV+gate engine** runs on **both** macOS and the Grid module (ESP32 / Lua 5.4). A thin **Driver** layer samples the engine each pulse and translates rising/falling gates into MIDI NOTE_ON/NOTE_OFF events. There is no compile pipeline and no precomputed event arrays — the engine is the source of truth at all times.
 
 ```
-┌──────────────── macOS (authoring) ────────────────┐    ┌──────── Grid module (playback) ────────┐
-│                                                   │    │                                        │
-│  patches/<name>.lua          (terse descriptor)     │    │   /player/player.lua                   │
-│        │                                          │    │   /<song>/<song>.lua                   │
-│        ▼                                          │    │        │                               │
-│  sequencer/  (full ER-101 + Metropolis engine)    │    │        ▼                               │
-│        │   step / pattern / track / engine        │    │   tape-deck Player                     │
-│        │   mathops / scene / probability          │    │   (no engine, no extras)               │
-│        ▼                                          │    │        │                               │
-│  tools/song_compile.lua                           │    │        ▼                               │
-│        │   walk engine for `bars * beatsPerBar`   │    │   midi_send()  →  MIDI out             │
-│        │   → schema v2 event arrays               │    │                                        │
-│        ▼                                          │    │   Clock source = either firmware       │
-│  compiled/<name>.lua  (single self-contained)     │    │     timer  OR  Ableton MIDI 0xF8       │
-│        │                                          │    │                                        │
-│        ▼                                          │    │                                        │
-│  copy into grid/<song>.lua (flat layout)          │────┼──→ upload grid/*.lua to /              │
-│                                                   │    │                                        │
-│  grid/  (final upload bundle, one file per lib)   │    │                                        │
-└───────────────────────────────────────────────────┘    └────────────────────────────────────────┘
+┌──────────────── macOS (dev/test) ────────────────┐    ┌──────── Grid module (live) ────────────┐
+│                                                  │    │                                        │
+│  patches/<name>.lua   (terse pure-data table)    │    │   /sequencer.lua                       │
+│        │                                         │    │   /<patch>.lua                         │
+│        ▼                                         │    │        │                               │
+│  PatchLoader.build(descriptor) → Engine          │    │        ▼                               │
+│        │                                         │    │   PatchLoader.build → Engine           │
+│        ▼                                         │    │        │                               │
+│  Driver.new(engine)                              │    │        ▼                               │
+│        │  per pulse, per track:                  │    │   Driver.new(engine)                   │
+│        │    cvA,cvB,gate = Engine.sampleTrack    │    │        │  on rtmidi 0xF8:              │
+│        │    MidiTranslate.step → emit NOTE_ON/OFF│    │        │    Driver.externalPulse       │
+│        │    Engine.advanceTrack                  │    │        │      → midi_send()            │
+│        ▼                                         │    │        ▼                               │
+│  bridge.py → virtual port "Sequencer"            │    │   MIDI out (DIN / TRS / USB)           │
+│        ▼                                         │    │                                        │
+│  Ableton                                         │    │   Clock = MIDI 0xF8 (external) by      │
+│                                                  │    │   default; Driver.tick available for   │
+│                                                  │    │   internal-clock mode                  │
+└──────────────────────────────────────────────────┘    └────────────────────────────────────────┘
 ```
 
-The **boundary** is `tools/song_compile.lua`. Everything left of it is rich and runs only at authoring time. Everything right of it is dumb and small.
+The **boundary** is the engine API itself: `(cursor, pulseCounter) → (cvA, cvB, gate)`. Both halves of the system call the same `Engine.sampleTrack` / `Engine.advanceTrack` and use the same `MidiTranslate` edge detector.
 
 ---
 
-## Why this split
+## Why this shape
 
-The Grid module is an ESP32 with tight memory. A full multi-track sequencer engine running per-pulse — with ratchet expansion, direction logic, probability rolls — does not fit comfortably and is not necessary.
+The previous architecture was a rich macOS authoring engine that compiled songs to flat event arrays for a tiny on-device tape-deck player. That worked, but had three costs:
 
-**Insight:** for a fixed-length song, every NOTE_ON / NOTE_OFF time can be precomputed once, in order, then replayed. The only per-loop randomness we care about is per-step probability, which is cheap to re-roll in place against a sidecar `srcStepProb[]` array.
+1. **Two truths.** The engine and the compiled song could drift; bug fixes had to be applied to both.
+2. **No live editing.** Any change to a step required recompiling the whole song.
+3. **Tooling weight.** A compile pipeline (`tools/song_compile.lua`), a writer (`sequencer/song_writer.lua`), an in-place editor (`live/edit.lua`), and a player (`player/player.lua`) all existed to work around the absence of an on-device engine.
 
-Result:
-- Authoring: complex but constraint-free (macOS, Lua 5.5, all rocks available).
-- Playback: ~180 lines of Lua, walks five parallel arrays, no allocations per pulse.
-
-> **Note on file sizes.** The Grid filesystem used to enforce an 880-char per-file limit, which required a separate splitter tool and per-array sidecar files. That limit no longer applies — files of any size upload and load on device. The compiled song is now a single self-contained file. Memory footprint still matters, so we keep arrays compact (`intList(arr)` produces no whitespace), but file count and per-file size are no longer a concern.
+Once the Grid filesystem dropped its 880-char per-file limit, the sequencer engine became small enough to ship. The whole compile/player/writer/editor stack collapses into **engine + driver + patch loader**. Bug fixes apply once. Edits are immediate. Future authoring features (knob tweaks, button-driven mathops) just call the existing `Step.set*` setters on the live engine.
 
 ---
 
-## Authoring engine (`sequencer/`)
+## Engine (`sequencer/`)
 
-The full ER-101 + Metropolis-inspired engine. Lives in `sequencer/`; runs only on macOS during authoring/testing. Responsibilities:
+The single ER-101 + Metropolis engine, shared between host (macOS dev harness) and device (bundled to `grid/sequencer.lua`).
 
-| Module | Role |
-|---|---|
-| `step.lua`        | Step record (pitch, velocity, duration, gate, ratch, probability, active). `ratch` is boolean (ER-101 style). Pitch is raw MIDI; harmony shaping is downstream. |
-| `pattern.lua`     | Named contiguous slice of a track's step list. Pure organisational layer. |
-| `track.lua`       | Per-track state: patterns, loop points, clock div/mult, direction mode (forward / reverse / pingpong / random / Brownian). `Track.advance` returns the next step. |
-| `engine.lua`      | Top-level: BPM, multi-track tick. `Engine.tick(eng, emit)` produces NOTE_ON/NOTE_OFF events for one pulse. |
-| `mathops.lua`     | Transpose / jitter / random on step parameters (one step, one pattern, or one track). |
-| `scene.lua`       | Scene chain — automated loop-point sequencing (per-track scene queue). |
-| `probability.lua` | Per-step probability evaluation (non-destructive, Blackbox-style). |
-| `snapshot.lua`    | Serialize/deserialize full engine state via `io`. macOS-only path; on-device persistence is out of scope for now. |
-| `song_writer.lua` | **Bridges to the tape-deck player.** `SongWriter.rollNextLoop(song, loopIndex)` mutates a compiled song in place at every loop boundary, flipping `kind[]` between active and muted to apply per-step probability. Static songs (no probability) skip this entirely and never ship the writer arrays. |
-
-Tests live in `tests/` and cover behaviour. Module files contain only `assert()` input-validation guards.
-
----
-
-## Lite authoring engine (`sequencer_lite/`)
-
-A carved-down copy of the authoring engine sized to fit on the Grid module. The intent is to allow on-device song authoring — building patterns, editing steps, re-compiling — without paying the full ~60 KB resident cost of `sequencer/`.
-
-| Lite module | Source | Carve |
+| Module | Role | On device? |
 |---|---|---|
-| `step.lua`    | byte-equivalent to `sequencer/step.lua`    | none |
-| `pattern.lua` | byte-equivalent to `sequencer/pattern.lua` | none |
-| `track.lua`   | carved from `sequencer/track.lua`          | drops `copyPattern`, `duplicatePattern`, `insertPattern`, `deletePattern`, `swapPatterns`, `pastePattern` |
-| `engine.lua`  | carved from `sequencer/engine.lua`         | drops scene-chain hooks; `Engine.onPulse` becomes a no-op |
+| `step.lua`           | Step record. `Step.sampleCv(s) → pitch, velocity`. `Step.sampleGate(s, pulseCounter) → bool` (ER-101 boolean ratchet, period = 2 × gate, suppressed once `pulseCounter >= duration`). | yes |
+| `pattern.lua`        | Named contiguous slice of a track's step list. Pure organisational layer. | yes |
+| `track.lua`          | Per-track state: patterns, loop points, clock div/mult, direction (forward / reverse / pingpong / random / Brownian). `Track.sample → cvA, cvB, gate`; `Track.advance` (no return). Rolls per-step entry probability on `Track.new`/`reset`/cursor advance/zero-dur skip. | yes |
+| `engine.lua`         | Top-level: BPM, multi-track sample/advance. `Engine.sampleTrack(eng, i) → cvA, cvB, gate`. `Engine.advanceTrack(eng, i)` (no return). `Engine.onPulse(eng, pulseCount)` runs scene-chain hooks. | yes |
+| `scene.lua`          | Scene chain — automated loop-point sequencing. | yes |
+| `midi_translate.lua` | **Driver-side** edge detector. Per-track state `{prevGate, lastPitch}`. `step(state, cvA, cvB, gate, channel, emit)` emits NOTE_ON on rising edge, NOTE_OFF on falling, OFF+ON on pitch change mid-gate. `panic(state, channel, emit)` clears all hanging notes. | yes |
+| `patch_loader.lua`   | `build(descriptor) → Engine`; `load(modulePath) → Engine`. Walks a pure-data descriptor table and populates a fresh engine. | yes |
+| `mathops.lua`        | Transpose / jitter / random on step parameters (one step, one pattern, or one track). | host-only |
+| `snapshot.lua`       | Serialize/deserialize full engine state via `io`. | host-only |
+| `probability.lua`    | Shared probability helpers. (Per-step entry rolls are inlined in `track.lua`.) | host-only |
+| `controls.lua`       | VSN1 control surface UI. Bundled separately to `grid/controls.lua` and lazy-loaded on first BUTTON event. | yes (separate bundle) |
 
-Modules **not** included in lite at all: `snapshot.lua`, `mathops.lua`, `scene.lua`, `song_writer.lua`, `probability.lua`. (`probability.lua` is a player-side concern at runtime; the lite engine doesn't need it at authoring time. `snapshot`/`mathops`/`scene` are intentional drops — see `docs/dropped-features.md` for the full rationale and revival recipes.)
-
-Sizes (raw / stripped):
-
-| Folder | Raw | Stripped | Modules |
-|---|---|---|---|
-| `sequencer_lite/` + `utils.lua` | 29.8 KB | 17.8 KB | 5 files |
-| `sequencer/` (full) + `utils.lua` | 69.2 KB | 38.1 KB | 11 files |
-
-The lite engine is now bundled into Grid uploads as `grid/sequencer_lite.lua` (a single file produced by `tools/bundle.lua` from the 5 source modules). The `grid_module.lua` INIT block contains a commented-out measurement hook that loads the bundle without using it, so on-device RAM cost can be measured by toggling the hook on/off.
+Tests live in `tests/`. Module files contain only `assert()` input-validation guards.
 
 ---
 
-## Live editor (`live/edit.lua`)
+## Driver (`driver/driver.lua`)
 
-A second on-device editing path, complementary to the lite engine. Where the lite engine reconstructs the full Track/Pattern/Step model and re-compiles to apply edits, `live/edit.lua` mutates the compiled song's parallel arrays directly.
-
-Operation classes:
-
-| Op | Cost | When safe to call |
-|---|---|---|
-| `setPitch(song, idx, midi)` | O(1) plus mate scan if no `pairOff` | any time |
-| `setVelocity(song, idx, vel)` | O(1) | any time |
-| `mute(song, idx)` / `mutePair(song, idx)` | O(1) plus mate scan | any time |
-| `unmute(song, idx)` / `unmutePair(song, idx)` | O(1) plus mate scan | any time |
-
-All operations are O(1) edits safe at any pulse. Ratcheting is now a per-step boolean flag in the source patch (ER-101 style); the compiled-song editor no longer splices ratchet groups.
-
-Addressing model: **event-index-based.** The compiled schema is a flat parallel-array timeline; the editor mutates events in place and finds the matching NOTE_OFF for a NOTE_ON via either the optional `pairOff[]` sidecar or a forward scan on (pitch, channel).
-
-Size: ~6.6 KB stripped. Bundled as `grid/edit.lua`. Tested in `tests/live_edit.lua` (11 checks).
-
----
-
-## Compiled song schema (v2)
-
-Produced by `tools/song_compile.lua` from a song descriptor. The descriptor is a pure-data Lua table (see `patches/dark_groove.lua`); the compiler instantiates the engine, walks it for `bars * beatsPerBar` beats, captures every emitted event, and flattens to:
+The glue layer that turns engine pulses into MIDI events. Runs on both host and device. Public API:
 
 ```
-song = {
-    bpm,                   -- declared BPM (used by internal-clock player)
-    pulsesPerBeat,         -- usually 4; must divide 24 evenly for MIDI clock sync
-    durationPulses,        -- total pulses in one loop
-    loop,                  -- boolean
-    eventCount,            -- N
+Driver.new(engine, clockFn?, bpm?)    -- clockFn nil → external-clock mode only
+Driver.start(d)                        -- panics, rewinds tracks, resets translators
+Driver.stop(d)                         -- emits all-notes-off via emit callback
+Driver.setBpm(d, bpm)                  -- internal-clock mode
+Driver.tick(d, emit)                   -- internal clock: derive target pulse from clockFn() and catch up
+Driver.externalPulse(d, emit)          -- one master pulse (e.g. one MIDI 0xF8 after 24→ppb division)
+Driver.allNotesOff(d, emit)            -- panic without stopping
+```
 
-    -- five parallel arrays of length N, sorted by (atPulse asc, kind asc):
-    atPulse[],             -- pulse index (1-based) when this event fires
-    kind[],                -- 1=NOTE_ON, 0=NOTE_OFF, 2=muted ON, 3=muted OFF
-    pitch[],               -- MIDI note (raw, as authored)
-    velocity[],            -- 0–127
-    channel[],             -- 1-based MIDI channel
+Per-pulse loop inside `Driver.externalPulse`:
 
-    -- writer-only sidecars, present iff hasProbability == true:
-    hasProbability,        -- boolean
-    pairOff[],             -- index of paired NOTE_OFF for each NOTE_ON (else 0)
-    srcStepProb[],         -- 0–100, source step probability for each NOTE_ON
-    srcVelocity[],         -- baseline velocity (reserved for future jitter)
+```lua
+for each track i:
+    track.clockAccum += track.clockMult
+    advanceCount = floor(track.clockAccum / track.clockDiv)
+    track.clockAccum = track.clockAccum % track.clockDiv
+    repeat advanceCount times:
+        cvA, cvB, gate = Engine.sampleTrack(engine, i)
+        MidiTranslate.step(translators[i], cvA, cvB, gate, channel, emit)
+        Engine.advanceTrack(engine, i)
+Engine.onPulse(engine, pulseCount)
+```
 
-    -- optional hook, set by host after compile:
-    onLoopBoundary = function(song, loopIndex) end
+The clock-div/mult **accumulator lives in the driver, not the engine**. The engine's notion of "pulse" is a single sample-then-advance step. The driver is what defines a master clock pulse and decides how many engine pulses each master pulse drives per track.
+
+`Driver.tick` is a thin shim over `externalPulse`: it derives a target pulse count from `clockFn()` and calls `externalPulse` until caught up.
+
+---
+
+## Patch loader (`sequencer/patch_loader.lua`)
+
+`PatchLoader.build(descriptor) → Engine`. The descriptor is a pure-data Lua table (see `patches/dark_groove.lua`); the loader walks it and populates a fresh engine. Loader runs on both host and device — the device just calls `PatchLoader.build(require("/dark_groove"))`.
+
+Descriptor format (all fields with `?` are optional):
+
+```lua
+{
+    bpm           = 118,
+    ppb           = 4,                          -- pulses per beat
+    bars?         = 4,                          -- only used by host harness
+    beatsPerBar?  = 4,                          -- only used by host harness
+    tracks = {
+        {
+            channel    = 10,                    -- 1-based MIDI channel
+            direction  = "forward",             -- forward/reverse/pingpong/random/brownian
+            clockDiv   = 1,
+            clockMult  = 1,
+            loopStart? = 1,
+            loopEnd?   = 16,
+            patterns = {
+                {
+                    name  = "kick",
+                    steps = {
+                        -- {pitch, velocity, duration, gate, ratch?, prob?}
+                        { 36, 110, 4, 2 },
+                        { 36, 110, 4, 2, false, 100 },
+                        ...
+                    },
+                },
+            },
+        },
+    },
 }
 ```
-
-Key properties:
-- **Interleaved & sorted.** A single cursor walks the arrays linearly per pulse — no separate ON/OFF queues, no priority heap.
-- **Player has no harmony or timing-feel logic.** The compiled arrays are exactly what gets emitted. Apply scale quantization, swing, or other shaping downstream of MIDI if needed.
-- **Static songs cost nothing per loop.** Without `hasProbability`, the writer arrays don't ship and `onLoopBoundary` is `nil`.
-- **Single self-contained file.** All five player arrays (and the optional three writer arrays) inline into one Lua module. `dark_groove` compiles to ~2.3 KB.
-
----
-
-## Tape-deck player (`player/player.lua`)
-
-~180 lines, single file. Public API:
-
-```
-Player.new(song, clockFn?, bpm?)   -- clockFn nil → external-clock mode
-Player.start(p)                    -- rewinds to pulse 0
-Player.stop(p)
-Player.setBpm(p, bpm)              -- internal-clock mode only
-Player.tick(p, emit)               -- internal clock: pulled by firmware timer
-Player.externalPulse(p, emit)      -- external clock: one MIDI 0xF8 (after 24→ppb division)
-Player.allNotesOff(p)              -- returns { {pitch=, channel=}, ... }
-```
-
-`p.pulseCount` is the source of truth. `Player.tick` is a thin shim that derives a target pulse from `clockFn()` and calls `externalPulse` until caught up. Both modes share the same advance loop.
-
-Loop wrap:
-1. `cursor` past `eventCount` AND `pulseCount >= durationPulses`.
-2. Subtract `durationPulses` from `pulseCount`, reset `cursor` to 1.
-3. Bump `loopIndex`.
-4. Call `song.onLoopBoundary(song, loopIndex)` if set.
 
 ---
 
 ## Two clock sources
 
-### 1. Internal (firmware timer)
+### 1. External MIDI clock (default on device)
 
-Default. The Grid timer fires every `SEQ_INTERVAL` ms (≈ half the pulse interval). Each tick:
-- bumps a software ms counter `SEQ_CLOCK_MS`,
-- calls `Player.tick(SEQ_PLAYER, SEQ_EMIT)`.
-
-`SEQ_INTERVAL` is set to `floor(pulseMs / 2)` — fine enough to resolve the smallest gate without overspending CPU.
-
-### 2. External MIDI clock (Ableton-driven, working on hardware)
-
-The element's `rtmrx_cb` translates incoming MIDI bytes:
+The `rtmrx_cb` block in `grid_module.lua` translates incoming MIDI bytes:
 
 | Byte  | Meaning           | Action |
 |-------|-------------------|--------|
-| 0xF8  | Timing clock      | count down `24 / ppb` per player pulse, then `externalPulse` |
-| 0xFA  | Start             | `Player.start` (rewind to 0) |
+| 0xF8  | Timing clock      | count down `24 / pulsesPerBeat` per master pulse, then `Driver.externalPulse` |
+| 0xFA  | Start             | `Driver.start` (rewind, panic) |
 | 0xFB  | Continue          | resume from current pulse |
-| 0xFC  | Stop              | `Player.stop` + `allNotesOff` |
+| 0xFC  | Stop              | `Driver.stop` (panic via emit callback) |
 
-`song.pulsesPerBeat` must divide 24 evenly (1, 2, 3, 4, 6, 8, 12, 24). All current songs use ppb=4 → 6 MIDI clocks per player pulse.
+`engine.pulsesPerBeat` must divide 24 evenly (1, 2, 3, 4, 6, 8, 12, 24). All current patches use `ppb=4` → 6 MIDI clocks per master pulse.
 
-**Never run both clocks at once** — the player will double-advance. Either start the timer OR enable the rtmidi callback, not both.
+### 2. Internal timer (default on host)
+
+`main.lua` wires a libuv timer firing every `pulseMs / 2`. The timer body calls `Driver.tick(driver, emit)`; `tick` reads `clockFn()` (an `os.clock`-based ms counter) and catches up. Same pattern works on device by replacing `Driver.externalPulse` in the timer block — `Driver.tick(SEQ_DRIVER, SEQ_EMIT)`.
+
+**Never run both clocks at once** — the driver will double-advance.
 
 ---
 
@@ -209,166 +170,158 @@ The element's `rtmrx_cb` translates incoming MIDI bytes:
 
 | Tool | Role |
 |---|---|
-| `tools/song_compile.lua` | Walk engine, flatten to schema v2, emit a single self-contained `compiled/<name>.lua`. |
-| `tools/strip.lua`        | Remove comments and statement-form `assert(...)` guards from any Lua module. Preserves value-returning asserts (`local f = assert(io.open(p))`) and overall formatting. Halves the player's footprint. |
-| `tools/charcheck.lua`    | Reports raw and minified character counts (no thresholds; used for memory-footprint estimation). |
-| `tools/memprofile.lua`   | Quantify on-device memory footprint (run on dev to estimate). |
+| `tools/build_grid.lua` | One-shot: bundle + strip + patch-copy → `grid/`. |
+| `tools/bundle.lua`     | Splice N source modules into one self-contained Lua file. `--as NAME=PATH` declares an inlined module; `--alias KEY=NAME` adds extra require-key → local mappings (used so PatchLoader's `require("sequencer/engine")` resolves to the inlined lite Engine local). |
+| `tools/strip.lua`      | Remove comments and statement-form `assert(...)` guards. Preserves value-returning asserts (`local f = assert(io.open(p))`). Halves the bundle's footprint. |
+| `tools/charcheck.lua`  | Reports raw and minified character counts (no thresholds; used for memory-footprint estimation). |
+| `tools/memprofile.lua` | On-device memory footprint estimator. |
 
 ### Grid require quirk
 
-Grid firmware's `require()` does **not** do `package.path` `?` substitution. The module name is treated as a literal file path. Therefore:
+Grid firmware's `require()` does **not** do `package.path` `?` substitution. The module name is treated as a literal file path, including a leading slash and no `.lua` extension:
 
 ```lua
-require("/player/player")            -- works
-require("/dark_groove/dark_groove")  -- works
-require("player")                    -- fails
+require("/sequencer")    -- works  (loads /sequencer.lua)
+require("/dark_groove")  -- works  (loads /dark_groove.lua)
+require("sequencer")     -- fails
 ```
-
-Hard-code the literal paths in your INIT block (see `grid_module.lua`).
 
 ### Flat layout on device
 
-Grid uploads/removes whole folders at a time, but Grid's `require()` does not
-do `package.path` `?` substitution — paths are literal. To keep on-device
-require strings short and unambiguous, every library is bundled into a single
-file and dropped flat at the filesystem root:
+Every module bundles into a single file at the filesystem root:
 
 ```
-/player.lua          ← grid/player.lua
-/utils.lua           ← grid/utils.lua
-/sequencer_lite.lua  ← grid/sequencer_lite.lua  (5 source modules bundled)
-/edit.lua            ← grid/edit.lua
-/dark_groove.lua     ← grid/dark_groove.lua
+/sequencer.lua       ← grid/sequencer.lua    (engine + Scene + MidiTranslate + PatchLoader + Driver, bundled+stripped+dieted)
+/controls.lua        ← grid/controls.lua     (~5 KB stripped+diet: UI module; LAZY-LOADED on first button event)
+/dark_groove.lua     ← grid/dark_groove.lua  (pure-data patch descriptor)
+/four_on_floor.lua   ← grid/four_on_floor.lua
+/empty.lua           ← grid/empty.lua
 ```
 
-`require("/player")`, `require("/sequencer_lite")`, `require("/dark_groove")`
-all resolve directly. No subfolders to manage on device.
+`require("/sequencer")` returns the Driver module table; `Driver.PatchLoader`, `Driver.Engine`, `Driver.MidiTranslate`, `Driver.Track`, `Driver.Pattern`, `Driver.Step`, `Driver.Utils` are all reachable as fields (via `--expose`).
+
+`require("/controls")` returns the Controls module. It is **not** loaded
+at boot — root `controls.lua` paste glue defines `PI()` which
+`require()`s the module on first BUTTON / SCREEN INIT event. This keeps
+cold-boot heap to ~50 KB (worst case dark_groove); UI loads on-demand
+adding ~54 KB. See `docs/2026-04-29-memory-overflow-plan.md`.
+
+The Controls bundle is built with `--alias sequencer/step=Step
+--alias sequencer/track=Track` and prepends a one-line shim
+`local _D = require("/sequencer"); local Step=_D.Step; local Track=_D.Track`
+so it shares the engine's already-loaded Step/Track classes rather than
+duplicating them.
 
 ### Build commands
 
-Minimal (player + one song):
-
 ```sh
-rm -rf grid && mkdir -p grid
-lua tools/strip.lua player/player.lua --out grid/player.lua
-lua tools/song_compile.lua patches/dark_groove.lua --outdir grid
+lua tools/build_grid.lua
 ```
 
-Full bundle (player + utils + lite engine + live editor + 3 songs):
+That's it. The script wipes stale grid contents, runs the bundle + strip, and copies patch descriptors. Output:
+
+```
+grid/sequencer.lua       20.9 KB stripped (40.4 KB raw)
+grid/dark_groove.lua     880 B
+grid/four_on_floor.lua   482 B
+grid/empty.lua           420 B
+```
+
+For ad-hoc bundling (e.g. with the full engine for testing):
 
 ```sh
-rm -rf grid && mkdir -p grid
-lua tools/strip.lua player/player.lua --out grid/player.lua
-lua tools/strip.lua utils.lua          --out grid/utils.lua
-lua tools/strip.lua live/edit.lua      --out grid/edit.lua
-lua tools/bundle.lua --out /tmp/sequencer_lite.lua \
+lua tools/bundle.lua --out /tmp/bundle.lua \
     --as Utils=utils.lua \
-    --as Step=sequencer_lite/step.lua \
-    --as Pattern=sequencer_lite/pattern.lua \
-    --as Track=sequencer_lite/track.lua \
-    --as Engine=sequencer_lite/engine.lua \
-    --expose Utils --expose Step --expose Pattern --expose Track \
-    --main Engine
-lua tools/strip.lua /tmp/sequencer_lite.lua --out grid/sequencer_lite.lua
-lua tools/song_compile.lua patches/empty.lua          --outdir grid
-lua tools/song_compile.lua patches/four_on_floor.lua  --outdir grid
-lua tools/song_compile.lua patches/dark_groove.lua    --outdir grid
-```
-
-`tools/strip.lua` removes comments and statement-form `assert(...)` guards. Asserts are an authoring-time test-coverage tool; they are dead weight on device, since every code path that reaches the player has already passed the same checks during macOS dev. Stripping cuts the player from ~6 KB to ~3 KB.
-
-`tools/bundle.lua` splices N source modules into one self-contained file: each module becomes a `do ... end` block, cross-module `require()` calls are rewritten to local upvalues, and secondary modules are exposed as fields on the main export. The bundled `sequencer_lite.lua` returns the Engine table with `Engine.Step`, `Engine.Pattern`, `Engine.Track`, `Engine.Utils` accessible as fields.
-
-For macOS dev (uses `compiled/<name>.lua` directly, asserts retained):
-
-```sh
-lua tools/song_compile.lua patches/dark_groove.lua
-lua main_lite.lua | python3 bridge.py
+    --as Step=sequencer/step.lua \
+    --as Pattern=sequencer/pattern.lua \
+    --as Track=sequencer/track.lua \
+    --as Engine=sequencer/engine.lua \
+    --as MidiTranslate=sequencer/midi_translate.lua \
+    --as PatchLoader=sequencer/patch_loader.lua \
+    --as Driver=driver/driver.lua \
+    --main Driver \
+    --expose Engine --expose PatchLoader
 ```
 
 ### Element wiring
 
-`grid_module.lua` is the canonical source for INIT / TIMER / rtmidi-callback blocks. Copy-paste sections; do not edit them on-device by hand.
+`grid_module.lua` is the canonical source for INIT / TIMER / BUTTON / RTMIDI callback blocks. Copy-paste sections; do not edit them on-device by hand.
 
 ---
 
-## Two macOS harnesses
+## macOS harness
 
-| Harness | Use case |
-|---|---|
-| `main.lua`      | Live edit. Build a song descriptor inline, compile in memory via `tools/song_compile.lua`, run through luv timer + lite player + bridge. Tweak, save, re-run. |
-| `main_lite.lua` | Ship-ready mirror. Loads precompiled `compiled/<name>.lua` exactly as the device would, no compiler dependency at runtime. Use this to validate the upload bundle. |
+`main.lua [patch_path]` — defaults to `patches/dark_groove`. Loads the descriptor, builds the engine via `PatchLoader`, constructs a `Driver` with an `os.clock`-based clockFn, runs a libuv timer at `pulseMs/2`, and pipes `NOTE_ON`/`NOTE_OFF` line-protocol events to stdout. Pipe to `bridge.py`:
 
-Both pipe their MIDI line-protocol output to `bridge.py`, which opens a virtual port named `"Sequencer"` for Ableton.
+```sh
+lua main.lua patches/four_on_floor | python3 bridge.py
+```
+
+`bridge.py` opens a virtual MIDI port named `"Sequencer"` for Ableton.
+
+SIGINT is trapped to flush all-notes-off via the emit callback before exit.
 
 ---
 
 ## File layout (current)
 
 ```
-main.lua                       -- live-edit harness: descriptor → compile → lite player + luv
-main_lite.lua                  -- ship-mirror harness: precompiled song + lite player + luv
+main.lua                       -- macOS harness: PatchLoader → Driver → libuv timer → bridge.py
 bridge.py                      -- Python MIDI bridge: stdin → virtual port "Sequencer"
-grid_module.lua                -- INIT / TIMER / rtmidi-callback copy-paste blocks
+grid_module.lua                -- INIT / TIMER / BUTTON / RTMIDI callback copy-paste blocks
 utils.lua                      -- shared helpers: tableNew, tableCopy, clamp, pitchToName
 tui.lua                        -- terminal renderer for engine state snapshots
 
-sequencer/                     -- AUTHORING ENGINE (macOS only)
-  step.lua
-  pattern.lua
-  track.lua
-  engine.lua
-  mathops.lua                  -- transpose/jitter/random ops
+sequencer/                     -- ENGINE (host + device)
+  step.lua                     -- sampleCv, sampleGate (boolean ratchet)
+  pattern.lua                  -- named slice of a track's step list
+  track.lua                    -- sample/advance + entry-probability roll
+  engine.lua                   -- sampleTrack/advanceTrack/onPulse + scene hooks
   scene.lua                    -- automated loop-point sequencing
-  probability.lua              -- per-step probability eval
-  snapshot.lua                 -- engine state save/load
-  song_writer.lua              -- bridge to player: rollNextLoop on loop boundary
+  midi_translate.lua           -- per-track edge detector + retrigger + panic
+  patch_loader.lua             -- descriptor table → Engine
+  controls.lua                 -- VSN1 UI (bundled separately to grid/controls.lua)
+  mathops.lua                  -- transpose/jitter/random ops (host-only)
+  snapshot.lua                 -- engine state save/load (host-only)
+  probability.lua              -- shared probability helpers (host-only)
 
-sequencer_lite/                -- ON-DEVICE AUTHORING ENGINE (carve of sequencer/)
-  step.lua                     -- byte-equivalent to sequencer/step.lua
-  pattern.lua                  -- byte-equivalent to sequencer/pattern.lua
-  track.lua                    -- pattern-manipulation ops removed
-  engine.lua                   -- scene-chain hooks removed
-  -- See docs/dropped-features.md for the carve rationale + revival recipes.
+driver/                        -- DRIVER LAYER (host + device)
+  driver.lua                   -- per-pulse sample → translate → advance loop;
+                               -- clock div/mult accumulator inside externalPulse;
+                               -- tick() (internal) and externalPulse() (MIDI 0xF8) entry points
 
-live/                          -- ON-DEVICE LIVE EDITOR (mutates compiled songs)
-  edit.lua                     -- O(1) pitch/velocity/mute
+patches/                       -- terse pure-data descriptors
+  dark_groove.lua  four_on_floor.lua  empty.lua
 
-player/                        -- TAPE-DECK PLAYER (runs on Grid)
-  player.lua                   -- ~180 lines, walks compiled event arrays
-
-patches/                         -- terse song descriptors (authoring inputs)
-  dark_groove.lua
-
-compiled/                      -- output of tools/song_compile.lua (single self-contained file)
-  dark_groove.lua
-
-grid/                          -- final upload bundle (one file per library, in its own folder)
-  player/player.lua            -- → /player/player.lua            on device
-  utils/utils.lua              -- → /utils/utils.lua              on device
-  sequencer_lite/*.lua         -- → /sequencer_lite/*.lua         on device (optional)
-  live/edit.lua                -- → /live/edit.lua                on device (optional)
-  dark_groove/dark_groove.lua  -- → /dark_groove/dark_groove.lua  on device
+grid/                          -- final upload bundle (FLAT, root files)
+  sequencer.lua                -- → /sequencer.lua  on device  (engine + driver + patch loader)
+  controls.lua                 -- → /controls.lua   on device  (UI; lazy-loaded)
+  dark_groove.lua              -- → /dark_groove.lua  on device
+  four_on_floor.lua            -- → /four_on_floor.lua  on device
+  empty.lua                    -- → /empty.lua  on device
 
 tools/
-  song_compile.lua             -- engine → compiled song + inlined arrays
+  build_grid.lua               -- one-shot bundle + strip + patch-copy
+  bundle.lua                   -- splice N modules; rewrites cross-module require(); --alias for cross-path keys
   strip.lua                    -- comment + statement-assert remover
   charcheck.lua                -- raw + minified char count reporter
   memprofile.lua               -- memory footprint estimator
 
 tests/                         -- behavioural tests
   utils.lua  step.lua  pattern.lua  track.lua  engine.lua
-  mathops.lua  snapshot.lua  scene.lua
-  probability.lua  song_writer.lua  player.lua  tui.lua
-  sequencer_lite.lua           -- smoke test for the lite engine carve
-  live_edit.lua                -- behavioural tests for live/edit.lua
-  sequence_runner.lua          -- runs scenarios in tests/sequences/
-  sequences/                   -- 9 end-to-end feature scenarios
+  mathops.lua  snapshot.lua  scene.lua  probability.lua  tui.lua
+  midi_translate.lua           -- edge detection + retrigger + panic
+  patch_loader.lua             -- descriptor → engine round-trip (incl. real patches/*)
+  driver.lua                   -- driver pulse loop + clock div/mult + start/stop/panic
+  controls.lua                 -- UI editing model + screen renderer
+  grid_bundle_smoke.lua        -- loads grid/sequencer.lua exactly as device would
+  sequence_runner.lua          -- runs scenarios in tests/sequences/ via real Driver
+  sequences/                   -- end-to-end feature scenarios
 
 docs/
   ARCHITECTURE.md              -- this file
-  dropped-features.md          -- what sequencer_lite/ leaves out and how to revive it
   2026-03-09-init-goal.md      -- original goal + ER-101/Metropolis decisions
+  2026-04-28-cvgate-engine.md  -- CV+gate refactor brief and work plan
   manuals/                     -- ER-101 & Metropolis reference manuals
   2026-04-*.md                 -- session notes (chronological)
 ```
@@ -384,25 +337,25 @@ NOTE_ON  <pitch> <velocity> <channel>   -- channel is 1-based
 NOTE_OFF <pitch> <channel>
 ```
 
-On device the player calls `midi_send(channel, status, note, velocity)` directly.
+On device the Driver's `emit` callback calls `midi_send(channel, status, note, velocity)` directly.
 
 ---
 
-## Status (2026-04-27)
+## Status (2026-04-28)
 
-- **Working on hardware.** Ableton-driven MIDI clock playback verified on the Grid module.
-- **All tests pass:** 13 behavioural test files + 11 sequence scenarios.
-- **Bundle is two files.** `grid/player.lua` (~6 KB raw / ~3 KB stripped) plus `grid/dark_groove.lua` (~3.1 KB).
-- **Two clock modes shipped:** internal firmware timer and external MIDI 0xF8.
+- **CV+gate refactor complete.** Engine, Driver, PatchLoader, MidiTranslate all in place; compile pipeline + tape-deck player + in-place editor all deleted.
+- **All tests pass:** 15 unit-test files + 9 sequence scenarios + 1 grid-bundle smoke test.
+- **Bundle is 5 files.** `grid/sequencer.lua` (~10 KB stripped+diet) + `grid/controls.lua` (~5 KB stripped+diet, lazy-loaded) + 3 patch descriptors (~0.4–0.9 KB each).
+- **Two clock modes shipped:** internal libuv timer (host) and external MIDI 0xF8 (device). Internal-timer mode is also available on device by swapping the rtmidi callback for a `Driver.tick` call in the timer block.
 
 ### Known gaps
 
-- `Engine.reset` and a hardware "panic" button are scaffolded in `grid_module.lua` as comments; not yet wired to physical Grid buttons.
-- No multi-song selector yet — current setup hard-codes `dark_groove`. Folder-per-library is ready for it.
+- Hardware on-device verification of the new bundle pending (smoke test passes synthetically; real-device run is the next step).
+- No on-device authoring UI yet — edits are made by editing patch descriptors and rebuilding the bundle. The architecture supports live edits via direct `Step.set*` / `Track.set*` calls; just no UI to drive them.
 
 ### Likely next areas
 
-- On-device button controls (start/stop/BPM knob/song select).
-- Multi-song workflow + button-bank switching.
-- Compile-time scale/transpose baking variants for performance presets.
-- Identifier-shortening minifier pass for headroom on large songs.
+- Wire physical Grid buttons to `Driver.start` / `Driver.stop` / `Driver.allNotesOff`.
+- On-device patch selector (multiple `/<patch>.lua` files; reload-on-button).
+- Knob-driven mathops on the live engine (transpose / jitter / random).
+- Identifier-shortening minifier pass for headroom.

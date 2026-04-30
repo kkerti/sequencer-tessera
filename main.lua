@@ -1,63 +1,64 @@
--- main.lua
--- Dev harness: load a patch descriptor → build engine → drive it live.
--- Pipe to bridge.py for MIDI:
+-- main.lua  (macOS harness)
+-- Loads the engine, applies a patch, drives it from stdin pulse lines.
 --
---   lua main.lua [patch] | python3 bridge.py
+-- Stdin protocol (one per line):
+--   START
+--   STOP
+--   CLK         (advance one pulse)
+--   QUIT
 --
--- Where [patch] is a module path (default: "patches/dark_groove").
+-- All MIDI events are written to stdout via driver_stdio.
+-- Engine activity is also logged to sequencer.log.
 
-local uv          = require("luv")
-local PatchLoader = require("sequencer/patch_loader")
-local Driver      = require("driver/driver")
+package.path = "src/?.lua;patches/?.lua;" .. package.path
 
--- ── Load patch ───────────────────────────────────────────────────────────────
+local Engine = require("engine")
+local Step   = require("step")
+local Driver = require("driver_stdio")
 
-local patchPath = arg[1] or "patches/dark_groove"
-local engine    = PatchLoader.load(patchPath)
+-- log file
+local logFile = io.open("sequencer.log", "w")
+local function log(s)
+    if logFile then logFile:write(s .. "\n"); logFile:flush() end
+end
 
--- ── Clock + emit ─────────────────────────────────────────────────────────────
+Engine.init({ trackCount = 4, stepsPerTrack = 64, log = log })
 
-local function clockFn() return uv.now() end
-
-local function emit(eventType, pitch, velocity, channel)
-    if eventType == "NOTE_ON" then
-        io.write("NOTE_ON " .. pitch .. " " .. velocity .. " " .. channel .. "\n")
-    else
-        io.write("NOTE_OFF " .. pitch .. " " .. channel .. "\n")
+-- Apply patch
+local function applyPatch(p)
+    for ti = 1, math.min(#p.tracks, #Engine.tracks) do
+        local pt = p.tracks[ti]
+        local tr = Engine.tracks[ti]
+        tr.len  = pt.len  or tr.len
+        tr.chan = pt.chan or tr.chan
+        tr.div  = pt.div  or tr.div
+        tr.dir  = pt.dir  or tr.dir
+        for si = 1, math.min(#pt.steps, tr.cap) do
+            tr.steps[si] = Step.pack(pt.steps[si])
+        end
     end
 end
 
--- ── Driver ───────────────────────────────────────────────────────────────────
+local patch = require("default")
+applyPatch(patch)
+log(string.format("loaded patch: %d tracks", #patch.tracks))
 
-local driver     = Driver.new(engine, clockFn)
-local intervalMs = math.floor(driver.pulseMs / 2)
-
-Driver.start(driver)
-
--- ── Timer + signal ───────────────────────────────────────────────────────────
-
-local timer  = uv.new_timer()
-local sigint = uv.new_signal()
-
-local function flushAllNotes()
-    Driver.allNotesOff(driver, emit)
-    io.flush()
+-- Drive loop
+for line in io.lines() do
+    if line == "START" then
+        Driver.note("START")
+        Engine.onStart()
+    elseif line == "STOP" then
+        Driver.note("STOP")
+        local off = Engine.onStop()
+        Driver.emit(off)
+    elseif line == "CLK" then
+        Driver.tickPulse()
+        local ev = Engine.onPulse()
+        if ev then Driver.emit(ev) end
+    elseif line == "QUIT" then
+        break
+    end
 end
 
-uv.signal_start(sigint, "sigint", function()
-    io.stderr:write("[main] SIGINT — flushing notes and exiting\n")
-    flushAllNotes()
-    uv.timer_stop(timer)
-    uv.stop()
-end)
-
-io.stderr:write(string.format(
-    "[main] patch=%s  bpm=%d  ppb=%d  tracks=%d  tick=%dms\n",
-    patchPath, engine.bpm, engine.pulsesPerBeat, engine.trackCount, intervalMs))
-
-uv.timer_start(timer, 0, intervalMs, function()
-    Driver.tick(driver, emit)
-    io.flush()
-end)
-
-uv.run()
+if logFile then logFile:close() end

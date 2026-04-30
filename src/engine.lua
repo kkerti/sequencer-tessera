@@ -6,8 +6,8 @@
 --   - `queuedRegion` (0..4; 0 = none) is the region scheduled to switch to
 --     at each track's next region boundary.
 --   - Per pulse, after advancing tracks, we scan for `regionDone` flags.
---     When all 4 tracks have flipped, we update `activeRegion`,
---     piggyback any DIR_RND tracks into the new region, and clear the queue.
+--     When all 4 tracks have flipped, we update `activeRegion` and clear
+--     the queue.
 
 local Track = require("track")
 
@@ -73,47 +73,21 @@ function M.onPulse()
     local n   = #ts
     local q   = M.queuedRegion
 
-    -- Advance non-random tracks first; random tracks last so they can
-    -- piggyback if this pulse completes the region flip.
     for i = 1, n do
-        local tr = ts[i]
-        if tr.dir ~= Track.DIR_RND then
-            Track.advance(tr, out, q)
-        end
+        Track.advance(ts[i], out, q)
     end
 
-    -- Check whether the queued switch is now complete for all non-random
-    -- tracks. Random tracks ride along.
+    -- If a region switch is queued and all tracks have crossed their own
+    -- boundary, finalize the global flip.
     if q ~= 0 then
         local allFlipped = true
         for i = 1, n do
-            local tr = ts[i]
-            if tr.dir ~= Track.DIR_RND and not tr.regionDone then
-                allFlipped = false
-                break
-            end
+            if not ts[i].regionDone then allFlipped = false; break end
         end
         if allFlipped then
-            -- piggyback random tracks
-            for i = 1, n do
-                local tr = ts[i]
-                if tr.dir == Track.DIR_RND then
-                    tr.curRegion = q
-                end
-            end
             M.activeRegion = q
             M.queuedRegion = 0
-            -- clear regionDone flags so future flips are detected fresh
             for i = 1, n do ts[i].regionDone = false end
-        end
-    end
-
-    -- Now advance random tracks (they always pick a fresh random pos in
-    -- whatever region they're currently in, so timing is unaffected).
-    for i = 1, n do
-        local tr = ts[i]
-        if tr.dir == Track.DIR_RND then
-            Track.advance(tr, out, 0)  -- random doesn't use queue directly
         end
     end
 
@@ -126,25 +100,6 @@ end
 function M.setStepParam(t, i, name, val)
     local tr = M.tracks[t]; if not tr then return end
     Track.setStepParam(tr, i, name, val)
-end
-
-function M.groupEdit(t, from, to, op, name, val)
-    local tr = M.tracks[t]; if not tr then return end
-    Track.groupEdit(tr, from, to, op, name, val)
-end
-
-function M.setTrackDiv(t, div)
-    local tr = M.tracks[t]; if not tr then return end
-    if div < 1 then div = 1 end
-    if div > 16 then div = 16 end
-    tr.div = div
-end
-
-function M.setTrackDir(t, dir)
-    local tr = M.tracks[t]; if not tr then return end
-    if dir < 1 or dir > 4 then return end
-    tr.dir = dir
-    tr.ppDir = 1
 end
 
 function M.setTrackChan(t, ch)

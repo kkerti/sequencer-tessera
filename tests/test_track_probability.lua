@@ -37,7 +37,10 @@ end
 function M.test_prob_mid_fires_some()
     math.randomseed(42)
     local tr = Track.new()
-    tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=4, gate=2, prob=64 })
+    -- Set ALL 16 steps in region 1 to prob=64 so every entry rolls 50/50.
+    for i = 1, 16 do
+        tr.steps[i] = Step.pack({ pitch=60, vel=100, dur=4, gate=2, prob=64 })
+    end
     Track.reset(tr, 1)
     local ons = 0
     for _ = 1, 400 do
@@ -45,7 +48,7 @@ function M.test_prob_mid_fires_some()
         Track.advance(tr, out, 0)
         for _, e in ipairs(out) do if e.type == Track.EV_ON then ons = ons + 1 end end
     end
-    -- 400 pulses / dur=4 = ~100 step entries; ~50 should fire
+    -- 400 pulses / dur=4 = 100 step entries; ~50 should fire
     if ons < 30 or ons > 70 then error("prob=64 expected ~50 fires, got " .. ons) end
 end
 

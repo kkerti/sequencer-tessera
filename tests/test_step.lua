@@ -11,7 +11,7 @@ function M.test_pack_unpack_defaults()
     eq(Step.dur(s), 6, "default dur")
     eq(Step.gate(s), 3, "default gate")
     eq(Step.ratch(s), false, "default ratch")
-    eq(Step.active(s), true, "default active")
+    eq(Step.muted(s), false, "default muted")
     eq(Step.prob(s), 127, "default prob")
 end
 

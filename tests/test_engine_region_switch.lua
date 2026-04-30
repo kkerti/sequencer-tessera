@@ -1,7 +1,6 @@
 -- tests/test_engine_region_switch.lua
 -- Engine-level region coordination:
---   - all 4 tracks must finish current region before activeRegion updates
---   - random tracks piggyback when the flip completes
+--   - all tracks must finish current region before activeRegion updates
 --   - tracks at different div finish at different pulse counts;
 --     activeRegion only updates after all have flipped
 
@@ -45,13 +44,20 @@ function M.test_global_flip_completes_after_all_tracks()
 end
 
 function M.test_div_2_track_holds_flip()
+    -- Same intent as before, now achieved via per-step `dur=2` on track 2:
+    -- each step occupies 2 pulses, so track 2 advances at half the rate
+    -- of track 1 (which uses dur=1 from seedAll).
     Engine.init({ trackCount = 2, stepsPerTrack = 64 })
     for t = 1, 2 do seedAll(Engine.tracks[t]) end
-    Engine.tracks[2].div = 2  -- track 2 advances at half speed
+    -- override track 2 with dur=2 per step
+    for i = 1, 64 do
+        Engine.tracks[2].steps[i] = Step.pack({ pitch=i % 128, vel=100, dur=2, gate=1 })
+    end
     Engine.onStart()
     Engine.setQueuedRegion(3)
 
-    -- 16 pulses: track 1 plays all of region 1; track 2 plays only 8 steps.
+    -- 16 pulses: track 1 plays all of region 1; track 2 plays 8 steps
+    -- (each step occupies 2 pulses).
     for _ = 1, 16 do Engine.onPulse() end
     eq(Engine.tracks[1].pos, 16)
     eq(Engine.tracks[2].pos, 8)
@@ -63,44 +69,22 @@ function M.test_div_2_track_holds_flip()
     eq(Engine.tracks[1].curRegion, 3)
     eq(Engine.tracks[1].regionDone, true)
     eq(Engine.tracks[2].curRegion, 1, "track 2 still in region 1")
-    eq(Engine.activeRegion, 1, "still 1, track 2 not flipped")
-    eq(Engine.queuedRegion, 3, "queue still pending")
+    eq(Engine.activeRegion, 1)
+    eq(Engine.queuedRegion, 3)
 
-    -- track 2 reaches step 16 at pulse 32 (8 more advances * div 2 = 16 pulses)
-    -- pulse 17 we already did. need 15 more pulses to bring track 2 to step 16.
+    -- track 2 needs to advance 8 more steps to reach pos 16. With dur=2
+    -- that's 16 more pulses; we already did pulse 17. Need 15 more to
+    -- bring track 2 to step 16.
     for _ = 1, 15 do Engine.onPulse() end
     eq(Engine.tracks[2].pos, 16)
     eq(Engine.activeRegion, 1)
 
-    -- next pulse: track 2 flips. div=2 swallows one pulse first.
-    Engine.onPulse() -- swallowed by divider
-    eq(Engine.tracks[2].pos, 16)
-    eq(Engine.activeRegion, 1)
-    Engine.onPulse() -- track 2 flips now
+    -- next pulse: track 2 boundary -> flip into region 3.
+    Engine.onPulse()
     eq(Engine.tracks[2].pos, 33)
     eq(Engine.tracks[2].curRegion, 3)
     eq(Engine.activeRegion, 3, "now flipped because both tracks done")
     eq(Engine.queuedRegion, 0)
-end
-
-function M.test_random_track_piggybacks()
-    Engine.init({ trackCount = 2, stepsPerTrack = 64 })
-    for t = 1, 2 do seedAll(Engine.tracks[t]) end
-    Engine.tracks[2].dir = Track.DIR_RND
-    math.randomseed(7)
-    Engine.onStart()
-    Engine.setQueuedRegion(4)
-
-    -- 16 pulses: track 1 finishes region 1; on pulse 17 it flips and the
-    -- random track 2 piggybacks because all non-random tracks have flipped.
-    for _ = 1, 17 do Engine.onPulse() end
-    eq(Engine.tracks[1].curRegion, 4)
-    eq(Engine.tracks[2].curRegion, 4, "random track piggybacked into region 4")
-    eq(Engine.activeRegion, 4)
-    -- random track's pos should be inside region 4 (49..64)
-    if Engine.tracks[2].pos < 49 or Engine.tracks[2].pos > 64 then
-        error("random track pos outside region 4: " .. Engine.tracks[2].pos)
-    end
 end
 
 function M.test_setQueuedRegion_clears_on_self()

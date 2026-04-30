@@ -4,29 +4,31 @@
 -- The sequencer engine + UI lives on the VSN1. This is its consumer manifest.
 -- =============================================================================
 --
--- Two-bundle layout (memory-conscious, IoT-style):
+-- Two-bundle layout (memory-conscious):
 --   dist/sequencer.lua     -- Core only. Loaded at module init. ~10 KB.
 --   dist/sequencer_ui.lua  -- Controls layer. Lazy-loaded on first input
---                             event or first screen draw. ~8 KB.
+--                             event or first screen draw. ~5 KB.
 --
 -- Pure-playback paths (master clock running, no user input, screen disabled)
--- never pay the UI heap cost. Boot stays under the Grid memory ceiling.
+-- never pay the UI heap cost.
 --
 -- Build:    lua tools/build_dist.lua    -> both bundles into dist/
 -- Upload:   both files to the VSN1 module's filesystem.
 --
--- Hardware mapping (per docs/LIB-2-HW-MAP.md and AGENTS.md):
+-- Hardware mapping:
 --   Screen        : 320 x 240
---                     top half (y=0..119)   = 4x2 parameter cells
---                     bottom half (y=120..) = 4 per-track region strips
---   4 small btns  : queue region 1..4 (global switch at end-of-region)
---   8 keyswitches : select which parameter the endless edits (cells 1..8)
---   Endless       : relative; 65 = up, 63 = down. Click toggles `active`.
+--                     top half (y=0..119)   = 4x2 mode/value cells
+--                     bottom half           = unused (deferred design)
+--   8 keyswitches : modes 1..7 (NOTE/VEL/DUR/GATE/MUTE/RATCH/PROB)
+--                   keyswitch 8 = SHIFT (momentary hold)
+--   4 small btns  : (no shift) select track 1..4
+--                   (+ shift)  queue region 1..4
+--   Endless       : turn = edit selected step in current mode
+--                   click = toggle selected step's mute
 --
--- The EN16 module (separate hardware, separate file: EN16.lua at repo root)
--- talks to this engine remotely via immediate_send. EN16's input messages
--- also trigger UI lazy-load on VSN1 (since they call vsn1_en16_turn/press
--- which require the Controls layer to be resident).
+-- The EN16 module talks to this engine via immediate_send. Its encoder
+-- turns/clicks invoke vsn1_en16_turn / vsn1_en16_press globals defined
+-- in section [8].
 -- =============================================================================
 
 
@@ -81,8 +83,8 @@ end
 -- =============================================================================
 -- [2] MIDI RX  (clock + transport from Ableton or other master)
 -- -----------------------------------------------------------------------------
--- Place this in the module's MIDI Rx event. Pure Core path: NEVER touches
--- UI. Pure-playback users never trigger loadUI().
+-- Pure Core path: NEVER touches UI. Pure-playback users never trigger
+-- loadUI().
 --
 --     0xF8  CLOCK    -> advance engine one pulse, ship its events out
 --     0xFA  START    -> reset transport, start playing
@@ -143,17 +145,23 @@ end)
 
 
 -- =============================================================================
--- [4] KEYSWITCH BUTTON EVENTS  (8 buttons -> select parameter)
+-- [4] KEYSWITCH BUTTON EVENTS  (8 buttons)
 -- -----------------------------------------------------------------------------
--- Cell layout (from src/controls.lua):
---     1 TRACK   2 STEP    3 NOTE   4 VEL
---     5 DUR     6 GATE    7 RATCH  8 PROB
+-- Slots 1..7 select mode (NOTE/VEL/DUR/GATE/MUTE/RATCH/PROB).
+-- Slot 8 is SHIFT (momentary): press = on, release = off.
+--
+-- This event chunk MUST be wired to fire on BOTH press AND release for
+-- the SHIFT key to release. Filtering on `button_state() == 127` only
+-- catches presses; we need both 0 and 127.
 -- =============================================================================
 
-if self:button_state() == 127 then
-    if not CTL then loadUI() end
-    local idx = self:element_index() + 1
-    if idx >= 1 and idx <= 8 then CTL.onKey(idx) end
+if not CTL then loadUI() end
+local idx = self:element_index() + 1
+local pressed = (self:button_state() == 127)
+if idx == 8 then
+    CTL.setShift(pressed)
+elseif pressed and idx >= 1 and idx <= 7 then
+    CTL.onKey(idx)
 end
 
 
@@ -173,31 +181,27 @@ end
 
 
 -- =============================================================================
--- [6] ENDLESS CLICK EVENT  -> toggle focused step's `active` bit
--- -----------------------------------------------------------------------------
--- The cell display does not currently show `active` state, so toggling
--- has no on-screen effect. It is audible (silenced steps emit nothing).
+-- [6] ENDLESS CLICK EVENT  -> toggle selected step's mute
 -- =============================================================================
 
 if self:button_state() == 127 then
     if not CTL then loadUI() end
-    local cur = STEP.active(ENGINE.tracks[CTL.selT].steps[CTL.selS]) and 1 or 0
-    ENGINE.setStepParam(CTL.selT, CTL.selS, "active", 1 - cur)
+    CTL.onEndlessClick()
 end
 
 
 -- =============================================================================
--- [7] SMALL BUTTONS UNDER SCREEN  (4 buttons -> queue region 1..4)
+-- [7] SMALL BUTTONS UNDER SCREEN  (4 buttons)
 -- -----------------------------------------------------------------------------
--- Pressing the button for the active region cancels any pending queue.
--- The queued-region pip on each row blinks until the engine completes the
--- flip (all tracks reaching their region boundary).
+-- No SHIFT held -> select track  1..4
+-- SHIFT held    -> queue region  1..4
+-- The dispatch lives in controls.onSmallBtn() based on CTL.shift.
 -- =============================================================================
 
 if self:button_state() == 127 then
     if not CTL then loadUI() end
-    local idx = self:element_index() + 1
-    if idx >= 1 and idx <= 4 then CTL.onSmallBtn(idx) end
+    local sidx = self:element_index() + 1
+    if sidx >= 1 and sidx <= 4 then CTL.onSmallBtn(sidx) end
 end
 
 
@@ -217,11 +221,7 @@ end
 -- allocations to the same tick has been observed to OOM. The trade-off:
 -- the very first EN16 turn or press only registers the global and is
 -- otherwise lost; the second message onward works normally.
---
--- Place the following two snippets in two separate Lua-string-receiver
--- event chunks on VSN1 (or rely on the receiver being the global Lua
--- environment that immediate_send executes against).
---
+
 -- Snippet A: turn receiver
 function vsn1_en16_turn(idx, delta)
     if not EN16 then loadUI() end

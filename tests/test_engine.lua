@@ -48,10 +48,4 @@ function M.test_setStepParam_through_engine()
     eq(Step.pitch(Engine.tracks[2].steps[5]), 72)
 end
 
-function M.test_groupEdit_through_engine()
-    Engine.init({ trackCount = 1 })
-    Engine.groupEdit(1, 1, 4, "set", "vel", 50)
-    for i = 1, 4 do eq(Step.vel(Engine.tracks[1].steps[i]), 50) end
-end
-
 return M

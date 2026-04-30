@@ -14,7 +14,7 @@ local SH_VEL = 7
 local SH_DUR = 14
 local SH_GATE = 21
 local SH_RAT = 28
-local SH_ACT = 29
+local SH_MUTE = 29
 local SH_PROB = 30
 local function clamp7(v) if v < 0 then return 0 elseif v > 127 then return 127 else return v end end
 local function clamp1(v) if v and v ~= 0 then return 1 else return 0 end end
@@ -24,17 +24,17 @@ function M.pack(t)
  local d = clamp7(t.dur or 6)
  local g = clamp7(t.gate or 3)
  local r = clamp1(t.ratch)
- local a = clamp1(t.active ~= false and 1 or 0)
+ local m = clamp1(t.mute)
  local pr = clamp7(t.prob or 127)
  return shl(p, SH_PITCH) | shl(v, SH_VEL) | shl(d, SH_DUR) | shl(g, SH_GATE)
- | shl(r, SH_RAT) | shl(a, SH_ACT) | shl(pr, SH_PROB)
+ | shl(r, SH_RAT) | shl(m, SH_MUTE) | shl(pr, SH_PROB)
 end
 function M.pitch(s) return band(shr(s, SH_PITCH), M7) end
 function M.vel(s) return band(shr(s, SH_VEL), M7) end
 function M.dur(s) return band(shr(s, SH_DUR), M7) end
 function M.gate(s) return band(shr(s, SH_GATE), M7) end
 function M.ratch(s) return band(shr(s, SH_RAT), 1) == 1 end
-function M.active(s) return band(shr(s, SH_ACT), 1) == 1 end
+function M.muted(s) return band(shr(s, SH_MUTE), 1) == 1 end
 function M.prob(s) return band(shr(s, SH_PROB), M7) end
 local function setField(s, shift, mask, value)
  return (s & ~shl(mask, shift)) | shl(value & mask, shift)
@@ -45,7 +45,7 @@ local FIELD = {
  dur = { SH_DUR, M7, clamp7 },
  gate = { SH_GATE, M7, clamp7 },
  ratch = { SH_RAT, 1, clamp1 },
- active = { SH_ACT, 1, clamp1 },
+ mute = { SH_MUTE, 1, clamp1 },
  prob = { SH_PROB, M7, clamp7 },
 }
 function M.set(s, name, value)
@@ -58,11 +58,11 @@ function M.get(s, name)
  elseif name == "dur" then return M.dur(s)
  elseif name == "gate" then return M.gate(s)
  elseif name == "ratch" then return M.ratch(s) and 1 or 0
- elseif name == "active" then return M.active(s) and 1 or 0
+ elseif name == "mute" then return M.muted(s) and 1 or 0
  elseif name == "prob" then return M.prob(s)
  end
 end
-M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "active", "prob" }
+M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute", "prob" }
 return M
 
 end)()
@@ -70,8 +70,6 @@ R["track"]=(function()
 
 local Step = require("step")
 local M = {}
-local DIR_FWD, DIR_REV, DIR_PP, DIR_RND = 1, 2, 3, 4
-M.DIR_FWD, M.DIR_REV, M.DIR_PP, M.DIR_RND = DIR_FWD, DIR_REV, DIR_PP, DIR_RND
 local STEPS_PER_REGION = 16
 M.STEPS_PER_REGION = STEPS_PER_REGION
 local REGION_COUNT = 4
@@ -82,18 +80,15 @@ M.regionLo, M.regionHi = regionLo, regionHi
 function M.new(cap)
  cap = cap or 64
  local steps = {}
- local def = Step.pack({ pitch=60, vel=100, dur=6, gate=3, prob=127, active=true })
+ local def = Step.pack({ pitch=60, vel=100, dur=4, gate=2, prob=127 })
  for i = 1, cap do steps[i] = def end
  return {
  steps = steps,
  cap = cap,
  chan = 1,
- div = 1,
- dir = DIR_FWD,
- ppDir = 1,
  pos = 0,
- divAcc = 0,
  stepAcc = 0,
+ stepLen = 0,
  curRegion = 1,
  regionDone = false,
  actPitch = -1,
@@ -103,11 +98,9 @@ function M.new(cap)
  }
 end
 local function nextPos(tr, queuedRegion)
- local d = tr.dir
  local cur = tr.curRegion
  local lo = regionLo(cur)
  local hi = regionHi(cur)
- if d == DIR_FWD then
  local p = tr.pos + 1
  if tr.pos < lo or tr.pos > hi then p = lo end
  if p > hi then
@@ -119,51 +112,6 @@ local function nextPos(tr, queuedRegion)
  return lo
  end
  return p
- elseif d == DIR_REV then
- local p = tr.pos - 1
- if tr.pos < lo or tr.pos > hi then p = hi end
- if p < lo then
- if queuedRegion ~= 0 then
- tr.curRegion = queuedRegion
- tr.regionDone = true
- return regionHi(queuedRegion)
- end
- return hi
- end
- return p
- elseif d == DIR_PP then
- if tr.pos < lo or tr.pos > hi then
- tr.ppDir = 1
- return lo
- end
- local p = tr.pos + tr.ppDir
- if p > hi then
- if queuedRegion ~= 0 then
- tr.curRegion = queuedRegion
- tr.regionDone = true
- tr.ppDir = 1
- return regionLo(queuedRegion)
- end
- tr.ppDir = -1
- p = hi - 1
- if p < lo then p = lo end
- return p
- elseif p < lo then
- if queuedRegion ~= 0 then
- tr.curRegion = queuedRegion
- tr.regionDone = true
- tr.ppDir = 1
- return regionLo(queuedRegion)
- end
- tr.ppDir = 1
- p = lo + 1
- if p > hi then p = hi end
- return p
- end
- return p
- else
- return math.random(lo, hi)
- end
 end
 local function rollProb(prob)
  if prob >= 127 then return true end
@@ -179,26 +127,24 @@ local function emitOff(tr, out)
  tr.actOff = 0
  end
 end
-local SUSTAIN = 0x7FFFFFFF
 local function fireStep(tr, out)
  local s = tr.steps[tr.pos]
- if not Step.active(s) then return end
+ if Step.muted(s) then return end
  if not rollProb(Step.prob(s)) then return end
  local p, v, g = Step.pitch(s), Step.vel(s), Step.gate(s)
  if g <= 0 then return end
- local dur = Step.dur(s)
- local sustain = (g >= dur)
- if tr.actPitch == p and sustain then
- tr.actOff = SUSTAIN
+ if g > tr.stepLen then g = tr.stepLen end
+ if tr.actPitch == p and g >= tr.stepLen and tr.actOff > 0 then
+ tr.actOff = g
  else
  if tr.actPitch >= 0 then
  out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.chan }
  end
  out[#out+1] = { type=EV_ON, pitch=p, vel=v, ch=tr.chan }
  tr.actPitch = p
- tr.actOff = sustain and SUSTAIN or g
+ tr.actOff = g
  end
- if Step.ratch(s) and g > 0 then
+ if Step.ratch(s) then
  tr.ratNext = g
  tr.ratState = 1
  else
@@ -206,18 +152,26 @@ local function fireStep(tr, out)
  end
 end
 function M.advance(tr, out, queuedRegion)
- tr.divAcc = tr.divAcc + 1
- if tr.divAcc < tr.div then return end
- tr.divAcc = 0
- if tr.actOff > 0 and tr.actOff ~= SUSTAIN then
+ if tr.stepAcc <= 0 then
+ tr.pos = nextPos(tr, queuedRegion or 0)
+ local s = tr.steps[tr.pos]
+ local d = Step.dur(s)
+ if d <= 0 then d = 1 end
+ tr.stepAcc = d
+ tr.stepLen = d
+ fireStep(tr, out)
+ else
+ if tr.actOff > 0 then
  tr.actOff = tr.actOff - 1
  if tr.actOff == 0 then emitOff(tr, out) end
+ end
  end
  if tr.ratNext > 0 then
  tr.ratNext = tr.ratNext - 1
  if tr.ratNext == 0 then
  local s = tr.steps[tr.pos]
  local g = Step.gate(s)
+ if g > tr.stepLen then g = tr.stepLen end
  if tr.ratState == 1 then
  emitOff(tr, out)
  tr.ratState = 0
@@ -232,14 +186,6 @@ function M.advance(tr, out, queuedRegion)
  end
  end
  end
- if tr.stepAcc <= 0 then
- tr.pos = nextPos(tr, queuedRegion or 0)
- local s = tr.steps[tr.pos]
- local d = Step.dur(s)
- if d <= 0 then d = 1 end
- tr.stepAcc = d
- fireStep(tr, out)
- end
  tr.stepAcc = tr.stepAcc - 1
 end
 function M.setStepParam(tr, i, name, val)
@@ -250,35 +196,14 @@ function M.getStepParam(tr, i, name)
  if i < 1 or i > tr.cap then return nil end
  return Step.get(tr.steps[i], name)
 end
-function M.groupEdit(tr, from, to, op, name, val)
- if from > to then from, to = to, from end
- if from < 1 then from = 1 end
- if to > tr.cap then to = tr.cap end
- if op == "set" then
- for i = from, to do
- tr.steps[i] = Step.set(tr.steps[i], name, val)
- end
- elseif op == "add" then
- for i = from, to do
- local cur = Step.get(tr.steps[i], name)
- tr.steps[i] = Step.set(tr.steps[i], name, cur + val)
- end
- elseif op == "rand" then
- local lo, hi = val[1], val[2]
- for i = from, to do
- tr.steps[i] = Step.set(tr.steps[i], name, math.random(lo, hi))
- end
- end
-end
 function M.reset(tr, region)
  tr.pos = 0
- tr.divAcc = 0
  tr.stepAcc = 0
+ tr.stepLen = 0
  tr.actPitch = -1
  tr.actOff = 0
  tr.ratNext = 0
  tr.ratState = 0
- tr.ppDir = 1
  tr.curRegion = region or 1
  tr.regionDone = false
 end
@@ -343,36 +268,17 @@ function M.onPulse()
  local n = #ts
  local q = M.queuedRegion
  for i = 1, n do
- local tr = ts[i]
- if tr.dir ~= Track.DIR_RND then
- Track.advance(tr, out, q)
- end
+ Track.advance(ts[i], out, q)
  end
  if q ~= 0 then
  local allFlipped = true
  for i = 1, n do
- local tr = ts[i]
- if tr.dir ~= Track.DIR_RND and not tr.regionDone then
- allFlipped = false
- break
- end
+ if not ts[i].regionDone then allFlipped = false; break end
  end
  if allFlipped then
- for i = 1, n do
- local tr = ts[i]
- if tr.dir == Track.DIR_RND then
- tr.curRegion = q
- end
- end
  M.activeRegion = q
  M.queuedRegion = 0
  for i = 1, n do ts[i].regionDone = false end
- end
- end
- for i = 1, n do
- local tr = ts[i]
- if tr.dir == Track.DIR_RND then
- Track.advance(tr, out, 0)
  end
  end
  if #out == 0 then return nil end
@@ -381,22 +287,6 @@ end
 function M.setStepParam(t, i, name, val)
  local tr = M.tracks[t]; if not tr then return end
  Track.setStepParam(tr, i, name, val)
-end
-function M.groupEdit(t, from, to, op, name, val)
- local tr = M.tracks[t]; if not tr then return end
- Track.groupEdit(tr, from, to, op, name, val)
-end
-function M.setTrackDiv(t, div)
- local tr = M.tracks[t]; if not tr then return end
- if div < 1 then div = 1 end
- if div > 16 then div = 16 end
- tr.div = div
-end
-function M.setTrackDir(t, dir)
- local tr = M.tracks[t]; if not tr then return end
- if dir < 1 or dir > 4 then return end
- tr.dir = dir
- tr.ppDir = 1
 end
 function M.setTrackChan(t, ch)
  local tr = M.tracks[t]; if not tr then return end

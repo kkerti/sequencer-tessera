@@ -47,7 +47,7 @@ return {
         },
         {
             chan = 10, div = 1, dir = 1,
-            steps = { { pitch=42, vel=90, dur=6, gate=2, active=false } },
+            steps = { { pitch=42, vel=90, dur=6, gate=2, mute=true } },
         },
     },
 }

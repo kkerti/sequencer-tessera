@@ -62,10 +62,29 @@ docs/
 | 14–20 | duration    | 0–127 pulses |
 | 21–27 | gate        | 0–127 pulses |
 | 28    | ratchet     | 0/1        |
-| 29    | active      | 0/1        |
+| 29    | mute        | 0/1        |
 | 30–36 | probability | 0–127      |
 
 One Lua integer per step. No per-step tables. 64 steps × 4 tracks = 256 ints.
+
+## Timing model (ER-101 style)
+
+Per-step **duration** and **gate** are independent pulse counts:
+
+- **`dur`** = how many external pulses the step *occupies*. The next step
+  fires `dur` pulses after this one started. `dur=1` is the legacy
+  every-pulse advance; `dur=4` makes the step a quarter-note when the
+  external clock runs at 16 ppqn.
+- **`gate`** = how many of those pulses the note is *held*. Capped at
+  `dur` at fire time. `gate==dur` is a sustained step (legato candidate);
+  `gate < dur` leaves silence at the tail.
+
+There is no per-track clock divider — set `dur` per step instead. The
+engine has no BPM concept; pulses arrive externally.
+
+**Legato**: when entering a step whose pitch matches the still-sustaining
+prior step (`actPitch == p`) AND `gate >= stepLen`, the engine extends
+`actOff` instead of emitting OFF+ON. One MIDI message per legato join.
 
 ## Engine contract
 
@@ -81,14 +100,15 @@ Events are consumed by a driver. Engine does no IO.
 
 ## Group edit
 
-Public Core API:
+Removed. The previous `groupEdit` API was never wired to a UI surface and
+dropped to save bytes. If bulk edit returns, design it against the 16-row
+view (e.g. range-select with SHIFT + endless).
+
+Public Core API for step mutation:
 
 ```lua
 track.setStepParam(t, i, param, val)
-track.groupEdit(t, from, to, op, param, val)  -- op = "set" | "add" | "rand"
 ```
-
-UI calls these. No selection state lives in Core.
 
 ## Glossary (read this before naming anything)
 
@@ -115,13 +135,12 @@ Switching is **global** (all 4 tracks share `activeRegion`) and **at-end-of-regi
 first step on its next own-clock advance).
 
 Edge cases:
-- Per-track flip is independent — a track on `div=4` finishes its region
-  several pulses after a `div=1` track. `activeRegion` only updates after
-  *all four* tracks have flipped.
-- `DIR_REV` / `DIR_PP`: boundary detection uses region bounds, not just
-  `pos == regionEnd`. See `track.lua` for specifics.
-- `DIR_RND`: random tracks have no natural boundary. They piggyback —
-  flip when `activeRegion` is updated by the last non-random track.
+- Per-track flip is independent — a track whose current step has `dur=4`
+  finishes its region several pulses after a `dur=1` track. `activeRegion`
+  only updates after *all four* tracks have flipped.
+- Tracks always play forward. Direction modes (FWD/REV/PP/RND) were
+  dropped to save bytes; if they return, the boundary-detection logic in
+  `track.lua` will need to grow back accordingly.
 
 Public API:
 

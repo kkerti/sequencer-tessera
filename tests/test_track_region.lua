@@ -2,7 +2,6 @@
 -- Region semantics within a single track:
 --   - track plays only steps inside curRegion
 --   - region switch happens at-end-of-region (not mid-region)
---   - per direction (FWD/REV/PP) the boundary is the natural wrap point
 
 local Track = require("track")
 local Step  = require("step")
@@ -34,7 +33,6 @@ function M.test_fwd_stays_in_region_2()
     seedAll(tr)
     Track.reset(tr, 2)              -- region 2 = steps 17..32
     local p = positions(tr, 32)
-    -- first 16 should be 17..32, then wrap to 17..32 again
     eq(p[1], 17); eq(p[16], 32); eq(p[17], 17); eq(p[32], 32)
 end
 
@@ -49,34 +47,6 @@ function M.test_fwd_switch_at_boundary()
     eq(p[18], 34)
     eq(tr.curRegion, 3)
     eq(tr.regionDone, true, "regionDone flag set after flip")
-end
-
-function M.test_rev_switch_at_boundary()
-    local tr = Track.new()
-    seedAll(tr)
-    Track.reset(tr, 1)
-    tr.dir = Track.DIR_REV
-    -- region 1 reverse: starts at 16, walks down to 1, then should jump
-    -- to region 4's hi (=64) on the next pulse if region 4 is queued.
-    local p = positions(tr, 18, function(_) return 4 end)
-    eq(p[1], 16); eq(p[16], 1)
-    eq(p[17], 64, "should jump to queued region's hi")
-    eq(p[18], 63)
-    eq(tr.curRegion, 4)
-end
-
-function M.test_pp_switch_at_top_boundary()
-    local tr = Track.new()
-    seedAll(tr)
-    Track.reset(tr, 1)
-    tr.dir = Track.DIR_PP
-    -- Ping-pong region 1: 1..16, then bounce. Queue region 2; the FIRST
-    -- bounce (at step 16) is the boundary, so jump to region 2 lo.
-    local p = positions(tr, 18, function(_) return 2 end)
-    eq(p[1], 1); eq(p[16], 16)
-    eq(p[17], 17, "PP top bounce + queue jumps to next region's lo")
-    eq(p[18], 18)
-    eq(tr.curRegion, 2)
 end
 
 function M.test_no_queue_means_loop()

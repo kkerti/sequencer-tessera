@@ -54,9 +54,9 @@ function M.test_legato()
     eq(#total, 0, "legato: no extra events")
 end
 
-function M.test_rest_step_active_false()
+function M.test_muted_step_emits_no_note()
     local tr = Track.new()
-    tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=4, gate=2, active=false })
+    tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=4, gate=2, mute=true })
     tr.steps[2] = Step.pack({ pitch=62, vel=100, dur=4, gate=2 })
     Track.reset(tr, 1)
 
@@ -69,15 +69,28 @@ function M.test_rest_step_active_false()
     if not found then error("expected NOTE_ON 62 within 4 pulses") end
 end
 
-function M.test_clock_divider()
+function M.test_step_dur_dwells()
+    -- ER-101 model: a step with dur=8 occupies 8 pulses; the next step
+    -- doesn't fire until pulse 9.
     local tr = Track.new()
-    tr.div = 2
-    tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=2, gate=1 })
-    tr.steps[2] = Step.pack({ pitch=62, vel=100, dur=2, gate=1 })
+    tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=8, gate=2 })
+    tr.steps[2] = Step.pack({ pitch=72, vel=100, dur=2, gate=1 })
     Track.reset(tr, 1)
 
-    local out = pulse(tr, 1); eq(#out, 0, "first pulse swallowed")
-    out = pulse(tr, 1); eq(out[1].type, Track.EV_ON); eq(out[1].pitch, 60)
+    local out = pulse(tr, 1)
+    eq(out[1].pitch, 60, "step 1 fires on pulse 1")
+    -- pulses 2..8 should produce no NOTE_ON
+    for k = 2, 8 do
+        out = pulse(tr, 1)
+        for _, e in ipairs(out) do
+            if e.type == Track.EV_ON then
+                error("unexpected NOTE_ON on pulse " .. k .. " (pitch " .. e.pitch .. ")")
+            end
+        end
+    end
+    out = pulse(tr, 1)  -- pulse 9: enter step 2
+    eq(out[#out].type, Track.EV_ON)
+    eq(out[#out].pitch, 72)
 end
 
 return M

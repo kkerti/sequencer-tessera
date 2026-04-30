@@ -11,6 +11,9 @@ local tests = {
     "test_track_probability",
     "test_track_group_edit",
     "test_engine",
+    "test_track_region",
+    "test_engine_region_switch",
+    "test_no_alloc",
     "test_dist_smoke",
 }
 

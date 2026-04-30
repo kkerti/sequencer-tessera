@@ -29,7 +29,6 @@ local function applyPatch(p)
     for ti = 1, math.min(#p.tracks, #Engine.tracks) do
         local pt = p.tracks[ti]
         local tr = Engine.tracks[ti]
-        tr.len  = pt.len  or tr.len
         tr.chan = pt.chan or tr.chan
         tr.div  = pt.div  or tr.div
         tr.dir  = pt.dir  or tr.dir
@@ -56,6 +55,11 @@ for line in io.lines() do
         Driver.tickPulse()
         local ev = Engine.onPulse()
         if ev then Driver.emit(ev) end
+    elseif line:sub(1,3) == "REG" then
+        -- "REG 2" -> queue region 2
+        local r = tonumber(line:sub(5))
+        Engine.setQueuedRegion(r)
+        Driver.note("QUEUE " .. tostring(r))
     elseif line == "QUIT" then
         break
     end

@@ -1,24 +1,82 @@
 -- tools/build_dist.lua
--- Build dist/sequencer.lua from src/.
+-- Build TWO bundles from src/:
+--   dist/sequencer.lua     -- Core only (step + track + engine). ~10 KB.
+--                             Required at module init. Engine + MIDI alone.
+--   dist/sequencer_ui.lua  -- Controls layer (controls + controls_en16). ~8 KB.
+--                             Lazy-loaded by VSN1.lua on first input event so
+--                             pure-playback or boot-failure paths never pay
+--                             the screen-UI heap cost.
 --
--- Pipeline (safe, deterministic):
---   1. Concatenate src files via a tiny require-shim.
---   2. Strip comments (line + block).
---   3. Strip top-level assert(...) calls.
---   4. Collapse whitespace.
+-- The UI bundle's internal require-shim falls back to the host's `require`
+-- so `require("engine")` / `require("track")` / `require("step")` inside
+-- the UI modules resolves through the already-loaded Core bundle. This
+-- works because Core is a regular `require("sequencer")` whose three-layer
+-- table makes step/track/engine available as flat aliases.
 --
--- Verifies the bundle parses on macOS Lua 5.4 before exiting.
+-- Pipeline (per file, both bundles):
+--   1. Strip comments (line + block).
+--   2. Strip top-level assert(...) calls.
+--   3. Collapse whitespace.
+--
+-- Verifies both bundles parse on macOS Lua 5.4 before exiting.
 
 local SRC = "src"
-local OUT = "dist/sequencer.lua"
 
--- order matters: leaves first
-local FILES = {
-    "step",
-    "track",
-    "engine",
-    "controls",
+-- ---------- bundle definitions ----------
+
+-- Core bundle: pure logic, no IO, no UI.
+local CORE = {
+    out   = "dist/sequencer.lua",
+    files = { "step", "track", "engine" },
+    namespaces = [[
+return {
+    Core     = { step = R.step, track = R.track, engine = R.engine },
+    Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
+    HAL      = {},
+    -- flat aliases (same table refs); UI bundle resolves through these
+    step   = R.step,
+    track  = R.track,
+    engine = R.engine,
 }
+]],
+}
+
+-- UI bundle: Controls layer. Depends on Core being already loaded.
+-- Its internal require-shim falls back to the host `require` for missing
+-- modules so `require("engine")` etc. resolves through Core's flat aliases
+-- (see SHIM_UI below).
+local UI = {
+    out   = "dist/sequencer_ui.lua",
+    files = { "controls", "controls_en16" },
+    namespaces = [[
+return {
+    screen = R.controls,
+    en16   = R.controls_en16,
+}
+]],
+}
+
+-- Require-shim variants ------------------------------------------------------
+
+local SHIM_CORE = [[
+local R={}
+local function require(n) return R[n] end
+]]
+
+-- UI shim: prefer locally-bundled module, else delegate to host require
+-- (which on device returns the Core bundle and exposes step/track/engine
+-- as flat fields). This keeps the inner module sources unmodified.
+local SHIM_UI = [[
+local R={}
+local _hostReq = require
+local _seq
+local function require(n)
+    local r = R[n]
+    if r ~= nil then return r end
+    if not _seq then _seq = _hostReq("sequencer") end
+    return _seq[n]
+end
+]]
 
 -- ---------- io ----------
 
@@ -36,7 +94,7 @@ local function write(path, content)
     f:close()
 end
 
--- ---------- comment stripping ----------
+-- ---------- comment stripping (string-aware, long-bracket-aware) ----------
 
 local function stripComments(src)
     local out = {}
@@ -102,9 +160,7 @@ end
 -- ---------- assert stripping ----------
 
 local function stripAsserts(src)
-    -- whole-line assert statement
     src = src:gsub("\n[ \t]*assert%b()[ \t]*\n", "\n")
-    -- expression-position assert(x) -> x  (a few passes for nesting)
     for _ = 1, 3 do
         src = src:gsub("assert(%b())", "%1")
     end
@@ -121,43 +177,34 @@ local function collapseWs(src)
     return src
 end
 
--- ---------- bundle ----------
+-- ---------- bundle one set of files ----------
 
-local function bundle()
-    local parts = {
-        "-- dist/sequencer.lua (auto-generated; do not edit)\n",
-        "local R={}\n",
-        "local function require(n) return R[n] end\n",
-    }
-    for _, name in ipairs(FILES) do
-        local body = read(SRC .. "/" .. name .. ".lua")
-        body = stripComments(body)
-        body = stripAsserts(body)
-        body = collapseWs(body)
+local function buildBundle(spec, shim, header)
+    local parts = { header, shim }
+    local rawTotal = 0
+    for _, name in ipairs(spec.files) do
+        local raw = read(SRC .. "/" .. name .. ".lua")
+        rawTotal = rawTotal + #raw
+        local body = collapseWs(stripAsserts(stripComments(raw)))
         parts[#parts+1] = string.format("R[%q]=(function()\n%s\nend)()\n", name, body)
     end
-    parts[#parts+1] = "return R\n"
-    return table.concat(parts)
+    parts[#parts+1] = spec.namespaces
+    local out = table.concat(parts)
+    write(spec.out, out)
+
+    io.write(string.format("%-26s source: %5d  dist: %5d  (%.1f%%)\n",
+        spec.out, rawTotal, #out, 100 * #out / rawTotal))
+
+    local ok, err = loadfile(spec.out)
+    if not ok then
+        io.stderr:write("VERIFY FAIL " .. spec.out .. ": " .. tostring(err) .. "\n")
+        os.exit(1)
+    end
 end
 
 -- ---------- main ----------
 
-local out = bundle()
-local rawTotal = 0
-for _, name in ipairs(FILES) do
-    rawTotal = rawTotal + #read(SRC .. "/" .. name .. ".lua")
-end
+buildBundle(CORE, SHIM_CORE, "-- dist/sequencer.lua (auto-generated; Core only)\n")
+buildBundle(UI,   SHIM_UI,   "-- dist/sequencer_ui.lua (auto-generated; Controls layer)\n")
 
-io.write(string.format("source: %d bytes\n", rawTotal))
-io.write(string.format("dist:   %d bytes (%.1f%%)\n", #out, 100 * #out / rawTotal))
-
-write(OUT, out)
-io.write("wrote " .. OUT .. "\n")
-
--- verify
-local ok, err = loadfile(OUT)
-if not ok then
-    io.stderr:write("VERIFY FAIL: " .. tostring(err) .. "\n")
-    os.exit(1)
-end
-io.write("verify: bundle parses OK\n")
+io.write("verify: both bundles parse OK\n")

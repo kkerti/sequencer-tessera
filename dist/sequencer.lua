@@ -1,4 +1,4 @@
--- dist/sequencer.lua (auto-generated; do not edit)
+-- dist/sequencer.lua (auto-generated; Core only)
 local R={}
 local function require(n) return R[n] end
 R["step"]=(function()
@@ -72,16 +72,21 @@ local Step = require("step")
 local M = {}
 local DIR_FWD, DIR_REV, DIR_PP, DIR_RND = 1, 2, 3, 4
 M.DIR_FWD, M.DIR_REV, M.DIR_PP, M.DIR_RND = DIR_FWD, DIR_REV, DIR_PP, DIR_RND
-function M.new(n, len)
- n = n or 64
- len = len or 16
+local STEPS_PER_REGION = 16
+M.STEPS_PER_REGION = STEPS_PER_REGION
+local REGION_COUNT = 4
+M.REGION_COUNT = REGION_COUNT
+local function regionLo(r) return (r - 1) * STEPS_PER_REGION + 1 end
+local function regionHi(r) return r * STEPS_PER_REGION end
+M.regionLo, M.regionHi = regionLo, regionHi
+function M.new(cap)
+ cap = cap or 64
  local steps = {}
  local def = Step.pack({ pitch=60, vel=100, dur=6, gate=3, prob=127, active=true })
- for i = 1, n do steps[i] = def end
+ for i = 1, cap do steps[i] = def end
  return {
  steps = steps,
- cap = n,
- len = len,
+ cap = cap,
  chan = 1,
  div = 1,
  dir = DIR_FWD,
@@ -89,31 +94,75 @@ function M.new(n, len)
  pos = 0,
  divAcc = 0,
  stepAcc = 0,
+ curRegion = 1,
+ regionDone = false,
  actPitch = -1,
  actOff = 0,
  ratNext = 0,
  ratState = 0,
  }
 end
-local function nextPos(tr)
- local len = tr.len
- if len <= 1 then return 1 end
+local function nextPos(tr, queuedRegion)
  local d = tr.dir
+ local cur = tr.curRegion
+ local lo = regionLo(cur)
+ local hi = regionHi(cur)
  if d == DIR_FWD then
  local p = tr.pos + 1
- if p > len then p = 1 end
+ if tr.pos < lo or tr.pos > hi then p = lo end
+ if p > hi then
+ if queuedRegion ~= 0 then
+ tr.curRegion = queuedRegion
+ tr.regionDone = true
+ return regionLo(queuedRegion)
+ end
+ return lo
+ end
  return p
  elseif d == DIR_REV then
  local p = tr.pos - 1
- if p < 1 then p = len end
+ if tr.pos < lo or tr.pos > hi then p = hi end
+ if p < lo then
+ if queuedRegion ~= 0 then
+ tr.curRegion = queuedRegion
+ tr.regionDone = true
+ return regionHi(queuedRegion)
+ end
+ return hi
+ end
  return p
  elseif d == DIR_PP then
+ if tr.pos < lo or tr.pos > hi then
+ tr.ppDir = 1
+ return lo
+ end
  local p = tr.pos + tr.ppDir
- if p > len then tr.ppDir = -1; p = len - 1; if p < 1 then p = 1 end
- elseif p < 1 then tr.ppDir = 1; p = 2; if p > len then p = len end end
+ if p > hi then
+ if queuedRegion ~= 0 then
+ tr.curRegion = queuedRegion
+ tr.regionDone = true
+ tr.ppDir = 1
+ return regionLo(queuedRegion)
+ end
+ tr.ppDir = -1
+ p = hi - 1
+ if p < lo then p = lo end
+ return p
+ elseif p < lo then
+ if queuedRegion ~= 0 then
+ tr.curRegion = queuedRegion
+ tr.regionDone = true
+ tr.ppDir = 1
+ return regionLo(queuedRegion)
+ end
+ tr.ppDir = 1
+ p = lo + 1
+ if p > hi then p = hi end
+ return p
+ end
  return p
  else
- return math.random(1, len)
+ return math.random(lo, hi)
  end
 end
 local function rollProb(prob)
@@ -156,17 +205,13 @@ local function fireStep(tr, out)
  tr.ratNext = 0
  end
 end
-function M.advance(tr, out)
+function M.advance(tr, out, queuedRegion)
  tr.divAcc = tr.divAcc + 1
- if tr.divAcc < tr.div then
- return
- end
+ if tr.divAcc < tr.div then return end
  tr.divAcc = 0
  if tr.actOff > 0 and tr.actOff ~= SUSTAIN then
  tr.actOff = tr.actOff - 1
- if tr.actOff == 0 then
- emitOff(tr, out)
- end
+ if tr.actOff == 0 then emitOff(tr, out) end
  end
  if tr.ratNext > 0 then
  tr.ratNext = tr.ratNext - 1
@@ -188,7 +233,7 @@ function M.advance(tr, out)
  end
  end
  if tr.stepAcc <= 0 then
- tr.pos = nextPos(tr)
+ tr.pos = nextPos(tr, queuedRegion or 0)
  local s = tr.steps[tr.pos]
  local d = Step.dur(s)
  if d <= 0 then d = 1 end
@@ -225,7 +270,7 @@ function M.groupEdit(tr, from, to, op, name, val)
  end
  end
 end
-function M.reset(tr)
+function M.reset(tr, region)
  tr.pos = 0
  tr.divAcc = 0
  tr.stepAcc = 0
@@ -234,6 +279,8 @@ function M.reset(tr)
  tr.ratNext = 0
  tr.ratState = 0
  tr.ppDir = 1
+ tr.curRegion = region or 1
+ tr.regionDone = false
 end
 function M.allOff(tr, out)
  emitOff(tr, out)
@@ -247,23 +294,27 @@ local Track = require("track")
 local M = {}
 M.tracks = {}
 M.running = false
+M.activeRegion = 1
+M.queuedRegion = 0
 local logFn = nil
 function M.init(opts)
  opts = opts or {}
  local n = opts.trackCount or 4
  local cap = opts.stepsPerTrack or 64
- local len = opts.defaultLen or 16
  M.tracks = {}
  for i = 1, n do
- M.tracks[i] = Track.new(cap, len)
+ M.tracks[i] = Track.new(cap)
  M.tracks[i].chan = i
  end
  M.running = false
+ M.activeRegion = 1
+ M.queuedRegion = 0
  logFn = opts.log
 end
 local function log(s) if logFn then logFn(s) end end
 function M.onStart()
- for i = 1, #M.tracks do Track.reset(M.tracks[i]) end
+ for i = 1, #M.tracks do Track.reset(M.tracks[i], M.activeRegion) end
+ M.queuedRegion = 0
  M.running = true
  log("START")
 end
@@ -274,12 +325,55 @@ function M.onStop()
  log("STOP")
  return out
 end
+function M.setQueuedRegion(r)
+ if r == nil or r < 1 or r > Track.REGION_COUNT then
+ M.queuedRegion = 0
+ return
+ end
+ if r == M.activeRegion then
+ M.queuedRegion = 0
+ return
+ end
+ M.queuedRegion = r
+end
 function M.onPulse()
  if not M.running then return nil end
  local out = {}
  local ts = M.tracks
- for i = 1, #ts do
- Track.advance(ts[i], out)
+ local n = #ts
+ local q = M.queuedRegion
+ for i = 1, n do
+ local tr = ts[i]
+ if tr.dir ~= Track.DIR_RND then
+ Track.advance(tr, out, q)
+ end
+ end
+ if q ~= 0 then
+ local allFlipped = true
+ for i = 1, n do
+ local tr = ts[i]
+ if tr.dir ~= Track.DIR_RND and not tr.regionDone then
+ allFlipped = false
+ break
+ end
+ end
+ if allFlipped then
+ for i = 1, n do
+ local tr = ts[i]
+ if tr.dir == Track.DIR_RND then
+ tr.curRegion = q
+ end
+ end
+ M.activeRegion = q
+ M.queuedRegion = 0
+ for i = 1, n do ts[i].regionDone = false end
+ end
+ end
+ for i = 1, n do
+ local tr = ts[i]
+ if tr.dir == Track.DIR_RND then
+ Track.advance(tr, out, 0)
+ end
  end
  if #out == 0 then return nil end
  return out
@@ -291,12 +385,6 @@ end
 function M.groupEdit(t, from, to, op, name, val)
  local tr = M.tracks[t]; if not tr then return end
  Track.groupEdit(tr, from, to, op, name, val)
-end
-function M.setTrackLen(t, len)
- local tr = M.tracks[t]; if not tr then return end
- if len < 1 then len = 1 end
- if len > tr.cap then len = tr.cap end
- tr.len = len
 end
 function M.setTrackDiv(t, div)
  local tr = M.tracks[t]; if not tr then return end
@@ -319,107 +407,12 @@ end
 return M
 
 end)()
-R["controls"]=(function()
-
-local Engine = require("engine")
-local Track = require("track")
-local Step = require("step")
-local M = {}
-M.selT = 1
-M.selS = 1
-M.focus = 3
-local CELLS = {
- { "TRACK", "track", function(t,s) return t end,
- function(t,s,d) M.selT = ((t - 1 + d) % 4) + 1 end, 1, 4 },
- { "STEP", "step", function(t,s) return s end,
- function(t,s,d)
- local tr = Engine.tracks[t]
- local n = (s - 1 + d) % tr.len
- M.selS = n + 1
- end, 1, 64 },
- { "NOTE", "pitch",
- function(t,s) return Engine.tracks[t].steps[s] and Step.pitch(Engine.tracks[t].steps[s]) or 0 end,
- function(t,s,d)
- local cur = Step.pitch(Engine.tracks[t].steps[s])
- Engine.setStepParam(t, s, "pitch", cur + d)
- end, 0, 127 },
- { "VEL", "vel",
- function(t,s) return Step.vel(Engine.tracks[t].steps[s]) end,
- function(t,s,d)
- local cur = Step.vel(Engine.tracks[t].steps[s])
- Engine.setStepParam(t, s, "vel", cur + d)
- end, 0, 127 },
- { "DUR", "dur",
- function(t,s) return Step.dur(Engine.tracks[t].steps[s]) end,
- function(t,s,d)
- local cur = Step.dur(Engine.tracks[t].steps[s])
- Engine.setStepParam(t, s, "dur", cur + d)
- end, 1, 127 },
- { "GATE", "gate",
- function(t,s) return Step.gate(Engine.tracks[t].steps[s]) end,
- function(t,s,d)
- local cur = Step.gate(Engine.tracks[t].steps[s])
- Engine.setStepParam(t, s, "gate", cur + d)
- end, 0, 127 },
- { "RATCH", "ratch",
- function(t,s) return Step.ratch(Engine.tracks[t].steps[s]) and 1 or 0 end,
- function(t,s,d)
- local cur = Step.ratch(Engine.tracks[t].steps[s]) and 1 or 0
- Engine.setStepParam(t, s, "ratch", (cur + d) % 2)
- end, 0, 1 },
- { "PROB", "prob",
- function(t,s) return Step.prob(Engine.tracks[t].steps[s]) end,
- function(t,s,d)
- local cur = Step.prob(Engine.tracks[t].steps[s])
- Engine.setStepParam(t, s, "prob", cur + d)
- end, 0, 127 },
+return {
+    Core     = { step = R.step, track = R.track, engine = R.engine },
+    Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
+    HAL      = {},
+    -- flat aliases (same table refs); UI bundle resolves through these
+    step   = R.step,
+    track  = R.track,
+    engine = R.engine,
 }
-M.CELLS = CELLS
-local dirty = { true, true, true, true, true, true, true, true }
-local function dirtyAll() for i=1,8 do dirty[i] = true end end
-M.dirtyAll = dirtyAll
-function M.onEndless(dir)
- local cell = CELLS[M.focus]
- cell[4](M.selT, M.selS, dir)
- dirty[M.focus] = true
- if M.focus == 1 or M.focus == 2 then dirtyAll() end
-end
-function M.onKey(idx)
- if idx < 1 or idx > 8 then return end
- dirty[M.focus] = true
- M.focus = idx
- dirty[idx] = true
-end
-local CELL_W, CELL_H = 80, 120
-local function cellRect(i)
- local col = (i - 1) % 4
- local row = math.floor((i - 1) / 4)
- return col * CELL_W, row * CELL_H
-end
-local COL_BG_ACTIVE = { 200, 30, 30 }
-local COL_BG_INACTIVE = { 40, 40, 40 }
-local COL_FG = { 230, 230, 230 }
-local function drawCell(scr, i)
- local x, y = cellRect(i)
- local cell = CELLS[i]
- local val = cell[3](M.selT, M.selS)
- local bg = (i == M.focus) and COL_BG_ACTIVE or COL_BG_INACTIVE
- scr:draw_rectangle_filled(x, y, x + CELL_W - 1, y + CELL_H - 1, bg)
- scr:draw_text_fast(cell[1], x + 4, y + 6, 8, COL_FG)
- scr:draw_text_fast(tostring(val), x + 4, y + 24, 16, COL_FG)
-end
-function M.draw(scr)
- local any = false
- for i = 1, 8 do
- if dirty[i] then
- drawCell(scr, i)
- dirty[i] = false
- any = true
- end
- end
- if any then scr:draw_swap() end
-end
-return M
-
-end)()
-return R

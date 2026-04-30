@@ -22,7 +22,6 @@ end
 function M.test_start_then_pulse_emits()
     Engine.init({ trackCount = 1 })
     Engine.tracks[1].steps[1] = Step.pack({ pitch=60, vel=100, dur=4, gate=2 })
-    Engine.tracks[1].len = 1
     Engine.onStart()
     local ev = Engine.onPulse()
     if not ev then error("expected events on first pulse after start") end
@@ -33,11 +32,9 @@ end
 function M.test_stop_emits_alloff()
     Engine.init({ trackCount = 1 })
     Engine.tracks[1].steps[1] = Step.pack({ pitch=60, vel=100, dur=8, gate=8 })
-    Engine.tracks[1].len = 1
     Engine.onStart()
     Engine.onPulse()  -- triggers note on
     local off = Engine.onStop()
-    -- expect at least one OFF for pitch 60
     local foundOff = false
     for _, e in ipairs(off) do
         if e.type == Track.EV_OFF and e.pitch == 60 then foundOff = true end

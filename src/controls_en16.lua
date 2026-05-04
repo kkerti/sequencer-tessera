@@ -45,6 +45,9 @@ function M.setShadow(i, packed)
     if i >= 1 and i <= 16 then M.SH[i] = packed end
 end
 
+-- Alias for clarity at call sites: "this single step changed".
+M.setStep = M.setShadow
+
 function M.setMeta(focus, lastStep, playhead, selS, vplo, shift)
     M.focus    = focus
     M.lastStep = lastStep

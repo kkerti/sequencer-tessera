@@ -1,0 +1,7 @@
+[
+  "overview.lua",
+  "steps.lua",
+  "track_select.lua",
+  "region_picker.lua",
+  "param_edit.lua"
+]

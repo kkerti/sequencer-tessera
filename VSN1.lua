@@ -5,7 +5,9 @@
 --
 -- Two-bundle layout:
 --   dist/sequencer.lua      Core only. Loaded at module init.
---   dist/sequencer_ui.lua   Screen UI. Loaded eagerly at init.
+--   dist/sequencer_ui.lua   Screen UI. Lazy-loaded by loadUI() on first
+--                           input event or first screen draw. Eager load
+--                           at init was too heavy and hung module boot.
 --
 -- Hardware mapping:
 --   Screen     : 320x240 EDIT view.
@@ -44,19 +46,26 @@ for i, p in ipairs(notes) do
     })
 end
 
--- UI eagerly loaded so input handlers don't branch on CTL existence and
--- so EU() can read CTL state during boot seed.
-local UI = require("sequencer_ui")
-SEQ.Controls = UI
-CTL = UI.screen
-CTL.dirtyAll()
+-- UI is lazy-loaded. Eager require("sequencer_ui") at init was heavy
+-- enough to hang module boot. loadUI() is idempotent: first input event
+-- or first screen draw pays the cost; pure-playback paths never do.
+CTL = nil
+function loadUI()
+    if CTL then return end
+    local UI = require("sequencer_ui")
+    SEQ.Controls = UI
+    CTL = UI.screen
+    CTL.dirtyAll()
+end
 
 -- ---- EN16 push (single function, called at end of any input handler) ------
 -- Computes mute mask (16 bits over visible viewport), focus, sel-relative,
 -- visible cap. One immediate_send per call. Cheap: ~25 byte payload.
+-- Caller MUST have loaded UI (every input handler does).
 local function vplo() return (CTL.viewport - 1) * 16 + 1 end
 
 function EU()
+    if not CTL then return end
     local lo  = vplo()
     local tr  = ENGINE.tracks[CTL.selT]
     local s   = tr.steps
@@ -74,9 +83,12 @@ function EU()
 end
 
 -- ---- EN16 playhead push (per pulse, only on slot change) ------------------
+-- Runs from MIDI rx; must NOT lazy-load UI. If CTL not yet loaded, skip
+-- (no UI means no viewport concept; the user hasn't interacted yet).
 EN16_LAST_PH = -1
 
 local function en16_push_playhead()
+    if not CTL then return end
     local pos = ENGINE.tracks[CTL.selT].pos
     local lo  = vplo()
     local slot
@@ -92,8 +104,8 @@ local function en16_push_playhead()
     end
 end
 
--- Boot seed: push state + clear playhead. EN16 lights immediately.
-EU()
+-- Boot seed for EN16: clear playhead only. Full state push happens on
+-- first input event after loadUI(). This keeps boot light.
 immediate_send(1, 0, "EN16.H(0);paint()")
 
 
@@ -139,6 +151,7 @@ end
 -- [3] SCREEN DRAW
 -- =============================================================================
 
+loadUI()
 CTL.draw(self)
 
 
@@ -146,6 +159,7 @@ CTL.draw(self)
 -- [4] KEYSWITCHES  (element_index 0..7  ->  idx 1..8)
 -- =============================================================================
 
+loadUI()
 local idx = self:element_index() + 1
 local pressed = (self:button_state() == 127)
 if idx == 8 then
@@ -161,6 +175,7 @@ end
 -- [5] ENDLESS TURN
 -- =============================================================================
 
+loadUI()
 local v = self:endless_value()
 if v == 65 or v == 63 then
     CTL.onEndless((v == 65) and 1 or -1)
@@ -172,6 +187,7 @@ end
 -- [6] ENDLESS CLICK
 -- =============================================================================
 
+loadUI()
 if self:button_state() == 127 then
     CTL.onEndlessClick()
     EU()
@@ -182,6 +198,7 @@ end
 -- [7] SMALL BUTTONS  (element_index 9..12  ->  sidx 1..4)
 -- =============================================================================
 
+loadUI()
 if self:button_state() == 127 then
     local sidx = self:element_index() - 8
     if sidx >= 1 and sidx <= 4 then
@@ -197,9 +214,13 @@ end
 -- -----------------------------------------------------------------------------
 -- vsn1_t(i, d) = encoder i (1..16) turned by delta d (-1/+1)
 -- vsn1_p(i)    = encoder i (1..16) pressed
+--
+-- These globals are defined at init. They lazy-load UI on first invocation
+-- so EN16 can drive VSN1 even if no local input has happened yet.
 -- =============================================================================
 
 function vsn1_t(i, d)
+    loadUI()
     if i < 1 or i > 16 then return end
     local f = CTL.focus
     if f == 5 or f == 7 then return end
@@ -211,6 +232,7 @@ function vsn1_t(i, d)
 end
 
 function vsn1_p(i)
+    loadUI()
     if i < 1 or i > 16 then return end
     local s = (CTL.viewport - 1) * 16 + i
     if CTL.shift then

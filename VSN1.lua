@@ -16,13 +16,12 @@
 -- Upload:   both files to the VSN1 module's filesystem.
 --
 -- Hardware mapping:
---   Screen        : 320 x 240
---                     top half (y=0..119)   = 4x2 mode/value cells
---                     bottom half           = unused (deferred design)
+--   Screen        : 320 x 240, single EDIT view (header + 7 param rows
+--                   + bottom region context strip).
 --   8 keyswitches : modes 1..7 (NOTE/VEL/DUR/GATE/MUTE/RATCH/PROB)
 --                   keyswitch 8 = SHIFT (momentary hold)
---   4 small btns  : (no shift) select track 1..4
---                   (+ shift)  queue region 1..4
+--   4 small btns  : (no shift) select TRACK 1..4
+--                   (+ shift)  queue REGION 1..4
 --   Endless       : turn = edit selected step in current mode
 --                   click = toggle selected step's mute
 --
@@ -40,12 +39,12 @@
 -- first need.
 -- =============================================================================
 
-SEQ     = require("sequencer")     -- Core bundle (dist/sequencer.lua)
-ENGINE  = SEQ.Core.engine
-TRACK   = SEQ.Core.track
-STEP    = SEQ.Core.step
-CTL     = nil                      -- lazy: SEQ.Controls.screen after loadUI()
-EN16    = nil                      -- lazy: SEQ.Controls.en16   after loadUI()
+SEQ    = require("sequencer")  -- Core bundle (dist/sequencer.lua)
+ENGINE = SEQ.Core.engine
+TRACK  = SEQ.Core.track
+STEP   = SEQ.Core.step
+CTL    = nil  -- lazy: SEQ.Controls.screen after loadUI()
+EN16   = nil  -- lazy: SEQ.Controls.en16   after loadUI()
 
 ENGINE.init({
     trackCount    = 4,
@@ -72,13 +71,12 @@ ENGINE.tracks[1].chan = 1
 -- their own event chunks (section [8]) on first call.
 function loadUI()
     if CTL then return end
-    local UI = require("sequencer_ui")
-    SEQ.Controls = UI            -- promote into the namespace for inspection
-    CTL  = UI.screen
-    EN16 = UI.en16
+    local UI     = require("sequencer_ui")
+    SEQ.Controls = UI -- promote into the namespace for inspection
+    CTL          = UI.screen
+    EN16         = UI.en16
     CTL.dirtyAll()
 end
-
 
 -- =============================================================================
 -- [2] MIDI RX  (clock + transport from Ableton or other master)
@@ -172,7 +170,7 @@ end
 -- =============================================================================
 
 if not CTL then loadUI() end
-local v = self:encoder_value()
+local v = self:endless_value()
 if v == 65 then
     CTL.onEndless(1)
 elseif v == 63 then
@@ -233,7 +231,6 @@ function vsn1_en16_press(idx)
     if not EN16 then loadUI() end
     if EN16 then EN16.onEncoderPress(idx) end
 end
-
 
 -- =============================================================================
 -- NOTES

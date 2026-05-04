@@ -41,21 +41,15 @@ local function setParam(i, t, s, d)
  end
 end
 M.setParam = setParam
-local dirtyCol = {}
-for i = 1, 16 do dirtyCol[i] = true end
-local headerDirty = true
+local needsFullRepaint = true
 local lastPhCol = 0
 local function dirtyAll()
- for i = 1, 16 do dirtyCol[i] = true end
- headerDirty = true
+ needsFullRepaint = true
  lastPhCol = 0
 end
 M.dirtyAll = dirtyAll
 function M.dirtyValueCells()
- local lo = Track.regionLo(Engine.tracks[M.selT].curRegion)
- local c = M.selS - lo + 1
- if c >= 1 and c <= 16 then dirtyCol[c] = true end
- headerDirty = true
+ needsFullRepaint = true
 end
 function M.setSelectedTrack(t)
  if t < 1 or t > #Engine.tracks then return end
@@ -70,30 +64,25 @@ function M.setSelectedStep(s)
  local cap = Engine.tracks[M.selT].cap
  if s > cap then return end
  if s == M.selS then return end
- local lo = Track.regionLo(Engine.tracks[M.selT].curRegion)
- local oldC = M.selS - lo + 1
- local newC = s - lo + 1
  M.selS = s
- if oldC >= 1 and oldC <= 16 then dirtyCol[oldC] = true end
- if newC >= 1 and newC <= 16 then dirtyCol[newC] = true end
- headerDirty = true
+ needsFullRepaint = true
 end
 function M.onEndless(dir)
  local i = M.focus
  if i < 1 or i > 7 then return end
  setParam(i, M.selT, M.selS, dir)
- M.dirtyValueCells()
+ needsFullRepaint = true
 end
 function M.onEndlessClick()
  local stp = Engine.tracks[M.selT].steps[M.selS]
  Engine.setStepParam(M.selT, M.selS, "mute", Step.muted(stp) and 0 or 1)
- M.dirtyValueCells()
+ needsFullRepaint = true
 end
 function M.onKey(idx)
  if idx < 1 or idx > 7 then return end
  if idx == M.focus then return end
  M.focus = idx
- dirtyAll()
+ needsFullRepaint = true
 end
 function M.setShift(b)
  if b == M.shift then return end
@@ -108,141 +97,140 @@ function M.onSmallBtn(idx)
  end
 end
 local P = {
- { 20, 20, 20 },
- { 160, 30, 30 },
- { 40, 60, 110 },
- { 230, 230, 230 },
- { 80, 80, 80 },
- { 180, 180, 180 },
- { 200, 160, 60 },
- { 110, 170, 110 },
+ { 18, 18, 20 },
+ { 200, 60, 40 },
+ { 40, 90, 160 },
+ { 240, 240, 240 },
+ { 110, 110, 115 },
+ { 200, 200, 200 },
+ { 90, 90, 95 },
+ { 60, 60, 65 },
 }
+local NOTE = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
+local function noteName(p)
+ local oct = (p // 12) - 1
+ return NOTE[(p % 12) + 1] .. tostring(oct)
+end
+local HDR_H = 22
+local PARAM_Y = 30
+local PARAM_H = 20
+local CTX_Y = 192
+local CTX_H = 48
 local COL_W = 20
-local Y_HEAD = 0
-local H_HEAD = 15
-local Y_PITCH = 15
-local H_PITCH = 75
-local Y_VEL = 90
-local H_VEL = 75
-local Y_GATEDUR = 165
-local H_GATEDUR = 30
-local Y_RATCH = 195
-local H_RATCH = 15
-local Y_MUTE = 210
-local H_MUTE = 15
-local Y_PROG = 225
-local H_PROG = 15
-local function modeBand(focus)
- if focus == 1 then return Y_PITCH, H_PITCH end
- if focus == 2 then return Y_VEL, H_VEL end
- if focus == 3 then return Y_GATEDUR, 14 end
- if focus == 4 then return Y_GATEDUR + 16, 14 end
- if focus == 5 then return Y_MUTE, H_MUTE end
- if focus == 6 then return Y_RATCH, H_RATCH end
- return 0, 0
-end
+local PARAM_LABELS = {
+ "pitch", "vel", "dur", "gate", "mute", "ratch", "prob",
+}
 local function drawHeader(scr)
- scr:draw_rectangle_filled(0, Y_HEAD, 319, Y_HEAD + H_HEAD - 1, P[1])
- local tr = Engine.tracks[M.selT]
- local stp = tr.steps[M.selS]
- local prob = Step.prob(stp)
- local txt = "T" .. M.selT .. " " .. CELLS[M.focus] .. " R" .. tr.curRegion
+ local stp = Engine.tracks[M.selT].steps[M.selS]
+ scr:draw_rectangle_filled(0, 0, 319, HDR_H - 1, P[1])
+ local left = "T" .. M.selT
  .. " S" .. string.format("%02d", M.selS)
- .. " P" .. prob
- scr:draw_text_fast(txt, 2, Y_HEAD + 3, 8, P[4])
+ .. " R" .. Engine.tracks[M.selT].curRegion
+ scr:draw_text_fast(left, 4, 4, 14, P[4])
+ scr:draw_text_fast(CELLS[M.focus], 130, 4, 14, P[2])
+ local p = Step.pitch(stp)
+ scr:draw_text_fast(noteName(p) .. " (" .. p .. ")",
+ 210, 4, 14, P[4])
+ scr:draw_rectangle_filled(0, HDR_H, 319, HDR_H, P[8])
 end
-local function drawCol(scr, c)
+local function drawParamRow(scr, i)
+ local stp = Engine.tracks[M.selT].steps[M.selS]
+ local y = PARAM_Y + (i - 1) * PARAM_H
+ local active = (i == M.focus)
+ local bg = active and P[2] or P[1]
+ scr:draw_rectangle_filled(0, y, 319, y + PARAM_H - 1, bg)
+ local fg = active and P[4] or P[5]
+ scr:draw_text_fast(PARAM_LABELS[i], 4, y + 4, 12, fg)
+ local val, max, glyph
+ if i == 1 then
+ val, max = Step.pitch(stp), 127
+ elseif i == 2 then
+ val, max = Step.vel(stp), 127
+ elseif i == 3 then
+ val, max = Step.dur(stp), 127
+ elseif i == 4 then
+ val, max = Step.gate(stp), 127
+ elseif i == 5 then
+ glyph = Step.muted(stp) and "MUTED" or "audible"
+ elseif i == 6 then
+ glyph = Step.ratch(stp) and "RATCH" or "off"
+ elseif i == 7 then
+ val, max = Step.prob(stp), 127
+ end
+ if glyph then
+ scr:draw_text_fast(glyph, 80, y + 4, 12,
+ active and P[4] or P[5])
+ else
+ scr:draw_text_fast(tostring(val), 80, y + 4, 12,
+ active and P[4] or P[6])
+ local bx, bw = 130, 180
+ scr:draw_rectangle(bx, y + 4, bx + bw - 1, y + PARAM_H - 6,
+ active and P[4] or P[8])
+ local fw = (val * (bw - 2)) // max
+ if fw > 0 then
+ scr:draw_rectangle_filled(bx + 1, y + 5,
+ bx + 1 + fw - 1, y + PARAM_H - 7,
+ active and P[4] or P[6])
+ end
+ end
+end
+local function drawCtxStrip(scr)
  local tr = Engine.tracks[M.selT]
  local lo = Track.regionLo(tr.curRegion)
+ scr:draw_rectangle_filled(0, CTX_Y - 8, 319, 239, P[1])
+ scr:draw_rectangle_filled(0, CTX_Y - 8, 319, CTX_Y - 8, P[8])
+ scr:draw_text_fast("region " .. tr.curRegion, 4, CTX_Y - 6,
+ 8, P[5])
+ for c = 1, 16 do
  local s = lo + c - 1
  local stp = tr.steps[s]
- local x0 = (c - 1) * COL_W
- local x1 = x0 + COL_W - 1
+ local x0 = (c - 1) * COL_W + 1
+ local x1 = x0 + COL_W - 3
  local isSel = (s == M.selS)
  local isPh = Engine.running and (tr.pos == s)
- local bg = P[1]
- if isPh then bg = P[3] end
- scr:draw_rectangle_filled(x0, Y_PITCH, x1, Y_PROG + H_PROG - 1, bg)
- if isSel then
- scr:draw_rectangle_filled(x0, Y_PITCH, x0, Y_PROG + H_PROG - 1, P[2])
- scr:draw_rectangle_filled(x1, Y_PITCH, x1, Y_PROG + H_PROG - 1, P[2])
- end
- local ix0, ix1 = x0 + 2, x1 - 2
- local fill = (isPh or isSel) and P[6] or P[5]
- local muted = Step.muted(stp)
- if not muted then
+ local bg = isPh and P[3] or P[1]
+ scr:draw_rectangle_filled(x0, CTX_Y, x1,
+ CTX_Y + CTX_H - 1, bg)
+ if not Step.muted(stp) then
  local p = Step.pitch(stp)
- local h = (p * H_PITCH) // 127
+ local h = (p * (CTX_H - 4)) // 127
  if h > 0 then
- local top = Y_PITCH + (H_PITCH - h)
- scr:draw_rectangle_filled(ix0, top, ix1, Y_PITCH + H_PITCH - 1, fill)
- end
- local v = Step.vel(stp)
- local hv = (v * H_VEL) // 127
- if hv > 0 then
- local topv = Y_VEL + (H_VEL - hv)
- scr:draw_rectangle_filled(ix0, topv, ix1, Y_VEL + H_VEL - 1, fill)
- end
- local d = Step.dur(stp); if d < 1 then d = 1 end
- local g = Step.gate(stp); if g > d then g = d end
- local barW = ix1 - ix0 + 1
- local dw = (d * barW) // 127
- if dw < 1 then dw = 1 end
- scr:draw_rectangle_filled(ix0, Y_GATEDUR, ix0 + dw - 1, Y_GATEDUR + 13, fill)
- local gw = (g * barW) // 127
- if gw > dw then gw = dw end
- if gw > 0 then
- scr:draw_rectangle_filled(ix0, Y_GATEDUR + 16, ix0 + gw - 1, Y_GATEDUR + 29, fill)
- end
- end
- if Step.ratch(stp) then
- scr:draw_text_fast("R", x0 + 7, Y_RATCH + 3, 8, P[4])
- end
- scr:draw_text_fast(muted and "M" or ".", x0 + 7, Y_MUTE + 3, 8, P[4])
- if isPh and tr.stepLen and tr.stepLen > 0 then
- local consumed = tr.stepLen - tr.stepAcc
- if consumed < 0 then consumed = 0 end
- if consumed > tr.stepLen then consumed = tr.stepLen end
- local pw = (consumed * (ix1 - ix0 + 1)) // tr.stepLen
- if pw > 0 then
- scr:draw_rectangle_filled(ix0, Y_PROG + 2, ix0 + pw - 1, Y_PROG + H_PROG - 3, P[8])
+ local top = CTX_Y + 2 + (CTX_H - 4 - h)
+ local fill = (isPh or isSel) and P[6] or P[7]
+ scr:draw_rectangle_filled(x0 + 1, top, x1 - 1,
+ CTX_Y + CTX_H - 3, fill)
  end
  end
  if isSel then
- local by, bh = modeBand(M.focus)
- if bh > 0 then
- scr:draw_rectangle(x0, by, x1, by + bh - 1, P[7])
+ scr:draw_rectangle(x0, CTX_Y, x1,
+ CTX_Y + CTX_H - 1, P[2])
  end
  end
 end
 function M.draw(scr)
- if Engine.running then
  local tr = Engine.tracks[M.selT]
+ local ctxDirty = false
+ if Engine.running then
  local lo = Track.regionLo(tr.curRegion)
  local c = tr.pos - lo + 1
  if c < 1 or c > 16 then c = 0 end
  if c ~= lastPhCol then
- if lastPhCol >= 1 and lastPhCol <= 16 then dirtyCol[lastPhCol] = true end
- if c >= 1 and c <= 16 then dirtyCol[c] = true end
+ ctxDirty = true
  lastPhCol = c
- elseif c >= 1 then
- dirtyCol[c] = true
  end
  elseif lastPhCol ~= 0 then
- dirtyCol[lastPhCol] = true
+ ctxDirty = true
  lastPhCol = 0
  end
- local any = false
- for c = 1, 16 do
- if dirtyCol[c] then
- drawCol(scr, c)
- dirtyCol[c] = false
- any = true
- end
- end
- if headerDirty or any then
+ local any = needsFullRepaint
+ if needsFullRepaint then
+ scr:draw_rectangle_filled(0, 0, 319, 239, P[1])
  drawHeader(scr)
- headerDirty = false
+ for i = 1, 7 do drawParamRow(scr, i) end
+ drawCtxStrip(scr)
+ needsFullRepaint = false
+ elseif ctxDirty then
+ drawCtxStrip(scr)
  any = true
  end
  if any then scr:draw_swap() end

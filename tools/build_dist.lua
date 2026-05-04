@@ -213,6 +213,9 @@ end
 
 buildBundle(CORE, SHIM_CORE, "-- dist/sequencer.lua (auto-generated; Core only)\n")
 buildBundle(UI,   SHIM_UI,   "-- dist/sequencer_ui.lua (auto-generated; Controls layer)\n")
-buildBundle(EN16, SHIM_CORE, "-- dist/sequencer_en16.lua (auto-generated; EN16 standalone)\n")
+-- EN16 bundle is standalone (no require() of its own — controls_en16 is
+-- a pure shadow, no engine, no track, no step). The UI shim is included
+-- for future-proofing only; its fall-through path is currently unused.
+buildBundle(EN16, SHIM_UI, "-- dist/sequencer_en16.lua (auto-generated; EN16 satellite)\n")
 
 io.write("verify: both bundles parse OK\n")

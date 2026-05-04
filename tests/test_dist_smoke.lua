@@ -45,30 +45,56 @@ function M.test_ui_bundle_loads_via_core()
     end
 end
 
-function M.test_en16_bundle_loads_standalone()
-    -- EN16 bundle is fully standalone. No Core, no Step.
+function M.test_en16_bundle_loads_via_core()
+    -- EN16 bundle is standalone; no Core dependency. We still go through
+    -- the same wiring path to prove the UI-shim's fall-through is harmless
+    -- when the bundle has zero require() calls of its own.
+    local core = dofile("dist/sequencer.lua")
+    package.loaded["sequencer"] = core
     local en16 = dofile("dist/sequencer_en16.lua")
-    if type(en16.refreshColors) ~= "function" then
-        error("EN16 bundle missing refreshColors()")
-    end
-    if type(en16.setShadow) ~= "function" then
-        error("EN16 bundle missing setShadow()")
-    end
-    if type(en16.setMeta) ~= "function" then
-        error("EN16 bundle missing setMeta()")
-    end
-    en16.setShadow(1, 60 | (100 << 7) | (4 << 14) | (2 << 21))
-    en16.setMeta(1, 16, 1, 1, 1, 0)
+    package.loaded["sequencer"] = nil
+
+    if type(en16.S)        ~= "function" then error("EN16 missing S()") end
+    if type(en16.V)        ~= "function" then error("EN16 missing V()") end
+    if type(en16.M)        ~= "function" then error("EN16 missing M()") end
+    if type(en16.H)        ~= "function" then error("EN16 missing H()") end
+    if type(en16.refresh)  ~= "function" then error("EN16 missing refresh()") end
+
+    -- seed: shadow slot 1 = pitch60/vel100/dur4/gate2; meta = focus1, lastStep16
+    en16.S(1, 60 | (100 << 7) | (4 << 14) | (2 << 21))
+    en16.M(1, 16, 1, 0)
+
     local emits = 0
-    en16.refreshColors(function(_, _, _, _) emits = emits + 1 end)
-    if emits ~= 16 then error("expected 16 color emits on first call, got " .. emits) end
-    -- second call same state -> 0 emits (cache hit)
-    en16.refreshColors(function(_, _, _, _) emits = emits + 1 end)
-    if emits ~= 16 then error("color cache failed: re-emitted on identical state") end
-    -- focus change -> non-playhead encoders re-emit (15 of 16; playhead stays white)
-    en16.setMeta(2, 16, 1, 1, 1, 0)
-    en16.refreshColors(function(_, _, _, _) emits = emits + 1 end)
-    if emits ~= 31 then error("focus change should emit 15 colors (playhead unchanged), got " .. (emits - 16)) end
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits ~= 16 then error("expected 16 color emits on first refresh, got " .. emits) end
+
+    -- second refresh same state -> 0 emits (cache hit; not dirty)
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits ~= 16 then error("color cache failed: re-emitted on idle refresh") end
+
+    -- focus change -> dirties; all 16 may re-emit (selection slot is one of them)
+    en16.M(2, 16, 1, 0)
+    local before = emits
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits == before then error("focus change should re-emit colors") end
+
+    -- playhead push: H(7) lights slot 7 white. At least one new emit.
+    before = emits
+    en16.H(7)
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits == before then error("H(7) should cause a re-emit on slot 7") end
+
+    -- H(7) again -> no dirty, no emits
+    before = emits
+    en16.H(7)
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits ~= before then error("H(slot) idempotent for same slot") end
+
+    -- H(0) clears playhead -> slot 7 must repaint to its non-playhead color
+    before = emits
+    en16.H(0)
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits == before then error("H(0) should clear playhead and re-emit slot 7") end
 end
 
 return M

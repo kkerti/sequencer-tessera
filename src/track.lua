@@ -29,8 +29,9 @@ M.DEFAULT_LAST_STEP = 16
 function M.new(cap)
     cap = cap or 64
     local steps = {}
-    -- Default seed: dur=4 pulses per step, gate=2 pulses (50% gate).
-    local def = Step.pack({ pitch=60, vel=100, dur=4, gate=2 })
+    -- Default seed: dur=6 pulses per step, gate=3 pulses (50% gate).
+    -- At 96 ppqn external clock that's a 16th note with 50% gate.
+    local def = Step.pack({ pitch=60, vel=100, dur=6, gate=3 })
     for i = 1, cap do steps[i] = def end
     return {
         steps    = steps,

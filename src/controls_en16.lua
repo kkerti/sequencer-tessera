@@ -4,12 +4,13 @@
 --
 -- Public API:
 --   M.onEncoder(idx, delta)        1..16. Selects that step on VSN1, then
---                                  edits in current MODE. Inert in LASTSTEP.
+--                                  edits in current MODE. Inert in
+--                                  LASTSTEP and STEP focus.
 --   M.onEncoderPress(idx)          1..16. Toggles mute on that step. In
---                                  LASTSTEP mode, sets the track's lastStep
---                                  to that absolute step index. SHIFT+press
---                                  is intercepted by VSN1.lua and routed
---                                  to Controls.setSelectedStep instead.
+--                                  LASTSTEP focus, sets the track's
+--                                  lastStep to that absolute step index.
+--                                  SHIFT+press is intercepted by VSN1.lua
+--                                  and routed to Controls.setSelectedStep.
 --   M.refreshLeds(emit)            emit(idx, layer, r, g, b) per LED.
 --                                  layer 1 = press color (white wash for
 --                                            audible / playhead / off).
@@ -47,12 +48,13 @@ end
 -- ---- input ----
 
 function M.onEncoder(idx, delta)
-    if Controls.focus == Controls.MODE_LASTSTEP then return end
+    local f = Controls.focus
+    if f == Controls.MODE_LASTSTEP or f == Controls.MODE_STEP then return end
     local tr, s = resolve(idx)
     if not tr then return end
     Controls.setSelectedStep(s)
     local d = delta > 0 and 1 or -1
-    Controls.setParam(Controls.focus, Controls.selT, s, d)
+    Controls.setParam(f, Controls.selT, s, d)
     Controls.dirtyValueCells()
 end
 
@@ -74,15 +76,19 @@ end
 local function modeValue(stp, focus)
     if focus == Controls.MODE_NOTE  then return Step.pitch(stp) end
     if focus == Controls.MODE_VEL   then return Step.vel(stp)   end
-    if focus == Controls.MODE_GATE  then return Step.gate(stp)  end
-    if focus == Controls.MODE_DUR   then return Step.dur(stp)   end
+    if focus == Controls.MODE_GATE  then
+        if Controls.shift then return Step.dur(stp) end
+        return Step.gate(stp)
+    end
     if focus == Controls.MODE_MUTE  then
         return Step.muted(stp) and 0 or 127
     end
-    if focus == Controls.MODE_RATCH then
-        return Step.ratch(stp) and 127 or 0
+    if focus == Controls.MODE_STEP then
+        -- STEP mode: brightness flat; selected step gets full color via
+        -- the press-layer wash, not here.
+        return 127
     end
-    -- LASTSTEP mode: brightness encodes "is this slot within lastStep"
+    -- LASTSTEP focus
     return 127
 end
 

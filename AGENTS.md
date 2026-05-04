@@ -141,7 +141,7 @@ Events are consumed by a driver. Engine does no IO.
 | **track** | A single 64-step buffer + monophonic voice. Fixed length 64. |
 | **lastStep** | Per-track loop point. Track plays `1..lastStep` then wraps. Default 16. |
 | **viewport** | UI-only concept: which 16-step window of the buffer the screen + EN16 are showing. Indexed 1..4 (steps 1–16, 17–32, 33–48, 49–64). Global, not per track. **Not stored in the engine.** |
-| **mode** | The currently-edited parameter (NOTE/VEL/GATE/MUTE/DUR/RATCH/LASTSTEP). Selected by VSN1 keyswitches 1..7. Each mode has a fixed RGB color defined in `controls.MODES`; the same color appears in the VSN1 header, the active param row, and the EN16 turn-layer LEDs. |
+| **mode** | The currently-edited focus (NOTE/VEL/GATE/MUTE/STEP/-/LASTSTEP). Selected by VSN1 keyswitches 1..7 (slot 6 reserved). DUR is reached as SHIFT+endless in GATE focus; RATCH as SHIFT+endless-click in MUTE focus. Each mode has a fixed RGB color defined in `controls.MODES`; the same color appears in the VSN1 header, the active param row, and the EN16 turn-layer LEDs. |
 | ~~region~~ | **DEPRECATED.** Used to mean an engine-coordinated 16-step window with global at-end-of-region switching. The engine no longer has regions. The word survives only as a casual synonym for "viewport" in old comments — prefer "viewport". |
 | ~~pattern~~ | **FORBIDDEN word.** Reserved. Pattern implies independent step buffers (Model B), which we explicitly do not have. |
 | ~~scene~~  | **FORBIDDEN.** |

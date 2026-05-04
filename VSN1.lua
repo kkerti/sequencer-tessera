@@ -9,14 +9,17 @@
 --                             event or first screen draw. ~8 KB.
 --
 -- Hardware mapping:
---   Screen        : 320 x 240 EDIT view + LASTSTEP takeover screen.
---   8 keyswitches : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=DUR 6=RATCH 7=LASTSTEP
---                   8=SHIFT (momentary hold).
---   4 small btns  : (no shift) viewport region 1..4  (which 16-step window)
+--   Screen        : 320 x 240 single EDIT view (no takeover screens).
+--   8 keyswitches : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=STEP 6=(reserved)
+--                   7=LASTSTEP 8=SHIFT (momentary hold).
+--                   In GATE focus, SHIFT+endless edits DUR.
+--                   In MUTE focus, SHIFT+endless-click toggles RATCH.
+--   4 small btns  : (no shift) viewport region 1..4
 --                   (+ shift)  select track 1..4
---   Endless       : turn  = edit selected step's current-mode param
---                   click = toggle selected step's mute
---                   In LASTSTEP mode, turn edits track lastStep (1..64).
+--   Endless       : turn  = act per current focus mode
+--                   click = toggle selected step's mute (or RATCH w/SHIFT)
+--                   In LASTSTEP focus, turn edits track lastStep (1..64).
+--                   In STEP focus, turn moves selected step (1..lastStep).
 --
 -- EN16 module talks via immediate_send. SHIFT+EN16 press = select step
 -- (no mute toggle); plain press = toggle mute (or set lastStep in LASTSTEP).
@@ -94,35 +97,26 @@ end
 -- =============================================================================
 -- [3] SCREEN DRAW EVENT
 -- -----------------------------------------------------------------------------
--- First draw triggers UI lazy-load. EN16 LED refresh piggybacks here,
--- cache-gated per (encoder, layer) so idle frames send no immediate_send.
+-- Pure screen render. First draw triggers UI lazy-load AND kicks the LED
+-- timer (slot 0) so EN16 refresh runs deterministically off the draw path.
+-- LED traffic stays off the draw event to avoid choking the module bus
+-- during fast input bursts (which was breaking editor<->hardware sync).
 -- =============================================================================
 
 if not CTL then loadUI() end
 CTL.draw(self)
 
-if not EN16_LED_CACHE then
-    -- 16 encoders × 2 layers; pack r,g,b into one int 0xRRGGBB.
-    EN16_LED_CACHE = {}
-    for i = 1, 32 do EN16_LED_CACHE[i] = -1 end
+if not LED_TIMER_ARMED then
+    LED_TIMER_ARMED = true
+    timer_start(0, 33)   -- ~30 Hz
 end
-local _BEAUTIFY = EN16.LED.beautify
-EN16.refreshLeds(function(idx, layer, r, g, b)
-    local k = (idx - 1) * 2 + layer
-    local packed = (r << 16) | (g << 8) | b
-    if EN16_LED_CACHE[k] == packed then return end
-    EN16_LED_CACHE[k] = packed
-    immediate_send(0, 1,
-        "led_color(" .. (idx - 1) .. "," .. layer
-        .. "," .. r .. "," .. g .. "," .. b
-        .. "," .. _BEAUTIFY .. ")")
-end)
 
 
 -- =============================================================================
 -- [4] KEYSWITCH BUTTON EVENTS  (8 buttons)
 -- -----------------------------------------------------------------------------
--- 1=NOTE 2=VEL 3=GATE 4=MUTE 5=DUR 6=RATCH 7=LASTSTEP 8=SHIFT (momentary).
+-- 1=NOTE 2=VEL 3=GATE 4=MUTE 5=STEP 6=(reserved) 7=LASTSTEP
+-- 8=SHIFT (momentary).
 -- Slot 8 must fire on BOTH press and release for SHIFT to release.
 -- =============================================================================
 
@@ -203,6 +197,39 @@ function vsn1_en16_press(idx)
         EN16.onEncoderPress(idx)
     end
 end
+
+
+-- =============================================================================
+-- [9] TIMER EVENT  (slot 0, ~30 Hz)
+-- -----------------------------------------------------------------------------
+-- Deterministic LED refresh, decoupled from the screen-draw rate. Cache-gated
+-- per (encoder, layer); idle frames send zero immediate_send messages. We
+-- self-restart the timer at the bottom so it keeps ticking.
+--
+-- LED traffic was previously on the draw event and starved the module bus
+-- during fast encoder bursts, desyncing hardware from the editor.
+-- =============================================================================
+
+if not EN16 then loadUI() end
+if EN16 then
+    if not EN16_LED_CACHE then
+        -- 16 encoders × 2 layers; pack r,g,b into one int 0xRRGGBB.
+        EN16_LED_CACHE = {}
+        for i = 1, 32 do EN16_LED_CACHE[i] = -1 end
+    end
+    local _BEAUTIFY = EN16.LED.beautify
+    EN16.refreshLeds(function(idx, layer, r, g, b)
+        local k = (idx - 1) * 2 + layer
+        local packed = (r << 16) | (g << 8) | b
+        if EN16_LED_CACHE[k] == packed then return end
+        EN16_LED_CACHE[k] = packed
+        immediate_send(0, 1,
+            "led_color(" .. (idx - 1) .. "," .. layer
+            .. "," .. r .. "," .. g .. "," .. b
+            .. "," .. _BEAUTIFY .. ")")
+    end)
+end
+timer_start(0, 33)
 
 
 -- =============================================================================

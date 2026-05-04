@@ -11,7 +11,6 @@ end
 R["controls"]=(function()
 
 local Engine = require("engine")
-local Track = require("track")
 local Step = require("step")
 local M = {}
 local MODES = {
@@ -19,8 +18,8 @@ local MODES = {
  { name="VEL", r=255, g=140, b= 30 },
  { name="GATE", r=240, g=210, b= 40 },
  { name="MUTE", r=220, g= 50, b= 50 },
- { name="DUR", r=200, g= 60, b=200 },
- { name="RATCH", r= 60, g=200, b=100 },
+ { name="STEP", r= 60, g=120, b=255 },
+ { name="--", r= 70, g= 70, b= 75 },
  { name="LASTSTEP", r=230, g=230, b=230 },
 }
 M.MODES = MODES
@@ -28,8 +27,7 @@ M.MODE_NOTE = 1
 M.MODE_VEL = 2
 M.MODE_GATE = 3
 M.MODE_MUTE = 4
-M.MODE_DUR = 5
-M.MODE_RATCH = 6
+M.MODE_STEP = 5
 M.MODE_LASTSTEP = 7
 function M.modeColor(i)
  local m = MODES[i] or MODES[1]
@@ -49,13 +47,13 @@ local function setParam(i, t, s, d)
  elseif i == M.MODE_VEL then
  Engine.setStepParam(t, s, "vel", Step.vel(stp) + d)
  elseif i == M.MODE_GATE then
+ if M.shift then
+ Engine.setStepParam(t, s, "dur", Step.dur(stp) + d)
+ else
  Engine.setStepParam(t, s, "gate", Step.gate(stp) + d)
+ end
  elseif i == M.MODE_MUTE then
  Engine.setStepParam(t, s, "mute", Step.muted(stp) and 0 or 1)
- elseif i == M.MODE_DUR then
- Engine.setStepParam(t, s, "dur", Step.dur(stp) + d)
- elseif i == M.MODE_RATCH then
- Engine.setStepParam(t, s, "ratch", Step.ratch(stp) and 0 or 1)
  end
 end
 M.setParam = setParam
@@ -92,23 +90,40 @@ function M.setViewport(v)
  dirtyAll()
 end
 function M.onEndless(dir)
- if M.focus == M.MODE_LASTSTEP then
+ local f = M.focus
+ if f == M.MODE_LASTSTEP then
  local tr = Engine.tracks[M.selT]
  Engine.setLastStep(M.selT, tr.lastStep + dir)
  needsFullRepaint = true
- elseif M.focus >= 1 and M.focus <= 6 then
- setParam(M.focus, M.selT, M.selS, dir)
+ elseif f == M.MODE_STEP then
+ local tr = Engine.tracks[M.selT]
+ local s = M.selS + dir
+ if s < 1 then s = tr.lastStep end
+ if s > tr.lastStep then s = 1 end
+ M.setSelectedStep(s)
+ elseif f == M.MODE_NOTE or f == M.MODE_VEL
+ or f == M.MODE_GATE or f == M.MODE_MUTE then
+ setParam(f, M.selT, M.selS, dir)
  needsFullRepaint = true
  end
 end
 function M.onEndlessClick()
- if M.focus == M.MODE_LASTSTEP then return end
+ local f = M.focus
+ if f == M.MODE_LASTSTEP or f == M.MODE_STEP then return end
+ if f == M.MODE_MUTE and M.shift then
  local stp = Engine.tracks[M.selT].steps[M.selS]
- Engine.setStepParam(M.selT, M.selS, "mute", Step.muted(stp) and 0 or 1)
+ Engine.setStepParam(M.selT, M.selS, "ratch",
+ Step.ratch(stp) and 0 or 1)
+ else
+ local stp = Engine.tracks[M.selT].steps[M.selS]
+ Engine.setStepParam(M.selT, M.selS, "mute",
+ Step.muted(stp) and 0 or 1)
+ end
  needsFullRepaint = true
 end
 function M.onKey(idx)
  if idx < 1 or idx > 7 then return end
+ if idx == 6 then return end
  if idx == M.focus then return end
  M.focus = idx
  dirtyAll()
@@ -134,10 +149,13 @@ local C_PLAYHEAD = { 40, 90, 160 }
 local HDR_H = 22
 local PARAM_Y = 30
 local PARAM_H = 20
-local CTX_Y = 192
-local CTX_H = 48
+local PARAMS_N = 5
+local LS_Y = PARAM_Y + PARAMS_N * PARAM_H + 2
+local LS_H = 18
+local CTX_Y = LS_Y + LS_H + 4
+local CTX_H = 240 - CTX_Y - 1
 local COL_W = 20
-local PARAM_LABELS = { "pitch", "vel", "gate", "mute", "dur", "ratch" }
+local PARAM_LABELS = { "pitch", "vel", "gate", "mute", "step" }
 local function modeRGB(i) return { M.modeColor(i) } end
 local function drawHeader(scr)
  local stp = Engine.tracks[M.selT].steps[M.selS]
@@ -167,22 +185,27 @@ local function drawParamRow(scr, i)
  elseif i == M.MODE_VEL then
  val, max = Step.vel(stp), 127
  elseif i == M.MODE_GATE then
+ if M.shift then
+ val, max = Step.dur(stp), 127
+ glyph = nil
+ scr:draw_text_fast("dur", 4, y + 4, 12, fg)
+ else
  val, max = Step.gate(stp), 127
+ end
  elseif i == M.MODE_MUTE then
  glyph = Step.muted(stp) and "MUTED" or "audible"
- elseif i == M.MODE_DUR then
- val, max = Step.dur(stp), 127
- elseif i == M.MODE_RATCH then
- glyph = Step.ratch(stp) and "RATCH" or "off"
+ if Step.ratch(stp) then glyph = glyph .. " R" end
+ elseif i == M.MODE_STEP then
+ val, max = M.selS, Engine.tracks[M.selT].lastStep
  end
  if glyph then
  scr:draw_text_fast(glyph, 80, y + 4, 12, fg)
- else
+ elseif val then
  scr:draw_text_fast(tostring(val), 80, y + 4, 12, fg)
  local bx, bw = 130, 180
  scr:draw_rectangle(bx, y + 4, bx + bw - 1, y + PARAM_H - 6,
  active and C_TEXT or C_GUIDE)
- local fw = (val * (bw - 2)) // max
+ local fw = (val * (bw - 2)) // (max > 0 and max or 1)
  if fw > 0 then
  scr:draw_rectangle_filled(bx + 1, y + 5,
  bx + 1 + fw - 1, y + PARAM_H - 7,
@@ -190,17 +213,30 @@ local function drawParamRow(scr, i)
  end
  end
 end
+local function drawLastStepRow(scr)
+ local tr = Engine.tracks[M.selT]
+ local active = (M.focus == M.MODE_LASTSTEP)
+ local mc = MODES[M.MODE_LASTSTEP]
+ local bg = active and { mc.r, mc.g, mc.b } or C_BG
+ scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, bg)
+ scr:draw_rectangle_filled(0, LS_Y - 2, 319, LS_Y - 1, C_GUIDE)
+ local fg = active and C_TEXT or C_DIM
+ scr:draw_text_fast("lastStep", 4, LS_Y + 3, 12, fg)
+ scr:draw_text_fast(tostring(tr.lastStep), 80, LS_Y + 3, 12, fg)
+ local bx, bw = 130, 180
+ scr:draw_rectangle(bx, LS_Y + 3, bx + bw - 1, LS_Y + LS_H - 5,
+ active and C_TEXT or C_GUIDE)
+ local fw = (tr.lastStep * (bw - 2)) // 64
+ if fw > 0 then
+ scr:draw_rectangle_filled(bx + 1, LS_Y + 4,
+ bx + 1 + fw - 1, LS_Y + LS_H - 6,
+ active and C_TEXT or C_DIM)
+ end
+end
 local function drawCtxStrip(scr)
  local tr = Engine.tracks[M.selT]
  local lo = viewportLo(M.viewport)
- scr:draw_rectangle_filled(0, CTX_Y - 8, 319, 239, C_BG)
- scr:draw_rectangle_filled(0, CTX_Y - 8, 319, CTX_Y - 8, C_GUIDE)
- local info = "V" .. M.viewport
- .. " last:" .. tr.lastStep
- if Engine.running and (tr.pos < lo or tr.pos > lo + 15) then
- info = info .. " ph:" .. tr.pos
- end
- scr:draw_text_fast(info, 4, CTX_Y - 6, 8, C_DIM)
+ scr:draw_rectangle_filled(0, CTX_Y, 319, 239, C_BG)
  local selRGB = modeRGB(M.focus)
  for c = 1, 16 do
  local s = lo + c - 1
@@ -229,47 +265,7 @@ local function drawCtxStrip(scr)
  end
  end
 end
-local function drawLastStepScreen(scr)
- local tr = Engine.tracks[M.selT]
- scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
- scr:draw_rectangle_filled(0, 0, 319, HDR_H - 1, C_BG)
- scr:draw_text_fast("T" .. M.selT, 4, 4, 14, C_TEXT)
- scr:draw_text_fast("LASTSTEP", 130, 4, 14, modeRGB(M.MODE_LASTSTEP))
- scr:draw_rectangle_filled(0, HDR_H, 319, HDR_H, C_GUIDE)
- scr:draw_text_fast(tostring(tr.lastStep), 110, 60, 60,
- modeRGB(M.MODE_LASTSTEP))
- scr:draw_text_fast("steps", 130, 130, 14, C_DIM)
- local mapY = 200
- local mapH = 30
- local cellW = 5
- local x0 = (320 - 64 * cellW) // 2
- for i = 1, 64 do
- local cx = x0 + (i - 1) * cellW
- local active = (i <= tr.lastStep)
- local color = active
- and ((i % 16 == 1) and modeRGB(M.MODE_LASTSTEP) or C_DIM)
- or C_OOR
- scr:draw_rectangle_filled(cx, mapY, cx + cellW - 2,
- mapY + mapH - 1, color)
- if i == tr.lastStep then
- scr:draw_rectangle(cx - 1, mapY - 2, cx + cellW - 1,
- mapY + mapH + 1, modeRGB(M.MODE_LASTSTEP))
- end
- if Engine.running and tr.pos == i then
- scr:draw_rectangle_filled(cx, mapY - 6,
- cx + cellW - 2, mapY - 3, C_PLAYHEAD)
- end
- end
-end
 function M.draw(scr)
- if M.focus == M.MODE_LASTSTEP then
- if needsFullRepaint or Engine.running then
- drawLastStepScreen(scr)
- needsFullRepaint = false
- scr:draw_swap()
- end
- return
- end
  local tr = Engine.tracks[M.selT]
  local ctxDirty = false
  local lo = viewportLo(M.viewport)
@@ -284,7 +280,8 @@ function M.draw(scr)
  if needsFullRepaint then
  scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
  drawHeader(scr)
- for i = 1, 6 do drawParamRow(scr, i) end
+ for i = 1, PARAMS_N do drawParamRow(scr, i) end
+ drawLastStepRow(scr)
  drawCtxStrip(scr)
  needsFullRepaint = false
  elseif ctxDirty then
@@ -318,12 +315,13 @@ local function resolve(idx)
  return tr, Controls.viewportLo(Controls.viewport) + (idx - 1)
 end
 function M.onEncoder(idx, delta)
- if Controls.focus == Controls.MODE_LASTSTEP then return end
+ local f = Controls.focus
+ if f == Controls.MODE_LASTSTEP or f == Controls.MODE_STEP then return end
  local tr, s = resolve(idx)
  if not tr then return end
  Controls.setSelectedStep(s)
  local d = delta > 0 and 1 or -1
- Controls.setParam(Controls.focus, Controls.selT, s, d)
+ Controls.setParam(f, Controls.selT, s, d)
  Controls.dirtyValueCells()
 end
 function M.onEncoderPress(idx)
@@ -340,13 +338,15 @@ end
 local function modeValue(stp, focus)
  if focus == Controls.MODE_NOTE then return Step.pitch(stp) end
  if focus == Controls.MODE_VEL then return Step.vel(stp) end
- if focus == Controls.MODE_GATE then return Step.gate(stp) end
- if focus == Controls.MODE_DUR then return Step.dur(stp) end
+ if focus == Controls.MODE_GATE then
+ if Controls.shift then return Step.dur(stp) end
+ return Step.gate(stp)
+ end
  if focus == Controls.MODE_MUTE then
  return Step.muted(stp) and 0 or 127
  end
- if focus == Controls.MODE_RATCH then
- return Step.ratch(stp) and 127 or 0
+ if focus == Controls.MODE_STEP then
+ return 127
  end
  return 127
 end

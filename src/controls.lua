@@ -123,7 +123,6 @@ local C_FG   = { 240, 240, 240 }
 local C_DIM  = { 110, 110, 115 }
 local C_LINE = {  60,  60,  65 }
 local C_OOR  = {  35,  35,  40 }
-local C_PH   = {  40,  90, 160 }
 
 -- Layout (320x240)
 local ROW_H  = 22                 -- header & each value row
@@ -149,7 +148,7 @@ end
 local function rgb(i) return { MR[i], MG[i], MB[i] } end
 
 function M.draw(scr)
-    if not dirty and not Engine.running then return end
+    if not dirty then return end
     dirty = false
 
     local tr  = Engine.tracks[M.selT]
@@ -212,10 +211,6 @@ function M.draw(scr)
 
         if s == M.selS then
             scr:draw_rectangle(x0, STR_Y, x1, STR_Y + STR_H - 1, rgb(f))
-        end
-        if Engine.running and tr.pos == s then
-            scr:draw_rectangle_filled(
-                x0 + 4, STR_Y + 4, x1 - 4, STR_Y + STR_H - 5, C_PH)
         end
     end
 

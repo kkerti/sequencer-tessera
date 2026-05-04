@@ -54,9 +54,11 @@ end
 -- ---- EN16 push state -------------------------------------------------------
 -- Dirty flags set by input handlers; drained at end of each handler block.
 -- View flag dominates step flags (full window resync supersedes per-step).
+-- EN16_DIRTY_STEPS is a 16-bit mask: bit (i-1) set means viewport slot i
+-- needs a per-step S(i,p) push. Avoids per-edit table allocation.
 EN16_DIRTY_META  = false
 EN16_DIRTY_VIEW  = false
-EN16_DIRTY_STEPS = {}
+EN16_DIRTY_STEPS = 0
 
 function en16_mark_meta()  EN16_DIRTY_META = true end
 function en16_mark_view()  EN16_DIRTY_VIEW = true end
@@ -64,7 +66,9 @@ function en16_mark_view()  EN16_DIRTY_VIEW = true end
 function en16_mark_step(absStep)
     if not CTL then return end
     local i = absStep - ((CTL.viewport - 1) * 16 + 1) + 1
-    if i >= 1 and i <= 16 then EN16_DIRTY_STEPS[i] = true end
+    if i >= 1 and i <= 16 then
+        EN16_DIRTY_STEPS = EN16_DIRTY_STEPS | (1 << (i - 1))
+    end
 end
 
 -- selS expressed relative to current viewport (1..16, or 0 if outside).
@@ -97,15 +101,19 @@ function en16_drain()
     if EN16_DIRTY_VIEW then
         en16_send_V()
         EN16_DIRTY_VIEW  = false
-        EN16_DIRTY_STEPS = {}                 -- subsumed by V
-    else
+        EN16_DIRTY_STEPS = 0                  -- subsumed by V
+    elseif EN16_DIRTY_STEPS ~= 0 then
         local lo = (CTL.viewport - 1) * 16 + 1
         local s  = ENGINE.tracks[CTL.selT].steps
-        for i, _ in pairs(EN16_DIRTY_STEPS) do
-            immediate_send(1, 0,
-                "EN16.S(" .. i .. "," .. s[lo + i - 1] .. ");paint()")
-            EN16_DIRTY_STEPS[i] = nil
+        local m  = EN16_DIRTY_STEPS
+        for i = 1, 16 do
+            if (m & 1) == 1 then
+                immediate_send(1, 0,
+                    "EN16.S(" .. i .. "," .. s[lo + i - 1] .. ");paint()")
+            end
+            m = m >> 1
         end
+        EN16_DIRTY_STEPS = 0
     end
     if EN16_DIRTY_META then
         en16_send_M()

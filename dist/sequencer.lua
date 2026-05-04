@@ -15,7 +15,6 @@ local SH_DUR = 14
 local SH_GATE = 21
 local SH_RAT = 28
 local SH_MUTE = 29
-local SH_PROB = 30
 local function clamp7(v) if v < 0 then return 0 elseif v > 127 then return 127 else return v end end
 local function clamp1(v) if v and v ~= 0 then return 1 else return 0 end end
 function M.pack(t)
@@ -25,9 +24,8 @@ function M.pack(t)
  local g = clamp7(t.gate or 3)
  local r = clamp1(t.ratch)
  local m = clamp1(t.mute)
- local pr = clamp7(t.prob or 127)
  return shl(p, SH_PITCH) | shl(v, SH_VEL) | shl(d, SH_DUR) | shl(g, SH_GATE)
- | shl(r, SH_RAT) | shl(m, SH_MUTE) | shl(pr, SH_PROB)
+ | shl(r, SH_RAT) | shl(m, SH_MUTE)
 end
 function M.pitch(s) return band(shr(s, SH_PITCH), M7) end
 function M.vel(s) return band(shr(s, SH_VEL), M7) end
@@ -35,7 +33,6 @@ function M.dur(s) return band(shr(s, SH_DUR), M7) end
 function M.gate(s) return band(shr(s, SH_GATE), M7) end
 function M.ratch(s) return band(shr(s, SH_RAT), 1) == 1 end
 function M.muted(s) return band(shr(s, SH_MUTE), 1) == 1 end
-function M.prob(s) return band(shr(s, SH_PROB), M7) end
 local function setField(s, shift, mask, value)
  return (s & ~shl(mask, shift)) | shl(value & mask, shift)
 end
@@ -46,7 +43,6 @@ local FIELD = {
  gate = { SH_GATE, M7, clamp7 },
  ratch = { SH_RAT, 1, clamp1 },
  mute = { SH_MUTE, 1, clamp1 },
- prob = { SH_PROB, M7, clamp7 },
 }
 function M.set(s, name, value)
  local f = FIELD[name]; if not f then return s end
@@ -59,10 +55,15 @@ function M.get(s, name)
  elseif name == "gate" then return M.gate(s)
  elseif name == "ratch" then return M.ratch(s) and 1 or 0
  elseif name == "mute" then return M.muted(s) and 1 or 0
- elseif name == "prob" then return M.prob(s)
  end
 end
-M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute", "prob" }
+M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute" }
+local NOTE_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
+function M.noteName(p)
+ if p < 0 then p = 0 elseif p > 127 then p = 127 end
+ local oct = (p // 12) - 1
+ return NOTE_NAMES[(p % 12) + 1] .. tostring(oct)
+end
 return M
 
 end)()
@@ -70,53 +71,30 @@ R["track"]=(function()
 
 local Step = require("step")
 local M = {}
-local STEPS_PER_REGION = 16
-M.STEPS_PER_REGION = STEPS_PER_REGION
-local REGION_COUNT = 4
-M.REGION_COUNT = REGION_COUNT
-local function regionLo(r) return (r - 1) * STEPS_PER_REGION + 1 end
-local function regionHi(r) return r * STEPS_PER_REGION end
-M.regionLo, M.regionHi = regionLo, regionHi
+M.DEFAULT_LAST_STEP = 16
 function M.new(cap)
  cap = cap or 64
  local steps = {}
- local def = Step.pack({ pitch=60, vel=100, dur=4, gate=2, prob=127 })
+ local def = Step.pack({ pitch=60, vel=100, dur=4, gate=2 })
  for i = 1, cap do steps[i] = def end
  return {
  steps = steps,
  cap = cap,
  chan = 1,
+ lastStep = M.DEFAULT_LAST_STEP,
  pos = 0,
  stepAcc = 0,
  stepLen = 0,
- curRegion = 1,
- regionDone = false,
  actPitch = -1,
  actOff = 0,
  ratNext = 0,
  ratState = 0,
  }
 end
-local function nextPos(tr, queuedRegion)
- local cur = tr.curRegion
- local lo = regionLo(cur)
- local hi = regionHi(cur)
+local function nextPos(tr)
  local p = tr.pos + 1
- if tr.pos < lo or tr.pos > hi then p = lo end
- if p > hi then
- if queuedRegion ~= 0 then
- tr.curRegion = queuedRegion
- tr.regionDone = true
- return regionLo(queuedRegion)
- end
- return lo
- end
+ if p > tr.lastStep or p < 1 then p = 1 end
  return p
-end
-local function rollProb(prob)
- if prob >= 127 then return true end
- if prob <= 0 then return false end
- return math.random(0, 126) < prob
 end
 local EV_ON, EV_OFF = 1, 2
 M.EV_ON, M.EV_OFF = EV_ON, EV_OFF
@@ -130,7 +108,6 @@ end
 local function fireStep(tr, out)
  local s = tr.steps[tr.pos]
  if Step.muted(s) then return end
- if not rollProb(Step.prob(s)) then return end
  local p, v, g = Step.pitch(s), Step.vel(s), Step.gate(s)
  if g <= 0 then return end
  if g > tr.stepLen then g = tr.stepLen end
@@ -151,9 +128,9 @@ local function fireStep(tr, out)
  tr.ratNext = 0
  end
 end
-function M.advance(tr, out, queuedRegion)
+function M.advance(tr, out)
  if tr.stepAcc <= 0 then
- tr.pos = nextPos(tr, queuedRegion or 0)
+ tr.pos = nextPos(tr)
  local s = tr.steps[tr.pos]
  local d = Step.dur(s)
  if d <= 0 then d = 1 end
@@ -196,7 +173,11 @@ function M.getStepParam(tr, i, name)
  if i < 1 or i > tr.cap then return nil end
  return Step.get(tr.steps[i], name)
 end
-function M.reset(tr, region)
+function M.setLastStep(tr, n)
+ if n < 1 then n = 1 elseif n > tr.cap then n = tr.cap end
+ tr.lastStep = n
+end
+function M.reset(tr)
  tr.pos = 0
  tr.stepAcc = 0
  tr.stepLen = 0
@@ -204,8 +185,6 @@ function M.reset(tr, region)
  tr.actOff = 0
  tr.ratNext = 0
  tr.ratState = 0
- tr.curRegion = region or 1
- tr.regionDone = false
 end
 function M.allOff(tr, out)
  emitOff(tr, out)
@@ -219,8 +198,6 @@ local Track = require("track")
 local M = {}
 M.tracks = {}
 M.running = false
-M.activeRegion = 1
-M.queuedRegion = 0
 local logFn = nil
 function M.init(opts)
  opts = opts or {}
@@ -232,14 +209,11 @@ function M.init(opts)
  M.tracks[i].chan = i
  end
  M.running = false
- M.activeRegion = 1
- M.queuedRegion = 0
  logFn = opts.log
 end
 local function log(s) if logFn then logFn(s) end end
 function M.onStart()
- for i = 1, #M.tracks do Track.reset(M.tracks[i], M.activeRegion) end
- M.queuedRegion = 0
+ for i = 1, #M.tracks do Track.reset(M.tracks[i]) end
  M.running = true
  log("START")
 end
@@ -250,36 +224,13 @@ function M.onStop()
  log("STOP")
  return out
 end
-function M.setQueuedRegion(r)
- if r == nil or r < 1 or r > Track.REGION_COUNT then
- M.queuedRegion = 0
- return
- end
- if r == M.activeRegion then
- M.queuedRegion = 0
- return
- end
- M.queuedRegion = r
-end
 function M.onPulse()
  if not M.running then return nil end
  local out = {}
  local ts = M.tracks
  local n = #ts
- local q = M.queuedRegion
  for i = 1, n do
- Track.advance(ts[i], out, q)
- end
- if q ~= 0 then
- local allFlipped = true
- for i = 1, n do
- if not ts[i].regionDone then allFlipped = false; break end
- end
- if allFlipped then
- M.activeRegion = q
- M.queuedRegion = 0
- for i = 1, n do ts[i].regionDone = false end
- end
+ Track.advance(ts[i], out)
  end
  if #out == 0 then return nil end
  return out
@@ -287,6 +238,10 @@ end
 function M.setStepParam(t, i, name, val)
  local tr = M.tracks[t]; if not tr then return end
  Track.setStepParam(tr, i, name, val)
+end
+function M.setLastStep(t, n)
+ local tr = M.tracks[t]; if not tr then return end
+ Track.setLastStep(tr, n)
 end
 function M.setTrackChan(t, ch)
  local tr = M.tracks[t]; if not tr then return end

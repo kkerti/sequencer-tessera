@@ -2,29 +2,22 @@
 -- Grid VSN1 UI -- single-screen EDIT view.
 -- Reads engine.tracks tables; calls engine setters. Core knows nothing.
 --
--- Hardware:
---   - 320x240 LCD
---   - 4 small buttons under screen
---   - 8 keyswitches (modes 1-7 + SHIFT on slot 8)
---   - Endless jog wheel (relative: 65 = up, 63 = down) with click
+-- Modes (selected via keyswitches 1..7):
+--   1 = NOTE      cyan      per-step pitch
+--   2 = VEL       orange    per-step velocity
+--   3 = GATE      yellow    per-step note-on length
+--   4 = MUTE      red       per-step mute toggle
+--   5 = DUR       magenta   per-step pulse length (advanced)
+--   6 = RATCH     green     per-step ratchet toggle (advanced)
+--   7 = LASTSTEP  white     per-track loop end (1..64; default 16)
 --
--- Control model:
---   * Keyswitches 1..7   : select MODE NOTE/VEL/DUR/GATE/MUTE/RATCH/PROB
---   * Keyswitch 8        : SHIFT (momentary)
---   * Small btn 1..4     : (no SHIFT) select TRACK 1..4
---                          (+ SHIFT)  queue REGION 1..4
---   * Endless turn       : edit selected step in current mode
---   * Endless click      : toggle selected step's mute
---   * EN16 turn/push     : per-step edit / mute toggle
+-- Viewport: 4 logical "regions" of 16 steps each (1..16, 17..32, ...).
+-- The viewport is purely UI -- the engine has no concept of regions.
+-- Switched by small button press (no SHIFT).
 --
--- EDIT screen layout (320x240):
---   y   0..21   header:  T1 S05 R1   NOTE   C4 (60)
---   y  22       1-px separator
---   y  30..169  7 param rows (20 px each): label | value | bar
---                 active mode row gets HOT background.
---   y 184       1-px separator (above context strip)
---   y 192..239  bottom context strip: 16 mini pitch contours,
---                 selected = red outline, playhead = blue wash.
+-- Polyrhythm awareness: each track has its own lastStep. The selected
+-- track's playhead may be outside the viewport; an indicator shows
+-- where it actually is.
 
 local Engine = require("engine")
 local Track  = require("track")
@@ -32,47 +25,67 @@ local Step   = require("step")
 
 local M = {}
 
+-- ---- mode table (single source of truth for naming + RGB) ----
+-- Color values are exposed via M.modeColor(idx) so EN16 LEDs match.
+local MODES = {
+    { name="NOTE",     r= 30, g=200, b=220 },  -- cyan
+    { name="VEL",      r=255, g=140, b= 30 },  -- orange
+    { name="GATE",     r=240, g=210, b= 40 },  -- yellow
+    { name="MUTE",     r=220, g= 50, b= 50 },  -- red
+    { name="DUR",      r=200, g= 60, b=200 },  -- magenta
+    { name="RATCH",    r= 60, g=200, b=100 },  -- green
+    { name="LASTSTEP", r=230, g=230, b=230 },  -- white
+}
+M.MODES = MODES
+M.MODE_NOTE     = 1
+M.MODE_VEL      = 2
+M.MODE_GATE     = 3
+M.MODE_MUTE     = 4
+M.MODE_DUR      = 5
+M.MODE_RATCH    = 6
+M.MODE_LASTSTEP = 7
+
+function M.modeColor(i)
+    local m = MODES[i] or MODES[1]
+    return m.r, m.g, m.b
+end
+
 -- ---- selection state (UI only; not in Core) ----
-M.selT  = 1
-M.selS  = 1
-M.focus = 1   -- 1=NOTE 2=VEL 3=DUR 4=GATE 5=MUTE 6=RATCH 7=PROB
-M.shift = false
+M.selT     = 1
+M.selS     = 1
+M.viewport = 1   -- 1..4: which 16-step window we're looking at
+M.focus    = 1   -- 1..7 mode index
+M.shift    = false
 
-local CELLS = { "NOTE","VEL","DUR","GATE","MUTE","RATCH","PROB","SHIFT" }
-M.CELLS = CELLS
-local FIELD = { "pitch","vel","dur","gate","mute","ratch","prob" }
-M.FIELD = FIELD
+local function viewportLo(v) return (v - 1) * 16 + 1 end
+M.viewportLo = viewportLo
 
--- ---- shared param mutator (used by EN16 + endless) ----
+-- ---- shared param mutator (delta applied to selected step's mode field) ----
 local function setParam(i, t, s, d)
     local stp = Engine.tracks[t].steps[s]
-    if i == 1 then
+    if i == M.MODE_NOTE then
         Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d)
-    elseif i == 2 then
+    elseif i == M.MODE_VEL then
         Engine.setStepParam(t, s, "vel", Step.vel(stp) + d)
-    elseif i == 3 then
-        Engine.setStepParam(t, s, "dur", Step.dur(stp) + d)
-    elseif i == 4 then
+    elseif i == M.MODE_GATE then
         Engine.setStepParam(t, s, "gate", Step.gate(stp) + d)
-    elseif i == 5 then
+    elseif i == M.MODE_MUTE then
         Engine.setStepParam(t, s, "mute", Step.muted(stp) and 0 or 1)
-    elseif i == 6 then
+    elseif i == M.MODE_DUR then
+        Engine.setStepParam(t, s, "dur", Step.dur(stp) + d)
+    elseif i == M.MODE_RATCH then
         Engine.setStepParam(t, s, "ratch", Step.ratch(stp) and 0 or 1)
-    elseif i == 7 then
-        Engine.setStepParam(t, s, "prob", Step.prob(stp) + d)
     end
 end
 M.setParam = setParam
 
 -- ---- dirty tracking ----
--- needsFullRepaint: header + all 7 param rows + ctx strip.
--- ctxDirty: only redraw the bottom context strip (playhead chase).
 local needsFullRepaint = true
-local lastPhCol = 0
+local lastPhCol = -1
 
 local function dirtyAll()
     needsFullRepaint = true
-    lastPhCol = 0
+    lastPhCol = -1
 end
 M.dirtyAll = dirtyAll
 
@@ -86,30 +99,44 @@ function M.setSelectedTrack(t)
     if t < 1 or t > #Engine.tracks then return end
     if t == M.selT then return end
     M.selT = t
-    local cap = Engine.tracks[t].cap
-    if M.selS > cap then M.selS = cap end
     dirtyAll()
 end
 
 function M.setSelectedStep(s)
-    if s < 1 then return end
-    local cap = Engine.tracks[M.selT].cap
-    if s > cap then return end
+    if s < 1 or s > Engine.tracks[M.selT].cap then return end
     if s == M.selS then return end
     M.selS = s
+    -- snap viewport to contain selected step
+    local v = ((s - 1) // 16) + 1
+    if v ~= M.viewport then M.viewport = v end
     needsFullRepaint = true
+end
+
+function M.setViewport(v)
+    if v < 1 or v > 4 then return end
+    if v == M.viewport then return end
+    M.viewport = v
+    -- keep selS within new viewport for editing convenience
+    local lo = viewportLo(v)
+    if M.selS < lo or M.selS > lo + 15 then M.selS = lo end
+    dirtyAll()
 end
 
 -- ---- input handlers ----
 
 function M.onEndless(dir)
-    local i = M.focus
-    if i < 1 or i > 7 then return end
-    setParam(i, M.selT, M.selS, dir)
-    needsFullRepaint = true
+    if M.focus == M.MODE_LASTSTEP then
+        local tr = Engine.tracks[M.selT]
+        Engine.setLastStep(M.selT, tr.lastStep + dir)
+        needsFullRepaint = true
+    elseif M.focus >= 1 and M.focus <= 6 then
+        setParam(M.focus, M.selT, M.selS, dir)
+        needsFullRepaint = true
+    end
 end
 
 function M.onEndlessClick()
+    if M.focus == M.MODE_LASTSTEP then return end
     local stp = Engine.tracks[M.selT].steps[M.selS]
     Engine.setStepParam(M.selT, M.selS, "mute", Step.muted(stp) and 0 or 1)
     needsFullRepaint = true
@@ -119,7 +146,7 @@ function M.onKey(idx)
     if idx < 1 or idx > 7 then return end
     if idx == M.focus then return end
     M.focus = idx
-    needsFullRepaint = true
+    dirtyAll()
 end
 
 function M.setShift(b)
@@ -130,39 +157,21 @@ end
 function M.onSmallBtn(idx)
     if idx < 1 or idx > 4 then return end
     if M.shift then
-        if idx <= Track.REGION_COUNT then Engine.setQueuedRegion(idx) end
-    else
         M.setSelectedTrack(idx)
+    else
+        M.setViewport(idx)
     end
 end
 
 -- ---- drawing ----
 
--- Palette
---   1 BG          dark background
---   2 ACCENT_HOT  red-orange (selected, active mode wash)
---   3 ACCENT_COOL blue (playhead wash)
---   4 TEXT        bright white
---   5 TEXT_DIM    grey
---   6 FILL        bright bar fill
---   7 FILL_DIM    quiet bar fill
---   8 GUIDE       thin separator
-local P = {
-    {  18,  18,  20 },
-    { 200,  60,  40 },
-    {  40,  90, 160 },
-    { 240, 240, 240 },
-    { 110, 110, 115 },
-    { 200, 200, 200 },
-    {  90,  90,  95 },
-    {  60,  60,  65 },
-}
-
-local NOTE = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
-local function noteName(p)
-    local oct = (p // 12) - 1
-    return NOTE[(p % 12) + 1] .. tostring(oct)
-end
+-- Static colors
+local C_BG       = {  18,  18,  20 }
+local C_TEXT     = { 240, 240, 240 }
+local C_DIM      = { 110, 110, 115 }
+local C_GUIDE    = {  60,  60,  65 }
+local C_OOR      = {  45,  45,  50 }   -- out-of-range placeholder
+local C_PLAYHEAD = {  40,  90, 160 }   -- blue wash on playhead column
 
 local HDR_H   = 22
 local PARAM_Y = 30
@@ -171,93 +180,99 @@ local CTX_Y   = 192
 local CTX_H   = 48
 local COL_W   = 20
 
-local PARAM_LABELS = {
-    "pitch", "vel", "dur", "gate", "mute", "ratch", "prob",
-}
+local PARAM_LABELS = { "pitch", "vel", "gate", "mute", "dur", "ratch" }
+
+local function modeRGB(i) return { M.modeColor(i) } end
 
 local function drawHeader(scr)
     local stp = Engine.tracks[M.selT].steps[M.selS]
-    scr:draw_rectangle_filled(0, 0, 319, HDR_H - 1, P[1])
+    scr:draw_rectangle_filled(0, 0, 319, HDR_H - 1, C_BG)
     local left = "T" .. M.selT
         .. " S" .. string.format("%02d", M.selS)
-        .. " R" .. Engine.tracks[M.selT].curRegion
-    scr:draw_text_fast(left, 4, 4, 14, P[4])
-    scr:draw_text_fast(CELLS[M.focus], 130, 4, 14, P[2])
+        .. " V" .. M.viewport
+    scr:draw_text_fast(left, 4, 4, 14, C_TEXT)
+    scr:draw_text_fast(MODES[M.focus].name, 130, 4, 14, modeRGB(M.focus))
     local p = Step.pitch(stp)
-    scr:draw_text_fast(noteName(p) .. " (" .. p .. ")",
-        210, 4, 14, P[4])
-    scr:draw_rectangle_filled(0, HDR_H, 319, HDR_H, P[8])
+    scr:draw_text_fast(Step.noteName(p) .. " (" .. p .. ")",
+        210, 4, 14, C_TEXT)
+    scr:draw_rectangle_filled(0, HDR_H, 319, HDR_H, C_GUIDE)
 end
 
 local function drawParamRow(scr, i)
     local stp = Engine.tracks[M.selT].steps[M.selS]
     local y = PARAM_Y + (i - 1) * PARAM_H
     local active = (i == M.focus)
-    local bg = active and P[2] or P[1]
+    local mc = MODES[i]
+    local bg = active and { mc.r, mc.g, mc.b } or C_BG
     scr:draw_rectangle_filled(0, y, 319, y + PARAM_H - 1, bg)
-    local fg = active and P[4] or P[5]
+    local fg = active and C_TEXT or C_DIM
     scr:draw_text_fast(PARAM_LABELS[i], 4, y + 4, 12, fg)
 
     local val, max, glyph
-    if i == 1 then
+    if i == M.MODE_NOTE then
         val, max = Step.pitch(stp), 127
-    elseif i == 2 then
+    elseif i == M.MODE_VEL then
         val, max = Step.vel(stp), 127
-    elseif i == 3 then
-        val, max = Step.dur(stp), 127
-    elseif i == 4 then
+    elseif i == M.MODE_GATE then
         val, max = Step.gate(stp), 127
-    elseif i == 5 then
+    elseif i == M.MODE_MUTE then
         glyph = Step.muted(stp) and "MUTED" or "audible"
-    elseif i == 6 then
+    elseif i == M.MODE_DUR then
+        val, max = Step.dur(stp), 127
+    elseif i == M.MODE_RATCH then
         glyph = Step.ratch(stp) and "RATCH" or "off"
-    elseif i == 7 then
-        val, max = Step.prob(stp), 127
     end
 
     if glyph then
-        scr:draw_text_fast(glyph, 80, y + 4, 12,
-            active and P[4] or P[5])
+        scr:draw_text_fast(glyph, 80, y + 4, 12, fg)
     else
-        scr:draw_text_fast(tostring(val), 80, y + 4, 12,
-            active and P[4] or P[6])
+        scr:draw_text_fast(tostring(val), 80, y + 4, 12, fg)
         local bx, bw = 130, 180
         scr:draw_rectangle(bx, y + 4, bx + bw - 1, y + PARAM_H - 6,
-            active and P[4] or P[8])
+            active and C_TEXT or C_GUIDE)
         local fw = (val * (bw - 2)) // max
         if fw > 0 then
             scr:draw_rectangle_filled(bx + 1, y + 5,
                 bx + 1 + fw - 1, y + PARAM_H - 7,
-                active and P[4] or P[6])
+                active and C_TEXT or C_DIM)
         end
     end
 end
 
 local function drawCtxStrip(scr)
     local tr = Engine.tracks[M.selT]
-    local lo = Track.regionLo(tr.curRegion)
-    scr:draw_rectangle_filled(0, CTX_Y - 8, 319, 239, P[1])
-    scr:draw_rectangle_filled(0, CTX_Y - 8, 319, CTX_Y - 8, P[8])
-    scr:draw_text_fast("region " .. tr.curRegion, 4, CTX_Y - 6,
-        8, P[5])
+    local lo = viewportLo(M.viewport)
+    scr:draw_rectangle_filled(0, CTX_Y - 8, 319, 239, C_BG)
+    scr:draw_rectangle_filled(0, CTX_Y - 8, 319, CTX_Y - 8, C_GUIDE)
+
+    -- info: viewport + lastStep + playhead-outside indicator
+    local info = "V" .. M.viewport
+        .. "  last:" .. tr.lastStep
+    if Engine.running and (tr.pos < lo or tr.pos > lo + 15) then
+        info = info .. "  ph:" .. tr.pos
+    end
+    scr:draw_text_fast(info, 4, CTX_Y - 6, 8, C_DIM)
+
+    local selRGB = modeRGB(M.focus)
 
     for c = 1, 16 do
-        local s   = lo + c - 1
-        local stp = tr.steps[s]
-        local x0  = (c - 1) * COL_W + 1
-        local x1  = x0 + COL_W - 3
+        local s    = lo + c - 1
+        local stp  = tr.steps[s]
+        local oor  = (s > tr.lastStep)
+        local x0   = (c - 1) * COL_W + 1
+        local x1   = x0 + COL_W - 3
         local isSel = (s == M.selS)
         local isPh  = Engine.running and (tr.pos == s)
-        local bg = isPh and P[3] or P[1]
+        local bg = isPh and C_PLAYHEAD or (oor and C_OOR or C_BG)
         scr:draw_rectangle_filled(x0, CTX_Y, x1,
             CTX_Y + CTX_H - 1, bg)
 
-        if not Step.muted(stp) then
+        if not oor and not Step.muted(stp) then
             local p = Step.pitch(stp)
             local h = (p * (CTX_H - 4)) // 127
             if h > 0 then
                 local top = CTX_Y + 2 + (CTX_H - 4 - h)
-                local fill = (isPh or isSel) and P[6] or P[7]
+                local fill = (isPh or isSel) and C_TEXT or C_DIM
                 scr:draw_rectangle_filled(x0 + 1, top, x1 - 1,
                     CTX_Y + CTX_H - 3, fill)
             end
@@ -265,32 +280,79 @@ local function drawCtxStrip(scr)
 
         if isSel then
             scr:draw_rectangle(x0, CTX_Y, x1,
-                CTX_Y + CTX_H - 1, P[2])
+                CTX_Y + CTX_H - 1, selRGB)
+        end
+    end
+end
+
+-- LASTSTEP screen takeover: 64-cell mini-map of the whole track buffer,
+-- big number in the middle.
+local function drawLastStepScreen(scr)
+    local tr = Engine.tracks[M.selT]
+    scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
+
+    -- header
+    scr:draw_rectangle_filled(0, 0, 319, HDR_H - 1, C_BG)
+    scr:draw_text_fast("T" .. M.selT, 4, 4, 14, C_TEXT)
+    scr:draw_text_fast("LASTSTEP", 130, 4, 14, modeRGB(M.MODE_LASTSTEP))
+    scr:draw_rectangle_filled(0, HDR_H, 319, HDR_H, C_GUIDE)
+
+    -- big number, centered-ish
+    scr:draw_text_fast(tostring(tr.lastStep), 110, 60, 60,
+        modeRGB(M.MODE_LASTSTEP))
+    scr:draw_text_fast("steps", 130, 130, 14, C_DIM)
+
+    -- 64-cell mini-map at bottom: 64 cells × 4 px wide, 24 px tall
+    local mapY = 200
+    local mapH = 30
+    local cellW = 5
+    local x0 = (320 - 64 * cellW) // 2
+    -- viewport boundaries 16/32/48 as ticks
+    for i = 1, 64 do
+        local cx = x0 + (i - 1) * cellW
+        local active = (i <= tr.lastStep)
+        local color = active
+            and ((i % 16 == 1) and modeRGB(M.MODE_LASTSTEP) or C_DIM)
+            or C_OOR
+        scr:draw_rectangle_filled(cx, mapY, cx + cellW - 2,
+            mapY + mapH - 1, color)
+        if i == tr.lastStep then
+            scr:draw_rectangle(cx - 1, mapY - 2, cx + cellW - 1,
+                mapY + mapH + 1, modeRGB(M.MODE_LASTSTEP))
+        end
+        if Engine.running and tr.pos == i then
+            scr:draw_rectangle_filled(cx, mapY - 6,
+                cx + cellW - 2, mapY - 3, C_PLAYHEAD)
         end
     end
 end
 
 function M.draw(scr)
+    if M.focus == M.MODE_LASTSTEP then
+        if needsFullRepaint or Engine.running then
+            drawLastStepScreen(scr)
+            needsFullRepaint = false
+            scr:draw_swap()
+        end
+        return
+    end
+
     local tr = Engine.tracks[M.selT]
     local ctxDirty = false
+    local lo = viewportLo(M.viewport)
     if Engine.running then
-        local lo = Track.regionLo(tr.curRegion)
-        local c  = tr.pos - lo + 1
+        local c = tr.pos - lo + 1
         if c < 1 or c > 16 then c = 0 end
-        if c ~= lastPhCol then
-            ctxDirty = true
-            lastPhCol = c
-        end
-    elseif lastPhCol ~= 0 then
-        ctxDirty = true
-        lastPhCol = 0
+        if c ~= lastPhCol then ctxDirty = true; lastPhCol = c end
+    elseif lastPhCol ~= -1 then
+        ctxDirty = true; lastPhCol = -1
     end
 
     local any = needsFullRepaint
     if needsFullRepaint then
-        scr:draw_rectangle_filled(0, 0, 319, 239, P[1])
+        scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
         drawHeader(scr)
-        for i = 1, 7 do drawParamRow(scr, i) end
+        for i = 1, 6 do drawParamRow(scr, i) end
         drawCtxStrip(scr)
         needsFullRepaint = false
     elseif ctxDirty then

@@ -8,7 +8,7 @@
 --   21-27 gate         7b 0..127 pulses
 --   28    ratchet      1b
 --   29    mute         1b   (1 = silenced; default 0 = audible)
---   30-36 probability  7b 0..127
+--   30-36 (free)       7b   reserved
 --
 -- One Lua integer per step. No tables.
 
@@ -28,7 +28,6 @@ local SH_DUR   = 14
 local SH_GATE  = 21
 local SH_RAT   = 28
 local SH_MUTE  = 29
-local SH_PROB  = 30
 
 local function clamp7(v) if v < 0 then return 0 elseif v > 127 then return 127 else return v end end
 local function clamp1(v) if v and v ~= 0 then return 1 else return 0 end end
@@ -41,9 +40,8 @@ function M.pack(t)
     local g = clamp7(t.gate or 3)
     local r = clamp1(t.ratch)
     local m = clamp1(t.mute)              -- default false/0 = audible
-    local pr = clamp7(t.prob or 127)
     return shl(p, SH_PITCH) | shl(v, SH_VEL) | shl(d, SH_DUR) | shl(g, SH_GATE)
-         | shl(r, SH_RAT)   | shl(m, SH_MUTE) | shl(pr, SH_PROB)
+         | shl(r, SH_RAT)   | shl(m, SH_MUTE)
 end
 
 -- field getters (cheap, inline-friendly)
@@ -53,7 +51,6 @@ function M.dur(s)     return band(shr(s, SH_DUR),   M7) end
 function M.gate(s)    return band(shr(s, SH_GATE),  M7) end
 function M.ratch(s)   return band(shr(s, SH_RAT),   1) == 1 end
 function M.muted(s)   return band(shr(s, SH_MUTE),  1) == 1 end
-function M.prob(s)    return band(shr(s, SH_PROB),  M7) end
 
 -- field setters return a new packed int
 local function setField(s, shift, mask, value)
@@ -67,7 +64,6 @@ local FIELD = {
     gate  = { SH_GATE,  M7, clamp7 },
     ratch = { SH_RAT,   1,  clamp1 },
     mute  = { SH_MUTE,  1,  clamp1 },
-    prob  = { SH_PROB,  M7, clamp7 },
 }
 
 function M.set(s, name, value)
@@ -82,10 +78,18 @@ function M.get(s, name)
     elseif name == "gate"  then return M.gate(s)
     elseif name == "ratch" then return M.ratch(s) and 1 or 0
     elseif name == "mute"  then return M.muted(s) and 1 or 0
-    elseif name == "prob"  then return M.prob(s)
     end
 end
 
-M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute", "prob" }
+M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute" }
+
+-- MIDI note name. 60 = C4 (Yamaha/Ableton convention). Sharps only.
+-- Range: pitch 0 = C-1, pitch 127 = G9.
+local NOTE_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
+function M.noteName(p)
+    if p < 0 then p = 0 elseif p > 127 then p = 127 end
+    local oct = (p // 12) - 1
+    return NOTE_NAMES[(p % 12) + 1] .. tostring(oct)
+end
 
 return M

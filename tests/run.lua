@@ -7,10 +7,8 @@ local tests = {
     "test_step",
     "test_track_advance",
     "test_track_ratchet",
-    "test_track_probability",
+    "test_track_laststep",
     "test_engine",
-    "test_track_region",
-    "test_engine_region_switch",
     "test_no_alloc",
     "test_dist_smoke",
 }

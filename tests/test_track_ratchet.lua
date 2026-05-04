@@ -9,12 +9,12 @@ function M.test_ratchet_produces_multiple_on_off()
     local tr = Track.new()
     -- dur=12, gate=3, ratch=true: expect on@0, off@3, on@6, off@9, off again at end
     tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=12, gate=3, ratch=true })
-    Track.reset(tr, 1)
+    Track.reset(tr)
 
     local total = {}
     for _ = 1, 13 do
         local out = {}
-        Track.advance(tr, out, 0)
+        Track.advance(tr, out)
         for _, e in ipairs(out) do total[#total+1] = e end
     end
 

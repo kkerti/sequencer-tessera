@@ -12,24 +12,21 @@ function M.test_pack_unpack_defaults()
     eq(Step.gate(s), 3, "default gate")
     eq(Step.ratch(s), false, "default ratch")
     eq(Step.muted(s), false, "default muted")
-    eq(Step.prob(s), 127, "default prob")
 end
 
 function M.test_pack_full()
-    local s = Step.pack({ pitch=72, vel=127, dur=24, gate=12, ratch=true, prob=64 })
+    local s = Step.pack({ pitch=72, vel=127, dur=24, gate=12, ratch=true })
     eq(Step.pitch(s), 72)
     eq(Step.vel(s), 127)
     eq(Step.dur(s), 24)
     eq(Step.gate(s), 12)
     eq(Step.ratch(s), true)
-    eq(Step.prob(s), 64)
 end
 
 function M.test_clamp()
-    local s = Step.pack({ pitch=200, vel=-5, prob=999 })
+    local s = Step.pack({ pitch=200, vel=-5 })
     eq(Step.pitch(s), 127)
     eq(Step.vel(s), 0)
-    eq(Step.prob(s), 127)
 end
 
 function M.test_set_returns_new_value()
@@ -46,13 +43,19 @@ function M.test_set_each_field_isolated()
     s = Step.set(s, "dur", 24)
     s = Step.set(s, "gate", 12)
     s = Step.set(s, "ratch", 1)
-    s = Step.set(s, "prob", 64)
     eq(Step.pitch(s), 100)
     eq(Step.vel(s), 50)
     eq(Step.dur(s), 24)
     eq(Step.gate(s), 12)
     eq(Step.ratch(s), true)
-    eq(Step.prob(s), 64)
+end
+
+function M.test_note_name_basic()
+    eq(Step.noteName(60), "C4")
+    eq(Step.noteName(61), "C#4")
+    eq(Step.noteName(0),  "C-1")
+    eq(Step.noteName(127), "G9")
+    eq(Step.noteName(69), "A4")
 end
 
 return M

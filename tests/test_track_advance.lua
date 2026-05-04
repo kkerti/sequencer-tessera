@@ -7,7 +7,7 @@ local function eq(a, b, msg) if a ~= b then error((msg or "") .. " expected " ..
 
 local function pulse(tr, n)
     local out = {}
-    for _ = 1, n do Track.advance(tr, out, 0) end
+    for _ = 1, n do Track.advance(tr, out) end
     return out
 end
 
@@ -15,7 +15,7 @@ function M.test_basic_note_on_off()
     local tr = Track.new()
     tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=4, gate=2 })
     tr.steps[2] = Step.pack({ pitch=62, vel=100, dur=4, gate=2 })
-    Track.reset(tr, 1)
+    Track.reset(tr)
 
     -- pulse 1: step 1 starts -> NOTE_ON 60
     local out = pulse(tr, 1)
@@ -41,7 +41,7 @@ function M.test_legato()
     for i = 1, 16 do
         tr.steps[i] = Step.pack({ pitch=60, vel=100, dur=4, gate=4 })
     end
-    Track.reset(tr, 1)
+    Track.reset(tr)
 
     local out = pulse(tr, 1)
     eq(#out, 1); eq(out[1].type, Track.EV_ON)
@@ -58,7 +58,7 @@ function M.test_muted_step_emits_no_note()
     local tr = Track.new()
     tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=4, gate=2, mute=true })
     tr.steps[2] = Step.pack({ pitch=62, vel=100, dur=4, gate=2 })
-    Track.reset(tr, 1)
+    Track.reset(tr)
 
     local out = pulse(tr, 1)
     eq(#out, 0)
@@ -75,7 +75,7 @@ function M.test_step_dur_dwells()
     local tr = Track.new()
     tr.steps[1] = Step.pack({ pitch=60, vel=100, dur=8, gate=2 })
     tr.steps[2] = Step.pack({ pitch=72, vel=100, dur=2, gate=1 })
-    Track.reset(tr, 1)
+    Track.reset(tr)
 
     local out = pulse(tr, 1)
     eq(out[1].pitch, 60, "step 1 fires on pulse 1")

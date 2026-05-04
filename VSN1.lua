@@ -1,57 +1,45 @@
 -- VSN1.lua
 -- =============================================================================
 -- ON-DEVICE ENTRY POINT for the VSN1 module of the sequencer.
--- The sequencer engine + UI lives on the VSN1. This is its consumer manifest.
 -- =============================================================================
 --
 -- Two-bundle layout (memory-conscious):
---   dist/sequencer.lua     -- Core only. Loaded at module init. ~10 KB.
+--   dist/sequencer.lua     -- Core only. Loaded at module init. ~8 KB.
 --   dist/sequencer_ui.lua  -- Controls layer. Lazy-loaded on first input
---                             event or first screen draw. ~5 KB.
---
--- Pure-playback paths (master clock running, no user input, screen disabled)
--- never pay the UI heap cost.
---
--- Build:    lua tools/build_dist.lua    -> both bundles into dist/
--- Upload:   both files to the VSN1 module's filesystem.
+--                             event or first screen draw. ~8 KB.
 --
 -- Hardware mapping:
---   Screen        : 320 x 240, single EDIT view (header + 7 param rows
---                   + bottom region context strip).
---   8 keyswitches : modes 1..7 (NOTE/VEL/DUR/GATE/MUTE/RATCH/PROB)
---                   keyswitch 8 = SHIFT (momentary hold)
---   4 small btns  : (no shift) select TRACK 1..4
---                   (+ shift)  queue REGION 1..4
---   Endless       : turn = edit selected step in current mode
+--   Screen        : 320 x 240 EDIT view + LASTSTEP takeover screen.
+--   8 keyswitches : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=DUR 6=RATCH 7=LASTSTEP
+--                   8=SHIFT (momentary hold).
+--   4 small btns  : (no shift) viewport region 1..4  (which 16-step window)
+--                   (+ shift)  select track 1..4
+--   Endless       : turn  = edit selected step's current-mode param
 --                   click = toggle selected step's mute
+--                   In LASTSTEP mode, turn edits track lastStep (1..64).
 --
--- The EN16 module talks to this engine via immediate_send. Its encoder
--- turns/clicks invoke vsn1_en16_turn / vsn1_en16_press globals defined
--- in section [8].
+-- EN16 module talks via immediate_send. SHIFT+EN16 press = select step
+-- (no mute toggle); plain press = toggle mute (or set lastStep in LASTSTEP).
 -- =============================================================================
 
 
 -- =============================================================================
 -- [1] MODULE INIT EVENT
--- -----------------------------------------------------------------------------
--- Loads the Core bundle ONLY. Controls layer is deferred to keep boot heap
--- minimal. UI globals (CTL, EN16) start nil; loadUI() populates them on
--- first need.
 -- =============================================================================
 
-SEQ    = require("sequencer")  -- Core bundle (dist/sequencer.lua)
-ENGINE = SEQ.Core.engine
-TRACK  = SEQ.Core.track
-STEP   = SEQ.Core.step
-CTL    = nil  -- lazy: SEQ.Controls.screen after loadUI()
-EN16   = nil  -- lazy: SEQ.Controls.en16   after loadUI()
+SEQ     = require("sequencer")     -- Core bundle (dist/sequencer.lua)
+ENGINE  = SEQ.Core.engine
+TRACK   = SEQ.Core.track
+STEP    = SEQ.Core.step
+CTL     = nil                      -- lazy: SEQ.Controls.screen after loadUI()
+EN16    = nil                      -- lazy: SEQ.Controls.en16   after loadUI()
 
 ENGINE.init({
     trackCount    = 4,
     stepsPerTrack = 64,
 })
 
--- Default seed: a short C minor riff in track 1, region 1 (steps 1..16).
+-- Default seed: a short C minor riff in track 1, steps 1..8.
 local notes = { 60, 63, 67, 70, 72, 67, 63, 60 }
 for i, p in ipairs(notes) do
     ENGINE.tracks[1].steps[i] = STEP.pack({
@@ -60,34 +48,18 @@ for i, p in ipairs(notes) do
 end
 ENGINE.tracks[1].chan = 1
 
--- Lazy UI loader. Idempotent. Called by every event chunk that touches CTL
--- or EN16. After first call, SEQ.Controls is populated and subsequent calls
--- return immediately.
---
--- Note: the vsn1_en16_turn / vsn1_en16_press globals are NOT defined here.
--- The require("sequencer_ui") call alone consumes most of the available
--- heap budget for the tick. Defining additional global closures in the
--- same event chunk has been observed to OOM. They are self-defined inside
--- their own event chunks (section [8]) on first call.
 function loadUI()
     if CTL then return end
-    local UI     = require("sequencer_ui")
-    SEQ.Controls = UI -- promote into the namespace for inspection
-    CTL          = UI.screen
-    EN16         = UI.en16
+    local UI = require("sequencer_ui")
+    SEQ.Controls = UI
+    CTL  = UI.screen
+    EN16 = UI.en16
     CTL.dirtyAll()
 end
 
+
 -- =============================================================================
--- [2] MIDI RX  (clock + transport from Ableton or other master)
--- -----------------------------------------------------------------------------
--- Pure Core path: NEVER touches UI. Pure-playback users never trigger
--- loadUI().
---
---     0xF8  CLOCK    -> advance engine one pulse, ship its events out
---     0xFA  START    -> reset transport, start playing
---     0xFB  CONTINUE -> resume without reset
---     0xFC  STOP     -> stop, flush any held notes
+-- [2] MIDI RX  (clock + transport from master)
 -- =============================================================================
 
 self.rtmrx_cb = function(self, t)
@@ -122,35 +94,36 @@ end
 -- =============================================================================
 -- [3] SCREEN DRAW EVENT
 -- -----------------------------------------------------------------------------
--- First draw triggers UI lazy-load. Subsequent draws are surgical updates
--- only. EN16 LED updates piggyback on this tick, cache-gated so idle
--- frames send no immediate_send messages.
+-- First draw triggers UI lazy-load. EN16 LED refresh piggybacks here,
+-- cache-gated per (encoder, layer) so idle frames send no immediate_send.
 -- =============================================================================
 
 if not CTL then loadUI() end
 CTL.draw(self)
 
 if not EN16_LED_CACHE then
+    -- 16 encoders × 2 layers; pack r,g,b into one int 0xRRGGBB.
     EN16_LED_CACHE = {}
-    for i = 1, 16 do EN16_LED_CACHE[i] = -1 end
+    for i = 1, 32 do EN16_LED_CACHE[i] = -1 end
 end
-EN16.refreshLeds(function(idx, b)
-    if EN16_LED_CACHE[idx] == b then return end
-    EN16_LED_CACHE[idx] = b
+local _BEAUTIFY = EN16.LED.beautify
+EN16.refreshLeds(function(idx, layer, r, g, b)
+    local k = (idx - 1) * 2 + layer
+    local packed = (r << 16) | (g << 8) | b
+    if EN16_LED_CACHE[k] == packed then return end
+    EN16_LED_CACHE[k] = packed
     immediate_send(0, 1,
-        "led_value(" .. (idx - 1) .. ",2," .. b .. ")")
+        "led_color(" .. (idx - 1) .. "," .. layer
+        .. "," .. r .. "," .. g .. "," .. b
+        .. "," .. _BEAUTIFY .. ")")
 end)
 
 
 -- =============================================================================
 -- [4] KEYSWITCH BUTTON EVENTS  (8 buttons)
 -- -----------------------------------------------------------------------------
--- Slots 1..7 select mode (NOTE/VEL/DUR/GATE/MUTE/RATCH/PROB).
--- Slot 8 is SHIFT (momentary): press = on, release = off.
---
--- This event chunk MUST be wired to fire on BOTH press AND release for
--- the SHIFT key to release. Filtering on `button_state() == 127` only
--- catches presses; we need both 0 and 127.
+-- 1=NOTE 2=VEL 3=GATE 4=MUTE 5=DUR 6=RATCH 7=LASTSTEP 8=SHIFT (momentary).
+-- Slot 8 must fire on BOTH press and release for SHIFT to release.
 -- =============================================================================
 
 if not CTL then loadUI() end
@@ -164,13 +137,11 @@ end
 
 
 -- =============================================================================
--- [5] ENDLESS ENCODER EVENT
--- -----------------------------------------------------------------------------
--- Relative encoder. 65 = clockwise/up, 63 = counter-clockwise/down.
+-- [5] ENDLESS ENCODER EVENT  (relative: 65=up, 63=down)
 -- =============================================================================
 
 if not CTL then loadUI() end
-local v = self:endless_value()
+local v = self:encoder_value()
 if v == 65 then
     CTL.onEndless(1)
 elseif v == 63 then
@@ -191,9 +162,8 @@ end
 -- =============================================================================
 -- [7] SMALL BUTTONS UNDER SCREEN  (4 buttons)
 -- -----------------------------------------------------------------------------
--- No SHIFT held -> select track  1..4
--- SHIFT held    -> queue region  1..4
--- The dispatch lives in controls.onSmallBtn() based on CTL.shift.
+-- No SHIFT -> change viewport region 1..4 (which 16-step window).
+-- + SHIFT  -> select track 1..4.
 -- =============================================================================
 
 if self:button_state() == 127 then
@@ -206,42 +176,42 @@ end
 -- =============================================================================
 -- [8] CROSS-MODULE COMMUNICATION  (VSN1 [0,0]  <->  EN16 [0,1])
 -- -----------------------------------------------------------------------------
--- Outbound (VSN1 -> EN16): in [3], one immediate_send per CHANGED encoder
--- LED, payload `led_value(idx, 2, brightness)`. Cache-gated.
+-- Outbound (VSN1 -> EN16): in [3], `led_color(idx, layer, r, g, b, beautify)`
+-- per CHANGED LED-layer. Cache-gated.
 --
--- Inbound (EN16 -> VSN1): EN16 sends
---   immediate_send(0, -1, 'vsn1_en16_turn(' .. idx .. ',' .. delta .. ')')
---   immediate_send(0, -1, 'vsn1_en16_press(' .. idx .. ')')
+-- Inbound (EN16 -> VSN1):
+--   immediate_send(0, -1, 'vsn1_en16_turn(idx, delta)')
+--   immediate_send(0, -1, 'vsn1_en16_press(idx)')
 --
--- These globals self-define on first invocation. They are NOT defined in
--- loadUI() because that event chunk already consumes most of the available
--- heap budget pulling in the UI bundle; adding two more closure
--- allocations to the same tick has been observed to OOM. The trade-off:
--- the very first EN16 turn or press only registers the global and is
--- otherwise lost; the second message onward works normally.
+-- Press routing: if SHIFT is held when EN16 press arrives, we move the
+-- selected step instead of toggling mute. EN16 module itself is
+-- shift-unaware; VSN1 is the brain.
+-- =============================================================================
 
--- Snippet A: turn receiver
 function vsn1_en16_turn(idx, delta)
     if not EN16 then loadUI() end
     if EN16 then EN16.onEncoder(idx, delta) end
 end
 
--- Snippet B: press receiver
 function vsn1_en16_press(idx)
     if not EN16 then loadUI() end
-    if EN16 then EN16.onEncoderPress(idx) end
+    if not EN16 then return end
+    if CTL.shift then
+        local s = CTL.viewportLo(CTL.viewport) + (idx - 1)
+        CTL.setSelectedStep(s)
+    else
+        EN16.onEncoderPress(idx)
+    end
 end
+
 
 -- =============================================================================
 -- NOTES
 -- -----------------------------------------------------------------------------
--- * Two-bundle split keeps boot heap small. UI loads on first user input
---   or first screen draw — typically within the first second of use, but
---   never during a pure-playback boot sequence.
--- * No internal clock. If the master is stopped, engine emits nothing.
--- * Region model: 4 fixed 16-step windows of each track's 64-step buffer.
---   Global at-end-of-region switching coordinated by the engine.
+-- * Two-bundle split keeps boot heap small.
+-- * No internal clock. No regions in the engine. Polyrhythm = per-track
+--   lastStep + per-step dur.
 -- * One voice per track. Track-N notes default to MIDI channel N.
--- * Zero allocations per pulse — locked by tests/test_no_alloc.lua.
+-- * Zero allocations per pulse - locked by tests/test_no_alloc.lua.
 -- * Rebuild after src/ changes:  lua tools/build_dist.lua
 -- =============================================================================

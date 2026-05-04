@@ -26,6 +26,11 @@ M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
 
+-- dirty flag (single bool; ph repaints whole screen at 30 Hz cap)
+-- MUST be declared before any function that writes to it, otherwise the
+-- assignment binds to a global instead of this upvalue.
+local dirty = true
+
 local function setParam(i, t, s, d)
     local stp = Engine.tracks[t].steps[s]
     if i == 1 then
@@ -41,11 +46,10 @@ local function setParam(i, t, s, d)
     elseif i == 4 then
         Engine.setStepParam(t, s, "mute", Step.muted(stp) and 0 or 1)
     end
+    dirty = true
 end
 M.setParam = setParam
 
--- dirty flag (single bool; ph repaints whole screen at 30 Hz cap)
-local dirty = true
 local function dAll() dirty = true end
 M.dirtyAll        = dAll
 M.dirtyValueCells = dAll
@@ -110,6 +114,7 @@ function M.setShift(b)
     b = b and true or false
     if b == M.shift then return end
     M.shift = b
+    dirty = true
 end
 
 function M.onSmallBtn(idx)

@@ -46,55 +46,57 @@ function M.test_ui_bundle_loads_via_core()
 end
 
 function M.test_en16_bundle_loads_via_core()
-    -- EN16 bundle is standalone; no Core dependency. We still go through
-    -- the same wiring path to prove the UI-shim's fall-through is harmless
-    -- when the bundle has zero require() calls of its own.
+    -- EN16 bundle is standalone (no Core dependency). The UI shim's
+    -- fall-through path is unused. Wiring through it anyway proves harmless.
     local core = dofile("dist/sequencer.lua")
     package.loaded["sequencer"] = core
     local en16 = dofile("dist/sequencer_en16.lua")
     package.loaded["sequencer"] = nil
 
-    if type(en16.S)        ~= "function" then error("EN16 missing S()") end
-    if type(en16.V)        ~= "function" then error("EN16 missing V()") end
-    if type(en16.M)        ~= "function" then error("EN16 missing M()") end
+    if type(en16.U)        ~= "function" then error("EN16 missing U()") end
     if type(en16.H)        ~= "function" then error("EN16 missing H()") end
     if type(en16.refresh)  ~= "function" then error("EN16 missing refresh()") end
 
-    -- seed: shadow slot 1 = pitch60/vel100/dur4/gate2; meta = focus1, lastStep16
-    en16.S(1, 60 | (100 << 7) | (4 << 14) | (2 << 21))
-    en16.M(1, 16, 1, 0)
+    -- mu=0 (none muted), focus=1 (NOTE), sel=1, cap=16
+    en16.U(0, 1, 1, 16)
 
     local emits = 0
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
     if emits ~= 16 then error("expected 16 color emits on first refresh, got " .. emits) end
 
-    -- second refresh same state -> 0 emits (cache hit; not dirty)
+    -- second refresh same state -> 0 emits (cache hit)
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
     if emits ~= 16 then error("color cache failed: re-emitted on idle refresh") end
 
-    -- focus change -> dirties; all 16 may re-emit (selection slot is one of them)
-    en16.M(2, 16, 1, 0)
+    -- focus change -> dirties; cells re-emit (at minimum the selection cell)
+    en16.U(0, 2, 1, 16)
     local before = emits
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
     if emits == before then error("focus change should re-emit colors") end
 
-    -- playhead push: H(7) lights slot 7 white. At least one new emit.
+    -- mute mask: bit 2 set (slot 3 muted) -> slot 3 must repaint
+    before = emits
+    en16.U(1 << 2, 2, 1, 16)
+    en16.refresh(function(_, _, _, _) emits = emits + 1 end)
+    if emits == before then error("mute mask change should re-emit slot 3") end
+
+    -- playhead push: H(7) lights slot 7 white
     before = emits
     en16.H(7)
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
-    if emits == before then error("H(7) should cause a re-emit on slot 7") end
+    if emits == before then error("H(7) should cause a re-emit") end
 
-    -- H(7) again -> no dirty, no emits
+    -- H(7) again -> idempotent
     before = emits
     en16.H(7)
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
     if emits ~= before then error("H(slot) idempotent for same slot") end
 
-    -- H(0) clears playhead -> slot 7 must repaint to its non-playhead color
+    -- H(0) clears playhead
     before = emits
     en16.H(0)
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
-    if emits == before then error("H(0) should clear playhead and re-emit slot 7") end
+    if emits == before then error("H(0) should clear playhead and re-emit") end
 end
 
 return M

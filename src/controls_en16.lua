@@ -1,38 +1,26 @@
 -- controls_en16.lua  (EN16-side logic; standalone bundle target)
 -- =============================================================================
--- EN16 holds:
---   * a 16-step shadow of the visible viewport of the selected track
---   * meta (focus, lastStep, selS-relative, shift)
---   * the current playhead slot (1..16, or 0 = playhead not in this window)
+-- EN16 holds FIVE numbers and a 16-bit mute mask. That's its entire state.
 --
--- It does NOT own the engine. VSN1 is the source of truth.
--- It does NOT listen to MIDI clock. VSN1 pushes playhead changes via H().
--- It does NOT compute LED colors per pulse — only when something changed.
+-- Protocol from VSN1:
+--   M.U(mu, f, sel, cap)    full state update (mute mask, focus, sel slot,
+--                           visible cap = min(lastStep within window, 16))
+--   M.H(slot)               playhead at slot 1..16, or 0 = not in this window
 --
--- Anti-feedback: local turns/presses are forwarded to VSN1 only. Shadow is
--- only mutated by S/V/M/H calls received FROM VSN1.
---
--- Public API (called from EN16.lua entry):
---   M.S(i, p)              one shadow step changed (slot 1..16, packed int)
---   M.V(p1,...,p16)        full window snapshot (16 packed ints)
---   M.M(f, L, sR, sh)      meta: focus, lastStep (real), selS-rel, shift
---   M.H(slot)              playhead at slot 1..16, or 0 = not in window
---   M.refresh(emit)        emit(idx0, r, g, b) for each changed LED, then clear dirty
---   M.dirty                read-only flag; true = redraw needed
+-- It does NOT own the engine, does NOT listen to MIDI clock, does NOT keep
+-- a per-step shadow. Local turns/presses are forwarded to VSN1 only.
 -- =============================================================================
 
 local M = {}
 M.NUM_ENC = 16
 
--- ---- shadow + meta ---------------------------------------------------------
+-- ---- state (5 numbers) -----------------------------------------------------
 
-M.SH       = {}
-for i = 1, 16 do M.SH[i] = 0 end
-M.focus    = 1     -- 1..7  (NOTE/VEL/GATE/MUTE/STEP/-/LASTSTEP)
-M.lastStep = 16    -- real lastStep on selected track (1..64)
-M.selR     = 1     -- selS relative to viewport (1..16); 0 = not in window
-M.shift    = 0
-M.ph       = 0     -- playhead slot 1..16, or 0 = not in this viewport
+M.mu    = 0    -- 16-bit mask: bit (i-1) set = slot i is muted
+M.focus = 1    -- 1..7 (NOTE/VEL/GATE/MUTE/STEP/-/LASTSTEP)
+M.sel   = 1    -- selected slot 1..16, or 0 = selection outside window
+M.cap   = 16   -- visible in-range cap; slots > cap render off
+M.ph    = 0    -- playhead slot 1..16, or 0 = not in this window
 
 -- ---- mode color table (matches controls.lua) -------------------------------
 
@@ -48,36 +36,14 @@ for i = 1, 16 do M.LAST[i] = -1 end
 
 M.dirty = true
 
--- step pack layout: bit 29 = mute (see src/step.lua)
-local function muted(p) return ((p >> 29) & 1) == 1 end
-
 -- ---- VSN1 -> EN16 receivers ------------------------------------------------
 
-function M.S(i, p)
-    if i >= 1 and i <= 16 then
-        M.SH[i] = p
-        M.dirty = true
-    end
-end
-
-function M.V(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16)
-    M.SH[1]=p1   M.SH[2]=p2   M.SH[3]=p3   M.SH[4]=p4
-    M.SH[5]=p5   M.SH[6]=p6   M.SH[7]=p7   M.SH[8]=p8
-    M.SH[9]=p9   M.SH[10]=p10 M.SH[11]=p11 M.SH[12]=p12
-    M.SH[13]=p13 M.SH[14]=p14 M.SH[15]=p15 M.SH[16]=p16
-    M.dirty = true
-end
-
-function M.M(f, L, sR, sh)
-    M.focus    = f
-    M.lastStep = L
-    M.selR     = sR
-    M.shift    = sh
+function M.U(mu, f, sel, cap)
+    M.mu, M.focus, M.sel, M.cap = mu, f, sel, cap
     M.dirty = true
 end
 
 -- Playhead push from VSN1. slot=1..16 lights that slot; slot=0 clears.
--- Cheap: integer compare; only dirties when slot actually changed.
 function M.H(slot)
     if slot ~= M.ph then
         M.ph = slot
@@ -97,18 +63,14 @@ function M.refresh(emit)
     if not M.dirty then return end
     M.dirty = false
 
-    local f, ls = M.focus, M.lastStep
+    local f, cap, sel, ph, mu = M.focus, M.cap, M.sel, M.ph, M.mu
     local mr, mg, mb = MR[f], MG[f], MB[f]
-    local SH, LAST = M.SH, M.LAST
-    local ph  = M.ph                    -- 1..16 or 0
-    local sel = M.selR
+    local LAST = M.LAST
 
-    -- Window slot i is in-range iff its absolute step <= lastStep.
-    -- We don't track viewport here; rely on VSN1 sending S(i, 0) for OOR
-    -- slots when the viewport is the LAST one. Conservative cap: clamp
-    -- i > min(16, lastStep) when lastStep < 16 (only viewport 1 case).
-    -- Otherwise all 16 slots are valid candidates.
-    local cap = (ls < 16) and ls or 16
+    -- precompute dim mode color (~30%)
+    local dr = (mr * 80) >> 8
+    local dg = (mg * 80) >> 8
+    local db = (mb * 80) >> 8
 
     for i = 1, 16 do
         local r, g, b
@@ -118,13 +80,10 @@ function M.refresh(emit)
             r, g, b = 255, 255, 255
         elseif i == sel then
             r, g, b = mr, mg, mb
-        elseif muted(SH[i]) then
+        elseif (mu >> (i - 1)) & 1 == 1 then
             r, g, b = 60, 0, 0
         else
-            -- normal step: dim mode color (~30%)
-            r = (mr * 80) >> 8
-            g = (mg * 80) >> 8
-            b = (mb * 80) >> 8
+            r, g, b = dr, dg, db
         end
 
         local packed = (r << 16) | (g << 8) | b

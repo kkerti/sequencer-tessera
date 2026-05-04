@@ -3,46 +3,36 @@
 -- ON-DEVICE ENTRY POINT for the VSN1 module of the sequencer.
 -- =============================================================================
 --
--- Two-bundle layout (memory-conscious):
---   dist/sequencer.lua     -- Core only. Loaded at module init. ~8 KB.
---   dist/sequencer_ui.lua  -- Controls layer. Lazy-loaded on first input
---                             event or first screen draw. ~8 KB.
+-- Three-bundle layout:
+--   dist/sequencer.lua      Core only. Loaded at module init.
+--   dist/sequencer_ui.lua   Screen UI. Lazy-loaded on first input/draw.
+--   (EN16 module loads its own dist/sequencer_en16.lua independently.)
+--
+-- VSN1 owns the engine; EN16 holds a SHADOW of the visible 16 steps + meta.
+-- VSN1 pushes deltas to EN16 only when something changes (push-on-change).
+-- EN16 runs its own timer, computes LED colors locally, and sends them to
+-- its own LED hardware. This keeps LED math off VSN1 and shrinks the UI
+-- bundle that has to fit on VSN1's tighter heap.
 --
 -- Hardware mapping:
---   Screen        : 320 x 240 single EDIT view (no takeover screens).
---   8 keyswitches : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=STEP 6=(reserved)
---                   7=LASTSTEP 8=SHIFT (momentary hold).
---                   In GATE focus, SHIFT+endless edits DUR.
---                   In MUTE focus, SHIFT+endless-click toggles RATCH.
---   4 small btns  : (no shift) viewport region 1..4
---                   (+ shift)  select track 1..4
---   Endless       : turn  = act per current focus mode
---                   click = toggle selected step's mute (or RATCH w/SHIFT)
---                   In LASTSTEP focus, turn edits track lastStep (1..64).
---                   In STEP focus, turn moves selected step (1..lastStep).
---
--- EN16 module talks via immediate_send. SHIFT+EN16 press = select step
--- (no mute toggle); plain press = toggle mute (or set lastStep in LASTSTEP).
+--   Screen     : 320x240 EDIT view.
+--   Keyswitch  : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=STEP 6=- 7=LASTSTEP 8=SHIFT.
+--   4 small btns: viewport (no shift) / track select (+ shift).
+--   Endless    : turn = act-per-mode; click = mute toggle (or RATCH w/SHIFT).
 -- =============================================================================
 
 
 -- =============================================================================
--- [1] MODULE INIT EVENT
+-- [1] MODULE INIT
 -- =============================================================================
 
-SEQ     = require("sequencer")     -- Core bundle (dist/sequencer.lua)
-ENGINE  = SEQ.Core.engine
-TRACK   = SEQ.Core.track
-STEP    = SEQ.Core.step
-CTL     = nil                      -- lazy: SEQ.Controls.screen after loadUI()
-EN16    = nil                      -- lazy: SEQ.Controls.en16   after loadUI()
+SEQ    = require("sequencer")
+ENGINE = SEQ.Core.engine
+STEP   = SEQ.Core.step
+CTL    = nil      -- lazy: SEQ.Controls.screen after loadUI()
 
-ENGINE.init({
-    trackCount    = 4,
-    stepsPerTrack = 64,
-})
+ENGINE.init({ trackCount = 4, stepsPerTrack = 64 })
 
--- Default seed: a short C minor riff in track 1, steps 1..8.
 local notes = { 60, 63, 67, 70, 72, 67, 63, 60 }
 for i, p in ipairs(notes) do
     ENGINE.tracks[1].steps[i] = STEP.pack({
@@ -55,14 +45,46 @@ function loadUI()
     if CTL then return end
     local UI = require("sequencer_ui")
     SEQ.Controls = UI
-    CTL  = UI.screen
-    EN16 = UI.en16
+    CTL = UI.screen
     CTL.dirtyAll()
+end
+
+-- ---- Push helpers (VSN1 -> EN16 shadow) -------------------------------------
+-- Sent over immediate_send(0, 1, "...") to the EN16 module which has the
+-- functions en16_shadow / en16_meta defined in its own init chunk.
+
+EN16_LAST_PH = -1   -- last playhead value pushed (gate setMeta on tick)
+
+function en16_push_full()
+    if not CTL then return end
+    local lo = CTL.viewportLo(CTL.viewport)
+    local tr = ENGINE.tracks[CTL.selT]
+    for i = 1, 16 do
+        local s = lo + i - 1
+        immediate_send(nil, nil,
+            "EN16.setShadow(" .. i .. "," .. tr.steps[s] .. ")")
+    end
+    immediate_send(nil, nil, string.format(
+        "EN16.setMeta(%d,%d,%d,%d,%d,%d)",
+        CTL.focus, tr.lastStep, tr.pos, CTL.selS, lo,
+        CTL.shift and 1 or 0))
+    EN16_LAST_PH = tr.pos
+end
+
+function en16_push_meta_only()
+    if not CTL then return end
+    local lo = CTL.viewportLo(CTL.viewport)
+    local tr = ENGINE.tracks[CTL.selT]
+    immediate_send(nil, nil, string.format(
+        "EN16.setMeta(%d,%d,%d,%d,%d,%d)",
+        CTL.focus, tr.lastStep, tr.pos, CTL.selS, lo,
+        CTL.shift and 1 or 0))
+    EN16_LAST_PH = tr.pos
 end
 
 
 -- =============================================================================
--- [2] MIDI RX  (clock + transport from master)
+-- [2] MIDI RX
 -- =============================================================================
 
 self.rtmrx_cb = function(self, t)
@@ -95,29 +117,22 @@ end
 
 
 -- =============================================================================
--- [3] SCREEN DRAW EVENT
+-- [3] SCREEN DRAW
 -- -----------------------------------------------------------------------------
--- Pure screen render. First draw triggers UI lazy-load AND kicks the LED
--- timer (slot 0) so EN16 refresh runs deterministically off the draw path.
--- LED traffic stays off the draw event to avoid choking the module bus
--- during fast input bursts (which was breaking editor<->hardware sync).
+-- Pure render. First draw lazy-loads UI and arms the EN16-sync timer.
 -- =============================================================================
 
 if not CTL then loadUI() end
 CTL.draw(self)
-
 if not LED_TIMER_ARMED then
     LED_TIMER_ARMED = true
-    timer_start(0, 33)   -- ~30 Hz
+    timer_start(0, 33)
+    en16_push_full()    -- seed EN16 with initial shadow + meta
 end
 
 
 -- =============================================================================
--- [4] KEYSWITCH BUTTON EVENTS  (8 buttons)
--- -----------------------------------------------------------------------------
--- 1=NOTE 2=VEL 3=GATE 4=MUTE 5=STEP 6=(reserved) 7=LASTSTEP
--- 8=SHIFT (momentary).
--- Slot 8 must fire on BOTH press and release for SHIFT to release.
+-- [4] KEYSWITCHES
 -- =============================================================================
 
 if not CTL then loadUI() end
@@ -125,109 +140,103 @@ local idx = self:element_index() + 1
 local pressed = (self:button_state() == 127)
 if idx == 8 then
     CTL.setShift(pressed)
+    en16_push_full()
 elseif pressed and idx >= 1 and idx <= 7 then
     CTL.onKey(idx)
+    en16_push_full()
 end
 
 
 -- =============================================================================
--- [5] ENDLESS ENCODER EVENT  (relative: 65=up, 63=down)
+-- [5] ENDLESS TURN
 -- =============================================================================
 
 if not CTL then loadUI() end
 local v = self:encoder_value()
 if v == 65 then
-    CTL.onEndless(1)
+    CTL.onEndless(1); en16_push_full()
 elseif v == 63 then
-    CTL.onEndless(-1)
+    CTL.onEndless(-1); en16_push_full()
 end
 
 
 -- =============================================================================
--- [6] ENDLESS CLICK EVENT  -> toggle selected step's mute
+-- [6] ENDLESS CLICK
 -- =============================================================================
 
 if self:button_state() == 127 then
     if not CTL then loadUI() end
     CTL.onEndlessClick()
+    en16_push_full()
 end
 
 
 -- =============================================================================
--- [7] SMALL BUTTONS UNDER SCREEN  (4 buttons)
--- -----------------------------------------------------------------------------
--- No SHIFT -> change viewport region 1..4 (which 16-step window).
--- + SHIFT  -> select track 1..4.
+-- [7] SMALL BUTTONS  (element_index 9..12)
 -- =============================================================================
 
 if self:button_state() == 127 then
     if not CTL then loadUI() end
-    local sidx = self:element_index() + 1
-    if sidx >= 1 and sidx <= 4 then CTL.onSmallBtn(sidx) end
+    local sidx = self:element_index() - 8
+    if sidx >= 1 and sidx <= 4 then
+        CTL.onSmallBtn(sidx)
+        en16_push_full()
+    end
 end
 
 
 -- =============================================================================
--- [8] CROSS-MODULE COMMUNICATION  (VSN1 [0,0]  <->  EN16 [0,1])
+-- [8] CROSS-MODULE CALLBACKS  (EN16 -> VSN1)
 -- -----------------------------------------------------------------------------
--- Outbound (VSN1 -> EN16): in [3], `led_color(idx, layer, r, g, b, beautify)`
--- per CHANGED LED-layer. Cache-gated.
---
--- Inbound (EN16 -> VSN1):
+-- EN16 sends:
 --   immediate_send(0, -1, 'vsn1_en16_turn(idx, delta)')
 --   immediate_send(0, -1, 'vsn1_en16_press(idx)')
---
--- Press routing: if SHIFT is held when EN16 press arrives, we move the
--- selected step instead of toggling mute. EN16 module itself is
--- shift-unaware; VSN1 is the brain.
 -- =============================================================================
 
 function vsn1_en16_turn(idx, delta)
-    if not EN16 then loadUI() end
-    if EN16 then EN16.onEncoder(idx, delta) end
+    if not CTL then loadUI() end
+    if idx < 1 or idx > 16 then return end
+    local f = CTL.focus
+    if f == 7 or f == 5 then return end
+    local s = CTL.viewportLo(CTL.viewport) + (idx - 1)
+    if s > ENGINE.tracks[CTL.selT].lastStep then return end
+    CTL.setSelectedStep(s)
+    CTL.setParam(f, CTL.selT, s, delta > 0 and 1 or -1)
+    CTL.dirtyValueCells()
+    en16_push_full()
 end
 
 function vsn1_en16_press(idx)
-    if not EN16 then loadUI() end
-    if not EN16 then return end
+    if not CTL then loadUI() end
+    if idx < 1 or idx > 16 then return end
+    local s = CTL.viewportLo(CTL.viewport) + (idx - 1)
     if CTL.shift then
-        local s = CTL.viewportLo(CTL.viewport) + (idx - 1)
         CTL.setSelectedStep(s)
+    elseif CTL.focus == 7 then
+        ENGINE.setLastStep(CTL.selT, s)
     else
-        EN16.onEncoderPress(idx)
+        local stp = ENGINE.tracks[CTL.selT].steps[s]
+        ENGINE.setStepParam(CTL.selT, s, "mute",
+            STEP.muted(stp) and 0 or 1)
     end
+    CTL.dirtyValueCells()
+    en16_push_full()
 end
 
 
 -- =============================================================================
--- [9] TIMER EVENT  (slot 0, ~30 Hz)
+-- [9] TIMER  (slot 0, ~30 Hz)
 -- -----------------------------------------------------------------------------
--- Deterministic LED refresh, decoupled from the screen-draw rate. Cache-gated
--- per (encoder, layer); idle frames send zero immediate_send messages. We
--- self-restart the timer at the bottom so it keeps ticking.
---
--- LED traffic was previously on the draw event and starved the module bus
--- during fast encoder bursts, desyncing hardware from the editor.
+-- Push playhead-only updates so EN16 LEDs follow the music. Single int
+-- per push, gated by EN16_LAST_PH so idle = zero broadcasts.
 -- =============================================================================
 
-if not EN16 then loadUI() end
-if EN16 then
-    if not EN16_LED_CACHE then
-        -- 16 encoders × 2 layers; pack r,g,b into one int 0xRRGGBB.
-        EN16_LED_CACHE = {}
-        for i = 1, 32 do EN16_LED_CACHE[i] = -1 end
+if CTL then
+    local ph = ENGINE.tracks[CTL.selT].pos
+    if ph ~= EN16_LAST_PH then
+        EN16_LAST_PH = ph
+        immediate_send(nil, nil, "EN16.setPlayhead(" .. ph .. ")")
     end
-    local _BEAUTIFY = EN16.LED.beautify
-    EN16.refreshLeds(function(idx, layer, r, g, b)
-        local k = (idx - 1) * 2 + layer
-        local packed = (r << 16) | (g << 8) | b
-        if EN16_LED_CACHE[k] == packed then return end
-        EN16_LED_CACHE[k] = packed
-        immediate_send(0, 1,
-            "led_color(" .. (idx - 1) .. "," .. layer
-            .. "," .. r .. "," .. g .. "," .. b
-            .. "," .. _BEAUTIFY .. ")")
-    end)
 end
 timer_start(0, 33)
 
@@ -235,10 +244,8 @@ timer_start(0, 33)
 -- =============================================================================
 -- NOTES
 -- -----------------------------------------------------------------------------
--- * Two-bundle split keeps boot heap small.
--- * No internal clock. No regions in the engine. Polyrhythm = per-track
---   lastStep + per-step dur.
--- * One voice per track. Track-N notes default to MIDI channel N.
+-- * Three-bundle split keeps boot heap small. EN16 owns its own LED math.
+-- * No internal clock. Polyrhythm = per-track lastStep + per-step dur.
 -- * Zero allocations per pulse - locked by tests/test_no_alloc.lua.
 -- * Rebuild after src/ changes:  lua tools/build_dist.lua
 -- =============================================================================

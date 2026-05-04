@@ -41,18 +41,25 @@ return {
 ]],
 }
 
--- UI bundle: Controls layer. Depends on Core being already loaded.
--- Its internal require-shim falls back to the host `require` for missing
--- modules so `require("engine")` etc. resolves through Core's flat aliases
--- (see SHIM_UI below).
+-- UI bundle: VSN1-side Controls (screen UI only). EN16 lives in its OWN
+-- bundle (dist/sequencer_en16.lua) loaded by the EN16 module independently.
 local UI = {
     out   = "dist/sequencer_ui.lua",
-    files = { "controls", "controls_en16" },
+    files = { "controls" },
     namespaces = [[
 return {
     screen = R.controls,
-    en16   = R.controls_en16,
 }
+]],
+}
+
+-- EN16 bundle: standalone for the EN16 module. Holds shadow of visible
+-- 16 steps + meta; computes LED colors locally; no engine, no step.
+local EN16 = {
+    out   = "dist/sequencer_en16.lua",
+    files = { "controls_en16" },
+    namespaces = [[
+return R.controls_en16
 ]],
 }
 
@@ -206,5 +213,6 @@ end
 
 buildBundle(CORE, SHIM_CORE, "-- dist/sequencer.lua (auto-generated; Core only)\n")
 buildBundle(UI,   SHIM_UI,   "-- dist/sequencer_ui.lua (auto-generated; Controls layer)\n")
+buildBundle(EN16, SHIM_CORE, "-- dist/sequencer_en16.lua (auto-generated; EN16 standalone)\n")
 
 io.write("verify: both bundles parse OK\n")

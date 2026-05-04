@@ -194,42 +194,25 @@ function M.draw(scr)
     scr:draw_text_fast("last  " .. tr.lastStep, 6, LS_Y + 4, 14,
         f == 7 and C_FG or C_DIM)
 
-    -- 16-cell step strip
+    -- 16-cell step strip (flat colors; no value-strength tinting)
     local lo = vplo(M.viewport)
-    local mr_, mg_, mb_ = MR[f], MG[f], MB[f]
+    local C_CELL  = { (MR[f] * 70) // 255, (MG[f] * 70) // 255, (MB[f] * 70) // 255 }
+    local C_MUTE  = { 30, 10, 10 }
     for c = 1, 16 do
         local s = lo + c - 1
         local x0 = (c - 1) * COL_W + 1
         local x1 = x0 + COL_W - 3
         local oor = (s > tr.lastStep)
-        local cs = tr.steps[s]
-        local muted = (not oor) and Step.muted(cs)
+        local cs  = tr.steps[s]
+        local bg
+        if oor then bg = C_OOR
+        elseif Step.muted(cs) then bg = C_MUTE
+        else bg = C_CELL end
+        scr:draw_rectangle_filled(x0, STR_Y, x1, STR_Y + STR_H - 1, bg)
 
-        -- base cell color: mode color × value (NOTE/VEL/GATE/STEP),
-        -- mute red wash (MUTE focus), or neutral
-        local cr, cg, cb = C_OOR[1], C_OOR[2], C_OOR[3]
-        if not oor then
-            if muted then
-                cr, cg, cb = 30, 10, 10
-            elseif f == 4 then
-                cr, cg, cb = 30, 30, 32
-            else
-                local v = valueOf(cs, f) or 0
-                if f == 5 then v = 127 end
-                local k = 40 + (160 * v) // 127
-                cr = (mr_ * k) // 255
-                cg = (mg_ * k) // 255
-                cb = (mb_ * k) // 255
-            end
-        end
-        scr:draw_rectangle_filled(x0, STR_Y, x1, STR_Y + STR_H - 1,
-            { cr, cg, cb })
-
-        -- selected outline
         if s == M.selS then
             scr:draw_rectangle(x0, STR_Y, x1, STR_Y + STR_H - 1, rgb(f))
         end
-        -- playhead inner rectangle (small, centered)
         if Engine.running and tr.pos == s then
             scr:draw_rectangle_filled(
                 x0 + 4, STR_Y + 4, x1 - 4, STR_Y + STR_H - 5, C_PH)

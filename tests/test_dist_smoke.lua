@@ -34,20 +34,41 @@ function M.test_dist_namespace_shape()
 end
 
 function M.test_ui_bundle_loads_via_core()
-    -- Simulate the device wiring: Core is loaded, then UI is required and
-    -- its inner `require("engine")` etc. resolve through Core's flat aliases.
+    -- Simulate the VSN1 wiring: Core loaded, then UI required.
     local core = dofile("dist/sequencer.lua")
-    package.loaded["sequencer"] = core    -- mimic on-device require() result
+    package.loaded["sequencer"] = core
     local ui = dofile("dist/sequencer_ui.lua")
-    package.loaded["sequencer"] = nil     -- clean up
+    package.loaded["sequencer"] = nil
     if not ui.screen then error("UI bundle missing screen module") end
-    if not ui.en16   then error("UI bundle missing en16 module")   end
     if type(ui.screen.draw) ~= "function" then
         error("UI screen module missing draw()")
     end
-    if type(ui.en16.refreshLeds) ~= "function" then
-        error("UI en16 module missing refreshLeds()")
+end
+
+function M.test_en16_bundle_loads_standalone()
+    -- EN16 bundle is fully standalone. No Core, no Step.
+    local en16 = dofile("dist/sequencer_en16.lua")
+    if type(en16.refreshColors) ~= "function" then
+        error("EN16 bundle missing refreshColors()")
     end
+    if type(en16.setShadow) ~= "function" then
+        error("EN16 bundle missing setShadow()")
+    end
+    if type(en16.setMeta) ~= "function" then
+        error("EN16 bundle missing setMeta()")
+    end
+    en16.setShadow(1, 60 | (100 << 7) | (4 << 14) | (2 << 21))
+    en16.setMeta(1, 16, 1, 1, 1, 0)
+    local emits = 0
+    en16.refreshColors(function(_, _, _, _) emits = emits + 1 end)
+    if emits ~= 16 then error("expected 16 color emits on first call, got " .. emits) end
+    -- second call same state -> 0 emits (cache hit)
+    en16.refreshColors(function(_, _, _, _) emits = emits + 1 end)
+    if emits ~= 16 then error("color cache failed: re-emitted on identical state") end
+    -- focus change -> non-playhead encoders re-emit (15 of 16; playhead stays white)
+    en16.setMeta(2, 16, 1, 1, 1, 0)
+    en16.refreshColors(function(_, _, _, _) emits = emits + 1 end)
+    if emits ~= 31 then error("focus change should emit 15 colors (playhead unchanged), got " .. (emits - 16)) end
 end
 
 return M

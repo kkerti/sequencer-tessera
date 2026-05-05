@@ -45,6 +45,25 @@ function M.test_ui_bundle_loads_via_core()
     end
 end
 
+function M.test_vsn1_bundle_loads_via_core()
+    -- VSN1 handler bundle: lazy-loaded after the screen UI bundle.
+    local core = dofile("dist/sequencer.lua")
+    package.loaded["sequencer"] = core
+    local ui   = dofile("dist/sequencer_ui.lua")
+    local app  = dofile("dist/sequencer_vsn1.lua")
+    package.loaded["sequencer"] = nil
+
+    if type(app.init)     ~= "function" then error("vsn1 missing init()") end
+    if type(app.onKey)    ~= "function" then error("vsn1 missing onKey()") end
+    if type(app.pushEN16) ~= "function" then error("vsn1 missing pushEN16()") end
+
+    -- init wires the screen controls module
+    core.Core.engine.init({ trackCount = 4, stepsPerTrack = 64 })
+    local ret = app.init(ui.screen)
+    if ret ~= app then error("init() must return the app module") end
+    if app.CTL ~= ui.screen then error("init() must store controls in CTL") end
+end
+
 function M.test_en16_bundle_loads_via_core()
     -- EN16 bundle is standalone (no Core dependency). The UI shim's
     -- fall-through path is unused. Wiring through it anyway proves harmless.
@@ -57,8 +76,8 @@ function M.test_en16_bundle_loads_via_core()
     if type(en16.H)        ~= "function" then error("EN16 missing H()") end
     if type(en16.refresh)  ~= "function" then error("EN16 missing refresh()") end
 
-    -- mu=0 (none muted), focus=1 (NOTE), sel=1, cap=16
-    en16.U(0, 1, 1, 16)
+    -- mu=0 (none muted), focus=2 (NOTE), sel=1, cap=16, tr=1, all values 0
+    en16.U(0, 2, 1, 16, 1, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0)
 
     local emits = 0
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
@@ -68,15 +87,15 @@ function M.test_en16_bundle_loads_via_core()
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
     if emits ~= 16 then error("color cache failed: re-emitted on idle refresh") end
 
-    -- focus change -> dirties; cells re-emit (at minimum the selection cell)
-    en16.U(0, 2, 1, 16)
+    -- value change on slot 5 -> brightness changes -> re-emit
+    en16.U(0, 2, 1, 16, 1, 0,0,0,0, 127,0,0,0, 0,0,0,0, 0,0,0,0)
     local before = emits
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
-    if emits == before then error("focus change should re-emit colors") end
+    if emits == before then error("value change should re-emit affected slot") end
 
     -- mute mask: bit 2 set (slot 3 muted) -> slot 3 must repaint
     before = emits
-    en16.U(1 << 2, 2, 1, 16)
+    en16.U(1 << 2, 2, 1, 16, 1, 0,0,0,0, 127,0,0,0, 0,0,0,0, 0,0,0,0)
     en16.refresh(function(_, _, _, _) emits = emits + 1 end)
     if emits == before then error("mute mask change should re-emit slot 3") end
 

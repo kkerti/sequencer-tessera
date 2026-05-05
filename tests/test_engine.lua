@@ -10,8 +10,8 @@ function M.test_init_creates_tracks()
     Engine.init({ trackCount = 4, stepsPerTrack = 64 })
     eq(#Engine.tracks, 4)
     eq(Engine.tracks[1].cap, 64)
-    eq(Engine.tracks[1].chan, 1)
-    eq(Engine.tracks[4].chan, 4)
+    eq(Engine.tracks[1].chan, 0)
+    eq(Engine.tracks[4].chan, 3)
 end
 
 function M.test_pulse_when_stopped_returns_nil()

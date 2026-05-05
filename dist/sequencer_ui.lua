@@ -1,4 +1,4 @@
--- dist/sequencer_ui.lua (auto-generated; Controls layer)
+-- dist/sequencer_ui.lua (auto-generated; screen controls)
 local R={}
 local _hostReq = require
 local _seq
@@ -13,40 +13,50 @@ R["controls"]=(function()
 local Engine = require("engine")
 local Step = require("step")
 local M = {}
-local MR = { 30, 255, 240, 220, 60, 180, 230 }
-local MG = { 200, 140, 210, 50, 120, 90, 230 }
-local MB = { 220, 30, 40, 50, 255, 230, 75 }
-local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "KEY", "LAST" }
-local PC_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
+local MN = { "STEP", "NOTE", "VEL", "GATE", "MUTE", "LAST" }
 local SWING_PCT = { "50", "58", "67", "75" }
-M.MODE_NOTE = 1
-M.MODE_VEL = 2
-M.MODE_GATE = 3
-M.MODE_MUTE = 4
-M.MODE_STEP = 5
-M.MODE_KEY = 6
-M.MODE_LASTSTEP = 7
+local DUR_LADDER = { 3, 6, 12, 18, 24, 30 }
+local function durIndex(v)
+ local best, bestd = 1, math.huge
+ for i = 1, #DUR_LADDER do
+ local d = math.abs(DUR_LADDER[i] - v)
+ if d < bestd then bestd = d; best = i end
+ end
+ return best
+end
+M.MODE_STEP = 1
+M.MODE_NOTE = 2
+M.MODE_VEL = 3
+M.MODE_GATE = 4
+M.MODE_MUTE = 5
+M.MODE_LASTSTEP = 6
 M.MODES = MN
-function M.modeColor(i) return MR[i], MG[i], MB[i] end
-M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
+M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 2, false
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
 local dirty = true
 local SWING_DETENTS = 4
 local swingAccum = 0
+local function bumpDur(t, s, d)
+ local cur = Step.dur(Engine.tracks[t].steps[s])
+ local idx = durIndex(cur) + d
+ if idx < 1 then idx = 1 elseif idx > #DUR_LADDER then idx = #DUR_LADDER end
+ Engine.setStepParam(t, s, "dur", DUR_LADDER[idx])
+end
 local function setParam(i, t, s, d)
  local stp = Engine.tracks[t].steps[s]
- if i == 1 then
- Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d)
- elseif i == 2 then
- Engine.setStepParam(t, s, "vel", Step.vel(stp) + d)
+ local big = M.shift and 12 or 1
+ if i == 2 then
+ Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d * big)
  elseif i == 3 then
+ Engine.setStepParam(t, s, "vel", Step.vel(stp) + d * big)
+ elseif i == 4 then
  if M.shift then
- Engine.setStepParam(t, s, "dur", Step.dur(stp) + d)
+ bumpDur(t, s, d)
  else
  Engine.setStepParam(t, s, "gate", Step.gate(stp) + d)
  end
- elseif i == 4 then
+ elseif i == 5 then
  Engine.setStepParam(t, s, "mute", Step.muted(stp) and 0 or 1)
  end
  dirty = true
@@ -74,7 +84,7 @@ function M.setViewport(v)
 end
 function M.onEndless(dir)
  local f = M.focus
- if f == 7 then
+ if f == M.MODE_LASTSTEP then
  if M.shift then
  swingAccum = swingAccum + dir
  local step = 0
@@ -91,27 +101,21 @@ function M.onEndless(dir)
  local tr = Engine.tracks[M.selT]
  Engine.setLastStep(M.selT, tr.lastStep + dir)
  end
- elseif f == 6 then
- if M.shift then
- Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
- else
- Engine.setRootPitch(Engine.rootPitch + dir)
- end
- elseif f == 5 then
+ elseif f == M.MODE_STEP then
  local tr = Engine.tracks[M.selT]
  local s = M.selS + dir
  if s < 1 then s = tr.lastStep end
  if s > tr.lastStep then s = 1 end
  M.setSelectedStep(s); return
- elseif f >= 1 and f <= 4 then
+ elseif f >= M.MODE_NOTE and f <= M.MODE_MUTE then
  setParam(f, M.selT, M.selS, dir)
  end
  dirty = true
 end
 function M.onEndlessClick()
  local f = M.focus
- if f == 5 then return end
- if f == 7 then
+ if f == M.MODE_STEP then return end
+ if f == M.MODE_LASTSTEP then
  if M.shift then
  Engine.setSwing(0)
  swingAccum = 0
@@ -119,23 +123,12 @@ function M.onEndlessClick()
  end
  return
  end
- if f == 6 then
- Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
- dirty = true
- return
- end
  local stp = Engine.tracks[M.selT].steps[M.selS]
- if f == 4 and M.shift then
- Engine.setStepParam(M.selT, M.selS, "ratch",
- Step.ratch(stp) and 0 or 1)
- else
- Engine.setStepParam(M.selT, M.selS, "mute",
- Step.muted(stp) and 0 or 1)
- end
+ Engine.setStepParam(M.selT, M.selS, "mute", Step.muted(stp) and 0 or 1)
  dirty = true
 end
 function M.onKey(idx)
- if idx < 1 or idx > 7 or idx == M.focus then return end
+ if idx < 1 or idx > #MN or idx == M.focus then return end
  M.focus = idx; swingAccum = 0; dirty = true
 end
 function M.setShift(b)
@@ -154,6 +147,17 @@ local C_FG = { 240, 240, 240 }
 local C_DIM = { 110, 110, 115 }
 local C_LINE = { 60, 60, 65 }
 local C_OOR = { 35, 35, 40 }
+local C_HI = { 60, 60, 65 }
+local C_HIFG = { 255, 255, 255 }
+local C_WELL = { 55, 55, 58 }
+local C_BAR = { 220, 220, 225 }
+local C_MUTE = { 160, 30, 30 }
+local C_TRACK = {
+ { 60, 130, 255 },
+ { 255, 140, 20 },
+ { 60, 200, 90 },
+ { 180, 80, 220 },
+}
 local ROW_H = 22
 local PARAMS = 5
 local LS_Y = ROW_H * (1 + PARAMS) + 2
@@ -161,78 +165,65 @@ local LS_H = ROW_H
 local STR_Y = LS_Y + LS_H + 4
 local STR_H = 240 - STR_Y - 1
 local COL_W = 20
-local function valueOf(stp, i)
- if i == 1 then return Step.pitch(stp), 127 end
- if i == 2 then return Step.vel(stp), 127 end
- if i == 3 then
- if M.shift then return Step.dur(stp), 127 end
- return Step.gate(stp), 127
- end
- if i == 4 then return Step.muted(stp) and 0 or 1, 1 end
- if i == 5 then return M.selS, Engine.tracks[M.selT].lastStep end
- return 0, 1
-end
-local function rgb(i) return { MR[i], MG[i], MB[i] } end
 function M.draw(scr)
  if not dirty then return end
  dirty = false
  local tr = Engine.tracks[M.selT]
  local stp = tr.steps[M.selS]
  local f = M.focus
+ local sh = M.shift
  scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
- local p = Step.pitch(stp)
- local tail
- if f == 6 then
- tail = PC_NAMES[Engine.rootPitch + 1]
- .. " " .. (Engine.scaleMode == 0 and "maj" or "min")
- else
- tail = Step.noteName(p)
- end
  local sw = Engine.swing
- local showSwHere = (f == 7 and M.shift)
- local swSuffix = (sw > 0 and not showSwHere)
- and (" sw " .. SWING_PCT[sw + 1] .. "%") or ""
+ local showSwHere = (f == M.MODE_LASTSTEP and sh)
+ local swSuffix = (sw > 0 and not showSwHere) and " sw" or ""
+ local tcol = C_TRACK[M.selT] or C_FG
+ scr:draw_rectangle_filled(2, 2, 38, 20, tcol)
+ scr:draw_text_fast("T" .. M.selT, 8, 4, 16, C_HIFG)
  scr:draw_text_fast(
- "T" .. M.selT .. " S" .. M.selS .. " V" .. M.viewport
- .. " " .. MN[f] .. " " .. tail .. swSuffix,
- 4, 4, 14, rgb(f))
+ "S" .. M.selS .. " V" .. M.viewport
+ .. " " .. MN[f] .. " " .. Step.noteName(Step.pitch(stp))
+ .. swSuffix,
+ 56, 4, 16, C_FG)
  for i = 1, PARAMS do
  local y = ROW_H * i
  local active = (i == f)
  if active then
- scr:draw_rectangle_filled(0, y, 319, y + ROW_H - 1, rgb(i))
+ scr:draw_rectangle_filled(0, y, 319, y + ROW_H - 1, C_HI)
  end
- local fg = active and C_FG or C_DIM
- local v, _ = valueOf(stp, i)
+ local fg = active and C_HIFG or C_DIM
  local txt
- if i == 4 then
- txt = (v == 1) and "audible" or "MUTED"
- if Step.ratch(stp) then txt = txt .. " R" end
- elseif i == 3 and M.shift then
- txt = "dur " .. v
+ if i == M.MODE_STEP then
+ txt = "step " .. M.selS
+ elseif i == M.MODE_NOTE then
+ txt = "note " .. Step.pitch(stp) .. " " .. Step.noteName(Step.pitch(stp))
+ elseif i == M.MODE_VEL then
+ txt = "vel " .. Step.vel(stp)
+ elseif i == M.MODE_GATE then
+ if sh and active then
+ txt = "dur " .. Step.dur(stp)
  else
- txt = MN[i]:lower() .. " " .. v
+ txt = "gate " .. Step.gate(stp)
  end
- scr:draw_text_fast(txt, 6, y + 4, 14, fg)
+ elseif i == M.MODE_MUTE then
+ txt = Step.muted(stp) and "mute MUTED" or "mute audible"
+ end
+ scr:draw_text_fast(txt, 6, y + 4, 16, fg)
  end
  scr:draw_rectangle_filled(0, LS_Y - 2, 319, LS_Y - 1, C_LINE)
- if f == 7 then
- scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, rgb(7))
+ local lsActive = (f == M.MODE_LASTSTEP)
+ if lsActive then
+ scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, C_HI)
  end
  local lsTxt
- if f == 7 and M.shift then
- lsTxt = "swing " .. SWING_PCT[Engine.swing + 1] .. "%"
+ if lsActive and sh then
+ lsTxt = "swing " .. SWING_PCT[sw + 1] .. "%"
  else
  lsTxt = "last " .. tr.lastStep
  end
- scr:draw_text_fast(lsTxt, 6, LS_Y + 4, 14,
- f == 7 and C_FG or C_DIM)
+ scr:draw_text_fast(lsTxt, 6, LS_Y + 4, 16,
+ lsActive and C_HIFG or C_DIM)
  local lo = vplo(M.viewport)
- local fr, fg_, fb = MR[f], MG[f], MB[f]
- local C_WELL = { (fr * 60) // 255, (fg_ * 60) // 255, (fb * 60) // 255 }
- local C_BAR = { fr, fg_, fb }
- local C_MUTE = { 70, 18, 22 }
- local heat = (f == 1 or f == 2 or f == 3)
+ local heat = (f == M.MODE_NOTE or f == M.MODE_VEL or f == M.MODE_GATE)
  local y0, y1 = STR_Y, STR_Y + STR_H - 1
  for c = 1, 16 do
  local s = lo + c - 1
@@ -248,9 +239,9 @@ function M.draw(scr)
  scr:draw_rectangle_filled(x0, y0, x1, y1, wellC)
  if heat and not oor and not mut then
  local v
- if f == 1 then v = Step.pitch(cs)
- elseif f == 2 then v = Step.vel(cs)
- else v = M.shift and Step.dur(cs) or Step.gate(cs) end
+ if f == M.MODE_NOTE then v = Step.pitch(cs)
+ elseif f == M.MODE_VEL then v = Step.vel(cs)
+ else v = sh and Step.dur(cs) or Step.gate(cs) end
  local bh = (STR_H * v) // 127
  if bh > 0 then
  scr:draw_rectangle_filled(x0, y1 - bh + 1, x1, y1, C_BAR)

@@ -136,9 +136,9 @@ function M.test_muted_cell_has_no_bar_and_uses_mute_well_colour()
     Controls.draw(scr)
     if cellBar(scr, 5) then error("muted cell must not draw a bar") end
     local w = cellWell(scr, 5)
-    eq(w.r, 70, "muted well R")
-    eq(w.g, 18, "muted well G")
-    eq(w.b, 22, "muted well B")
+    eq(w.r, 160, "muted well R")
+    eq(w.g, 30,  "muted well G")
+    eq(w.b, 30,  "muted well B")
 end
 
 function M.test_oor_cell_has_no_bar_and_uses_oor_well_colour()

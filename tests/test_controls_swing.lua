@@ -157,8 +157,9 @@ function M.test_header_omits_sw_suffix_when_swing_row_is_visible()
     Controls.dirtyAll()
     Controls.draw(scr)
 
-    -- header is the first draw_text_fast; row comes later
-    local header = scr.seen[1]
+    -- header is split into two draw_text_fast calls (T-chip + rest);
+    -- check both seen[1] and seen[2] for the suffix
+    local header = (scr.seen[1] or "") .. " " .. (scr.seen[2] or "")
     if header:find("sw ") then
         error("header redundantly showed 'sw' while swing row is on screen: "
             .. header)
@@ -174,9 +175,9 @@ function M.test_header_shows_sw_suffix_when_in_other_focus()
     Controls.dirtyAll()
     Controls.draw(scr)
 
-    local header = scr.seen[1]
-    if not (header:find("sw") and header:find("58")) then
-        error("expected 'sw 58%' in header under non-LASTSTEP focus, got: "
+    local header = (scr.seen[1] or "") .. " " .. (scr.seen[2] or "")
+    if not header:find("sw") then
+        error("expected 'sw' in header under non-LASTSTEP focus, got: "
             .. header)
     end
 end

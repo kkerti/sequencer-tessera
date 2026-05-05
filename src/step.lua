@@ -6,9 +6,8 @@
 --   7-13  velocity     7b 0..127
 --   14-20 duration     7b 0..127 pulses
 --   21-27 gate         7b 0..127 pulses
---   28    ratchet      1b
---   29    mute         1b   (1 = silenced; default 0 = audible)
---   30-36 (free)       7b   reserved
+--   28    mute         1b   (1 = silenced; default 0 = audible)
+--   29-36 (free)       8b   reserved
 --
 -- One Lua integer per step. No tables.
 
@@ -26,8 +25,7 @@ local SH_PITCH = 0
 local SH_VEL   = 7
 local SH_DUR   = 14
 local SH_GATE  = 21
-local SH_RAT   = 28
-local SH_MUTE  = 29
+local SH_MUTE  = 28
 
 local function clamp7(v) if v < 0 then return 0 elseif v > 127 then return 127 else return v end end
 local function clamp1(v) if v and v ~= 0 then return 1 else return 0 end end
@@ -38,10 +36,9 @@ function M.pack(t)
     local v = clamp7(t.vel or 100)
     local d = clamp7(t.dur or 6)
     local g = clamp7(t.gate or 3)
-    local r = clamp1(t.ratch)
     local m = clamp1(t.mute)              -- default false/0 = audible
     return shl(p, SH_PITCH) | shl(v, SH_VEL) | shl(d, SH_DUR) | shl(g, SH_GATE)
-         | shl(r, SH_RAT)   | shl(m, SH_MUTE)
+         | shl(m, SH_MUTE)
 end
 
 -- field getters (cheap, inline-friendly)
@@ -49,7 +46,6 @@ function M.pitch(s)   return band(shr(s, SH_PITCH), M7) end
 function M.vel(s)     return band(shr(s, SH_VEL),   M7) end
 function M.dur(s)     return band(shr(s, SH_DUR),   M7) end
 function M.gate(s)    return band(shr(s, SH_GATE),  M7) end
-function M.ratch(s)   return band(shr(s, SH_RAT),   1) == 1 end
 function M.muted(s)   return band(shr(s, SH_MUTE),  1) == 1 end
 
 -- field setters return a new packed int
@@ -62,7 +58,6 @@ local FIELD = {
     vel   = { SH_VEL,   M7, clamp7 },
     dur   = { SH_DUR,   M7, clamp7 },
     gate  = { SH_GATE,  M7, clamp7 },
-    ratch = { SH_RAT,   1,  clamp1 },
     mute  = { SH_MUTE,  1,  clamp1 },
 }
 
@@ -76,12 +71,11 @@ function M.get(s, name)
     elseif name == "vel"   then return M.vel(s)
     elseif name == "dur"   then return M.dur(s)
     elseif name == "gate"  then return M.gate(s)
-    elseif name == "ratch" then return M.ratch(s) and 1 or 0
     elseif name == "mute"  then return M.muted(s) and 1 or 0
     end
 end
 
-M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute" }
+M.FIELDS = { "pitch", "vel", "dur", "gate", "mute" }
 
 -- MIDI note name. 60 = C4 (Yamaha/Ableton convention). Sharps only.
 -- Range: pitch 0 = C-1, pitch 127 = G9.

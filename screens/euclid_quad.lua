@@ -128,6 +128,15 @@ for ti=1,4 do
   ggdft(0,'E('..t.k..','..t.n..')',cx-R+12,cy-R-22,8,FG)
   if t.rot>0 then ggdft(0,'r'..t.rot,cx+R-14,cy-R-22,8,DIM) end
 
+  -- faint dotted ring outline so the circle is always visible
+  -- (n slots is too sparse for n<=8; sample 32 points around the ring)
+  for i=0,31 do
+    local a=-1.5707963+TAU*i/32
+    local x=cx+math.floor(R*math.cos(a)+0.5)
+    local y=cy+math.floor(R*math.sin(a)+0.5)
+    ggdpx(0,x,y,RING)
+  end
+
   -- compute and draw slots
   local hitsX,hitsY={},{}
   local nh=0
@@ -143,11 +152,14 @@ for ti=1,4 do
       nh=nh+1; hitsX[nh]=x; hitsY[nh]=y
       ggdrf(0,x-rDot,y-rDot,x+rDot,y+rDot,C)
     else
-      ggdpx(0,x,y,RING)
-      ggdpx(0,x+1,y,RING)
-      ggdpx(0,x,y+1,RING)
-      ggdpx(0,x+1,y+1,RING)
+      -- rest: outlined 5x5 square so it reads against the ring
+      ggdr(0,x-2,y-2,x+2,y+2,DIM)
     end
+  end
+
+  -- empty-pattern guard: label cell so it never reads as broken
+  if nh==0 then
+    ggdft(0,'OFF',cx-9,cy-4,8,DIM)
   end
 
   -- polygon connector

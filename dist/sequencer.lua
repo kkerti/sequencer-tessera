@@ -13,8 +13,7 @@ local SH_PITCH = 0
 local SH_VEL = 7
 local SH_DUR = 14
 local SH_GATE = 21
-local SH_RAT = 28
-local SH_MUTE = 29
+local SH_MUTE = 28
 local function clamp7(v) if v < 0 then return 0 elseif v > 127 then return 127 else return v end end
 local function clamp1(v) if v and v ~= 0 then return 1 else return 0 end end
 function M.pack(t)
@@ -22,16 +21,14 @@ function M.pack(t)
  local v = clamp7(t.vel or 100)
  local d = clamp7(t.dur or 6)
  local g = clamp7(t.gate or 3)
- local r = clamp1(t.ratch)
  local m = clamp1(t.mute)
  return shl(p, SH_PITCH) | shl(v, SH_VEL) | shl(d, SH_DUR) | shl(g, SH_GATE)
- | shl(r, SH_RAT) | shl(m, SH_MUTE)
+ | shl(m, SH_MUTE)
 end
 function M.pitch(s) return band(shr(s, SH_PITCH), M7) end
 function M.vel(s) return band(shr(s, SH_VEL), M7) end
 function M.dur(s) return band(shr(s, SH_DUR), M7) end
 function M.gate(s) return band(shr(s, SH_GATE), M7) end
-function M.ratch(s) return band(shr(s, SH_RAT), 1) == 1 end
 function M.muted(s) return band(shr(s, SH_MUTE), 1) == 1 end
 local function setField(s, shift, mask, value)
  return (s & ~shl(mask, shift)) | shl(value & mask, shift)
@@ -41,7 +38,6 @@ local FIELD = {
  vel = { SH_VEL, M7, clamp7 },
  dur = { SH_DUR, M7, clamp7 },
  gate = { SH_GATE, M7, clamp7 },
- ratch = { SH_RAT, 1, clamp1 },
  mute = { SH_MUTE, 1, clamp1 },
 }
 function M.set(s, name, value)
@@ -53,11 +49,10 @@ function M.get(s, name)
  elseif name == "vel" then return M.vel(s)
  elseif name == "dur" then return M.dur(s)
  elseif name == "gate" then return M.gate(s)
- elseif name == "ratch" then return M.ratch(s) and 1 or 0
  elseif name == "mute" then return M.muted(s) and 1 or 0
  end
 end
-M.FIELDS = { "pitch", "vel", "dur", "gate", "ratch", "mute" }
+M.FIELDS = { "pitch", "vel", "dur", "gate", "mute" }
 local NOTE_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 function M.noteName(p)
  if p < 0 then p = 0 elseif p > 127 then p = 127 end
@@ -80,15 +75,13 @@ function M.new(cap)
  return {
  steps = steps,
  cap = cap,
- chan = 1,
+ chan = 0,
  lastStep = M.DEFAULT_LAST_STEP,
  pos = 0,
  stepAcc = 0,
  stepLen = 0,
  actPitch = -1,
  actOff = 0,
- ratNext = 0,
- ratState = 0,
  }
 end
 local function nextPos(tr)
@@ -121,12 +114,6 @@ local function fireStep(tr, out)
  tr.actPitch = p
  tr.actOff = g
  end
- if Step.ratch(s) then
- tr.ratNext = g
- tr.ratState = 1
- else
- tr.ratNext = 0
- end
 end
 function M.advance(tr, out)
  if tr.stepAcc <= 0 then
@@ -141,26 +128,6 @@ function M.advance(tr, out)
  if tr.actOff > 0 then
  tr.actOff = tr.actOff - 1
  if tr.actOff == 0 then emitOff(tr, out) end
- end
- end
- if tr.ratNext > 0 then
- tr.ratNext = tr.ratNext - 1
- if tr.ratNext == 0 then
- local s = tr.steps[tr.pos]
- local g = Step.gate(s)
- if g > tr.stepLen then g = tr.stepLen end
- if tr.ratState == 1 then
- emitOff(tr, out)
- tr.ratState = 0
- tr.ratNext = g
- else
- local p, v = Step.pitch(s), Step.vel(s)
- out[#out+1] = { type=EV_ON, pitch=p, vel=v, ch=tr.chan }
- tr.actPitch = p
- tr.actOff = g
- tr.ratState = 1
- tr.ratNext = g
- end
  end
  end
  tr.stepAcc = tr.stepAcc - 1
@@ -183,8 +150,6 @@ function M.reset(tr)
  tr.stepLen = 0
  tr.actPitch = -1
  tr.actOff = 0
- tr.ratNext = 0
- tr.ratState = 0
 end
 function M.allOff(tr, out)
  emitOff(tr, out)
@@ -198,8 +163,6 @@ local Track = require("track")
 local M = {}
 M.tracks = {}
 M.running = false
-M.rootPitch = 0
-M.scaleMode = 0
 M.pulseCount = 0
 M.swing = 0
 local logFn = nil
@@ -210,13 +173,11 @@ function M.init(opts)
  M.tracks = {}
  for i = 1, n do
  M.tracks[i] = Track.new(cap)
- M.tracks[i].chan = i
+ M.tracks[i].chan = i - 1
  end
  M.running = false
  M.pulseCount = 0
  M.swing = 0
- M.rootPitch = 0
- M.scaleMode = 0
  M._swingOwed = {}
  for i = 1, n do M._swingOwed[i] = 0 end
  logFn = opts.log
@@ -279,15 +240,9 @@ function M.setLastStep(t, n)
 end
 function M.setTrackChan(t, ch)
  local tr = M.tracks[t]; if not tr then return end
- if ch < 1 then ch = 1 end
- if ch > 16 then ch = 16 end
+ if ch < 0 then ch = 0 end
+ if ch > 15 then ch = 15 end
  tr.chan = ch
-end
-function M.setRootPitch(p)
- M.rootPitch = p % 12
-end
-function M.setScaleMode(m)
- M.scaleMode = (m ~= 0) and 1 or 0
 end
 function M.setSwing(s)
  if s < 0 then s = 0 elseif s > 3 then s = 3 end
@@ -296,12 +251,46 @@ end
 return M
 
 end)()
+R["midi_rx"]=(function()
+
+local Engine = require("engine")
+local M = {}
+function M.handle(t, send)
+ if t == 0xF8 then
+ local events = Engine.onPulse()
+ if events then
+ for i = 1, #events do
+ local e = events[i]
+ if e.type == 1 then send(e.ch, 0x90, e.pitch, e.vel)
+ else send(e.ch, 0x80, e.pitch, 0) end
+ end
+ end
+ return "tick"
+ elseif t == 0xFA then
+ Engine.onStart()
+ return "start"
+ elseif t == 0xFB then
+ if not Engine.running then Engine.onStart() end
+ return "start"
+ elseif t == 0xFC then
+ local off = Engine.onStop()
+ if off then
+ for i = 1, #off do send(off[i].ch, 0x80, off[i].pitch, 0) end
+ end
+ return "stop"
+ end
+end
+return M
+
+end)()
 return {
-    Core     = { step = R.step, track = R.track, engine = R.engine },
+    Core     = { step = R.step, track = R.track, engine = R.engine, midi_rx = R.midi_rx },
+    App      = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     HAL      = {},
     -- flat aliases (same table refs); UI bundle resolves through these
-    step   = R.step,
-    track  = R.track,
-    engine = R.engine,
+    step    = R.step,
+    track   = R.track,
+    engine  = R.engine,
+    midi_rx = R.midi_rx,
 }

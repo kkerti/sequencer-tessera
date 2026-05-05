@@ -9,8 +9,6 @@ local M = {}
 
 M.tracks = {}     -- public read; UI may read directly
 M.running = false
-M.rootPitch = 0   -- 0..11 (C..B); display-only key signature, global
-M.scaleMode = 0   -- 0 = major, 1 = minor; display-only, global
 M.pulseCount = 0  -- absolute pulse counter since last onStart; for swing grid
 M.swing = 0       -- 0..3 pulses of delay applied to off-beat 16ths (24 PPQN)
 local logFn = nil
@@ -22,13 +20,11 @@ function M.init(opts)
     M.tracks = {}
     for i = 1, n do
         M.tracks[i] = Track.new(cap)
-        M.tracks[i].chan = i
+        M.tracks[i].chan = i - 1     -- channels are 0-based on the wire
     end
     M.running = false
     M.pulseCount = 0
     M.swing = 0
-    M.rootPitch = 0
-    M.scaleMode = 0
     -- swingOwed[i] = pulses each track was deferred and must compensate on
     -- its next real fire. Preallocated; never reassigned.
     M._swingOwed = {}
@@ -119,19 +115,9 @@ end
 
 function M.setTrackChan(t, ch)
     local tr = M.tracks[t]; if not tr then return end
-    if ch < 1 then ch = 1 end
-    if ch > 16 then ch = 16 end
+    if ch < 0 then ch = 0 end
+    if ch > 15 then ch = 15 end
     tr.chan = ch
-end
-
--- Display-only key signature. Global to all tracks. Engine never reads
--- these values during onPulse — they exist only for the UI to show.
-function M.setRootPitch(p)
-    M.rootPitch = p % 12
-end
-
-function M.setScaleMode(m)
-    M.scaleMode = (m ~= 0) and 1 or 0
 end
 
 -- Global swing depth in pulses (0..3 at 24 PPQN → 50/58/67/75% feel).

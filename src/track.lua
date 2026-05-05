@@ -36,7 +36,7 @@ function M.new(cap)
     return {
         steps    = steps,
         cap      = cap,
-        chan     = 1,
+        chan     = 0,
         lastStep = M.DEFAULT_LAST_STEP,
         -- runtime
         pos      = 0,        -- last fired step (0 = none yet)
@@ -45,9 +45,6 @@ function M.new(cap)
         -- active note slot
         actPitch = -1,
         actOff   = 0,        -- pulses until NOTE_OFF; 0 = no active note
-        -- ratchet bookkeeping
-        ratNext  = 0,
-        ratState = 0,
     }
 end
 
@@ -88,13 +85,6 @@ local function fireStep(tr, out)
         tr.actPitch = p
         tr.actOff   = g
     end
-
-    if Step.ratch(s) then
-        tr.ratNext  = g
-        tr.ratState = 1
-    else
-        tr.ratNext  = 0
-    end
 end
 
 -- advance: called once per *engine* pulse.
@@ -111,28 +101,6 @@ function M.advance(tr, out)
         if tr.actOff > 0 then
             tr.actOff = tr.actOff - 1
             if tr.actOff == 0 then emitOff(tr, out) end
-        end
-    end
-
-    -- ratchet toggle inside current step
-    if tr.ratNext > 0 then
-        tr.ratNext = tr.ratNext - 1
-        if tr.ratNext == 0 then
-            local s = tr.steps[tr.pos]
-            local g = Step.gate(s)
-            if g > tr.stepLen then g = tr.stepLen end
-            if tr.ratState == 1 then
-                emitOff(tr, out)
-                tr.ratState = 0
-                tr.ratNext  = g
-            else
-                local p, v = Step.pitch(s), Step.vel(s)
-                out[#out+1] = { type=EV_ON, pitch=p, vel=v, ch=tr.chan }
-                tr.actPitch = p
-                tr.actOff   = g
-                tr.ratState = 1
-                tr.ratNext  = g
-            end
         end
     end
 
@@ -163,8 +131,6 @@ function M.reset(tr)
     tr.stepLen  = 0
     tr.actPitch = -1
     tr.actOff   = 0
-    tr.ratNext  = 0
-    tr.ratState = 0
 end
 
 function M.allOff(tr, out)

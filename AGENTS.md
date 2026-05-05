@@ -38,9 +38,10 @@ with an extremely small memory footprint.
    and per-step `dur` differences are first-class and visible.
 3. **Every parameter the engine supports has a control surface.** If we
    can't edit it, we cut it. (Probability was cut for exactly this reason.)
-4. **Color as identity.** Each editable parameter has one RGB color
-   defined in `controls.MODES`. That color follows the user across
-   modules: VSN1 header word, VSN1 active param row, EN16 turn-layer LED.
+4. **Brightness as identity.** No per-mode hues. The active param row on
+   the VSN1 screen is highlighted via inverted brightness; on the EN16
+   the focused parameter's value drives per-LED brightness (white-grey).
+   Mute is the only colored signal — red, on both surfaces.
 5. **EN16 is the keyboard; VSN1 is the monitor.** Fast per-step edits
    on EN16 (encoders 1..16 = current viewport's 16 steps of selected
    track). Deep info on VSN1.
@@ -68,10 +69,13 @@ src/
   step.lua          packed-int step encode/decode
   track.lua         track state + advance
   engine.lua        4 tracks, onPulse, onStart, onStop
+  vsn1_app.lua      VSN1 entry-point logic (init, EU, MIDI rx, all input
+                    handlers, cross-module receivers). Bundled into Core
+                    so VSN1.lua's per-event scriptlets stay <800 chars.
   driver_stdio.lua  macOS event sink (stdout line protocol)
   driver_grid.lua   Grid event sink (midi.send)
-  controls.lua      VSN1 UI: 7-mode EDIT screen + LASTSTEP screen
-  controls_en16.lua EN16 module UI: 16 push-encoders + RGB LEDs (2 layers)
+  controls.lua      VSN1 UI: 6-mode EDIT screen + LASTSTEP/swing row
+  controls_en16.lua EN16 module UI: 16 push-encoders + RGB LEDs (greyscale + mute red)
 patches/            test patterns (human form, packed on load)
 tools/
   build_dist.lua    minify + strip → dist/sequencer.lua
@@ -94,9 +98,8 @@ docs/
 | 7–13  | velocity    | 0–127      |
 | 14–20 | duration    | 0–127 pulses |
 | 21–27 | gate        | 0–127 pulses |
-| 28    | ratchet     | 0/1        |
-| 29    | mute        | 0/1        |
-| 30–36 | (free)      | reserved   |
+| 28    | mute        | 0/1        |
+| 29–36 | (free)      | reserved   |
 
 One Lua integer per step. No per-step tables. 64 steps × 4 tracks = 256 ints.
 
@@ -127,7 +130,7 @@ delay applied to fires that land on the off-beat 16th of a quarter
 (`pulseCount % 12 == 6`). Stored as an int (50/58/67/75% feel). Affects
 all 4 tracks identically. Implemented in `engine.onPulse` by pre-bumping
 the firing track's `stepAcc` so the fire is deferred by `swing` pulses;
-note-off and ratchet logic still tick every pulse. Swing only acts on
+note-off logic still ticks every pulse. Swing only acts on
 fires that coincide with the swing grid — tracks programmed off-grid via
 `dur` are unaffected, by design. Engine still has no BPM concept; swing
 is expressed in clock pulses, not milliseconds.
@@ -152,7 +155,7 @@ engine.onStart()
 engine.onStop()
 local events = engine.onPulse()  -- array of {type, pitch, vel, ch} or nil
 
-engine.setStepParam(t, i, name, val)   -- name ∈ pitch/vel/dur/gate/ratch/mute
+engine.setStepParam(t, i, name, val)   -- name ∈ pitch/vel/dur/gate/mute
 engine.setLastStep(t, n)
 engine.setTrackChan(t, ch)
 ```
@@ -167,7 +170,7 @@ Events are consumed by a driver. Engine does no IO.
 | **track** | A single 64-step buffer + monophonic voice. Fixed length 64. |
 | **lastStep** | Per-track loop point. Track plays `1..lastStep` then wraps. Default 16. |
 | **viewport** | UI-only concept: which 16-step window of the buffer the screen + EN16 are showing. Indexed 1..4 (steps 1–16, 17–32, 33–48, 49–64). Global, not per track. **Not stored in the engine.** |
-| **mode** | The currently-edited focus (NOTE/VEL/GATE/MUTE/STEP/KEY/LASTSTEP). Selected by VSN1 keyswitches 1..7. DUR is reached as SHIFT+endless in GATE focus; RATCH as SHIFT+endless-click in MUTE focus. KEY (slot 6) edits a global, display-only key signature: turn = root pitch (12 chromatic steps), shift+turn or click = toggle major/minor. Engine never reads `Engine.rootPitch` / `Engine.scaleMode` during `onPulse` — they are metadata for the screen only. Each mode has a fixed RGB color defined in `controls.MODES`; the same color appears in the VSN1 header, the active param row, and the EN16 turn-layer LEDs. |
+| **mode** | The currently-edited focus (STEP/NOTE/VEL/GATE/MUTE/LASTSTEP). Selected by VSN1 keyswitches 1..6. DUR is reached as SHIFT+endless in GATE focus and snaps to the musical ladder `{3, 6, 12, 18, 24, 30}` pulses. SHIFT+turn in NOTE/VEL/GATE focus coarsens the increment to ±12 (octave / loud-soft / long-short jumps). The VSN1 screen and EN16 LEDs use no per-mode hue: highlight is brightness-only on the active param row, and EN16 LED brightness reflects the focused parameter's value per visible step. The selected step is rendered at max brightness; muted steps are red on EN16. |
 | ~~region~~ | **DEPRECATED.** Used to mean an engine-coordinated 16-step window with global at-end-of-region switching. The engine no longer has regions. The word survives only as a casual synonym for "viewport" in old comments — prefer "viewport". |
 | ~~pattern~~ | **FORBIDDEN word.** Reserved. Pattern implies independent step buffers (Model B), which we explicitly do not have. |
 | ~~scene~~  | **FORBIDDEN.** |

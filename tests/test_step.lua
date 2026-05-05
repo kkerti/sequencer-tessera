@@ -10,17 +10,15 @@ function M.test_pack_unpack_defaults()
     eq(Step.vel(s), 100, "default vel")
     eq(Step.dur(s), 6, "default dur")
     eq(Step.gate(s), 3, "default gate")
-    eq(Step.ratch(s), false, "default ratch")
     eq(Step.muted(s), false, "default muted")
 end
 
 function M.test_pack_full()
-    local s = Step.pack({ pitch=72, vel=127, dur=24, gate=12, ratch=true })
+    local s = Step.pack({ pitch=72, vel=127, dur=24, gate=12 })
     eq(Step.pitch(s), 72)
     eq(Step.vel(s), 127)
     eq(Step.dur(s), 24)
     eq(Step.gate(s), 12)
-    eq(Step.ratch(s), true)
 end
 
 function M.test_clamp()
@@ -42,12 +40,12 @@ function M.test_set_each_field_isolated()
     s = Step.set(s, "vel", 50)
     s = Step.set(s, "dur", 24)
     s = Step.set(s, "gate", 12)
-    s = Step.set(s, "ratch", 1)
+    s = Step.set(s, "mute", 1)
     eq(Step.pitch(s), 100)
     eq(Step.vel(s), 50)
     eq(Step.dur(s), 24)
     eq(Step.gate(s), 12)
-    eq(Step.ratch(s), true)
+    eq(Step.muted(s), true)
 end
 
 function M.test_note_name_basic()

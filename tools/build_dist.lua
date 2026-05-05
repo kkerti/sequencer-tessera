@@ -1,17 +1,24 @@
 -- tools/build_dist.lua
--- Build TWO bundles from src/:
---   dist/sequencer.lua     -- Core only (step + track + engine). ~10 KB.
---                             Required at module init. Engine + MIDI alone.
---   dist/sequencer_ui.lua  -- Controls layer (controls + controls_en16). ~8 KB.
---                             Lazy-loaded by VSN1.lua on first input event so
---                             pure-playback or boot-failure paths never pay
---                             the screen-UI heap cost.
+-- Build FOUR bundles from src/:
+--   dist/sequencer.lua       Core only (step + track + engine + midi_rx).
+--                            Required at VSN1 module init.
+--   dist/sequencer_ui.lua    Screen UI (controls.lua only). Lazy-loaded
+--                            on first screen draw / first input event.
+--   dist/sequencer_vsn1.lua  VSN1 handler glue (vsn1_app.lua only).
+--                            Lazy-loaded on first input event.
+--   dist/sequencer_en16.lua  EN16 satellite (controls_en16.lua only).
+--                            Loaded by the EN16 module independently.
 --
--- The UI bundle's internal require-shim falls back to the host's `require`
--- so `require("engine")` / `require("track")` / `require("step")` inside
--- the UI modules resolves through the already-loaded Core bundle. This
--- works because Core is a regular `require("sequencer")` whose three-layer
--- table makes step/track/engine available as flat aliases.
+-- The reason the UI lives in two separate bundles instead of one larger
+-- one: bundle-load itself was rebooting the VSN1 module on device. Two
+-- thin bundles loaded sequentially keeps each load step well within the
+-- watchdog budget.
+--
+-- The UI/VSN1 bundles' internal require-shim falls back to the host's
+-- `require` so `require("engine")` / `require("track")` / `require("step")`
+-- inside those modules resolves through the already-loaded Core bundle.
+-- This works because Core is a regular `require("sequencer")` whose
+-- three-layer table makes step/track/engine available as flat aliases.
 --
 -- Pipeline (per file, both bundles):
 --   1. Strip comments (line + block).
@@ -27,22 +34,25 @@ local SRC = "src"
 -- Core bundle: pure logic, no IO, no UI.
 local CORE = {
     out   = "dist/sequencer.lua",
-    files = { "step", "track", "engine" },
+    files = { "step", "track", "engine", "midi_rx" },
     namespaces = [[
 return {
-    Core     = { step = R.step, track = R.track, engine = R.engine },
+    Core     = { step = R.step, track = R.track, engine = R.engine, midi_rx = R.midi_rx },
+    App      = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     HAL      = {},
     -- flat aliases (same table refs); UI bundle resolves through these
-    step   = R.step,
-    track  = R.track,
-    engine = R.engine,
+    step    = R.step,
+    track   = R.track,
+    engine  = R.engine,
+    midi_rx = R.midi_rx,
 }
 ]],
 }
 
--- UI bundle: VSN1-side Controls (screen UI only). EN16 lives in its OWN
--- bundle (dist/sequencer_en16.lua) loaded by the EN16 module independently.
+-- UI bundle: VSN1-side screen controls. Lazy-loaded together with the
+-- VSN1 bundle on first input event. EN16 lives in its OWN bundle
+-- (dist/sequencer_en16.lua) loaded by the EN16 module independently.
 local UI = {
     out   = "dist/sequencer_ui.lua",
     files = { "controls" },
@@ -50,6 +60,17 @@ local UI = {
 return {
     screen = R.controls,
 }
+]],
+}
+
+-- VSN1 bundle: handler glue (input dispatch, EN16 push). Loaded once
+-- the screen UI bundle is in memory; takes the screen-controls module
+-- as init argument.
+local VSN1 = {
+    out   = "dist/sequencer_vsn1.lua",
+    files = { "vsn1_app" },
+    namespaces = [[
+return R.vsn1_app
 ]],
 }
 
@@ -212,10 +233,11 @@ end
 -- ---------- main ----------
 
 buildBundle(CORE, SHIM_CORE, "-- dist/sequencer.lua (auto-generated; Core only)\n")
-buildBundle(UI,   SHIM_UI,   "-- dist/sequencer_ui.lua (auto-generated; Controls layer)\n")
+buildBundle(UI,   SHIM_UI,   "-- dist/sequencer_ui.lua (auto-generated; screen controls)\n")
+buildBundle(VSN1, SHIM_UI,   "-- dist/sequencer_vsn1.lua (auto-generated; VSN1 handler glue)\n")
 -- EN16 bundle is standalone (no require() of its own — controls_en16 is
 -- a pure shadow, no engine, no track, no step). The UI shim is included
 -- for future-proofing only; its fall-through path is currently unused.
 buildBundle(EN16, SHIM_UI, "-- dist/sequencer_en16.lua (auto-generated; EN16 satellite)\n")
 
-io.write("verify: both bundles parse OK\n")
+io.write("verify: all bundles parse OK\n")

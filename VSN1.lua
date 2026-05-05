@@ -3,145 +3,87 @@
 -- ON-DEVICE ENTRY POINT for the VSN1 module of the sequencer.
 -- =============================================================================
 --
--- Two-bundle layout:
---   dist/sequencer.lua      Core only. Loaded at module init.
---   dist/sequencer_ui.lua   Screen UI. Lazy-loaded by loadUI() on first
---                           input event or first screen draw. Eager load
---                           at init was too heavy and hung module boot.
+-- Lazy-load chain:
+--   [1]  init           -> require("sequencer")        (Core, ~7 KB)
+--   first user input    -> require("sequencer_ui")     (screen, ~6 KB)
+--                          require("sequencer_vsn1")   (handlers, ~3 KB)
+--
+-- Pure-playback path (MIDI rx only, never any input) never loads the
+-- UI/VSN1 bundles. This keeps boot light and respects the module
+-- watchdog: each individual `require` is small enough not to trip it.
+--
+-- All real handler logic lives in src/vsn1_app.lua (bundled into
+-- dist/sequencer_vsn1.lua). Each per-event scriptlet here is just a
+-- thin call into APP. Library bundles have no per-scriptlet size limit;
+-- only this file's sections do, but staying thin keeps copy-paste sane.
 --
 -- Hardware mapping:
---   Screen     : 320x240 EDIT view.
---   Keyswitch  : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=STEP 6=- 7=LASTSTEP 8=SHIFT.
+--   Screen     : 320x240 EDIT view (greyscale + mute red).
+--   Keyswitch  : 1=STEP 2=NOTE 3=VEL 4=GATE 5=MUTE 6=LASTSTEP 7=- 8=SHIFT.
 --   4 small btns: viewport (no shift) / track select (+ shift).
---   Endless    : turn = act-per-mode; click = mute toggle (RATCH w/SHIFT in MUTE).
---                In GATE focus, SHIFT + turn edits dur instead of gate.
+--   Endless    : turn = act-per-mode; click = mute toggle on selected step.
+--                In GATE focus, SHIFT + turn edits dur (snaps ladder).
+--                Shift + turn coarsens NOTE/VEL/GATE by x12.
 --
--- EN16 satellite (optional, at relative position dx=+1, dy=0):
---   VSN1 -> EN16   immediate_send( 1, 0, "EN16.U(mu,f,sel,cap);paint()")
---                  immediate_send( 1, 0, "EN16.H(slot);paint()")
---   EN16 -> VSN1   immediate_send(-1, 0, "vsn1_t(i,d)")
---                  immediate_send(-1, 0, "vsn1_p(i)")
--- VSN1 owns the engine. EN16 holds 5 numbers + a 16-bit mute mask.
--- Every input handler ends with EU() to push fresh state. No drain queue,
--- no dirty flags, no per-step shadow. If no EN16 is wired the message
--- goes nowhere harmlessly.
+-- EN16 satellite (optional, dx=+1, dy=0):
+--   VSN1 -> EN16   "EN16.U(mu,f,sel,cap,v1..v16);paint()"
+--                  "EN16.H(slot);paint()"
+--   EN16 -> VSN1   "vsn1_t(i,d)"  /  "vsn1_p(i)"
 -- =============================================================================
 
 
 -- =============================================================================
--- [1] MODULE INIT
+-- [1] MODULE INIT  (Core only; UI is lazy)
 -- =============================================================================
 
 SEQ    = require("sequencer")
 ENGINE = SEQ.Core.engine
 STEP   = SEQ.Core.step
+MIDIRX = SEQ.Core.midi_rx
+APP    = nil
+CTL    = nil
 
 ENGINE.init({ trackCount = 4, stepsPerTrack = 64 })
 
--- Seed track 1 with a small motif so the screen has something to show.
+-- Seed track 1 motif (kept here so the engine has content even if UI never loads).
 local notes = { 60, 63, 67, 70, 72, 67, 63, 60 }
 for i, p in ipairs(notes) do
-    ENGINE.tracks[1].steps[i] = STEP.pack({
-        pitch = p, vel = 100, dur = 6, gate = 3,
-    })
+    ENGINE.tracks[1].steps[i] = STEP.pack({ pitch = p, vel = 100, dur = 6, gate = 3 })
 end
 
--- UI is lazy-loaded. Eager require("sequencer_ui") at init was heavy
--- enough to hang module boot. loadUI() is idempotent: first input event
--- or first screen draw pays the cost; pure-playback paths never do.
-CTL = nil
-function loadUI()
-    if CTL then return end
+-- Lazy loader. Called from every input scriptlet and the first screen
+-- draw. Loads the screen UI bundle, the VSN1 handler bundle, wires them.
+function loadAPP()
+    if APP then return APP end
     local UI = require("sequencer_ui")
-    SEQ.Controls = UI
     CTL = UI.screen
-    CTL.dirtyAll()
+    APP = require("sequencer_vsn1").init(CTL)
+    return APP
 end
 
--- ---- EN16 push (single function, called at end of any input handler) ------
--- Computes mute mask (16 bits over visible viewport), focus, sel-relative,
--- visible cap. One immediate_send per call. Cheap: ~25 byte payload.
--- Caller MUST have loaded UI (every input handler does).
-local function vplo() return (CTL.viewport - 1) * 16 + 1 end
-
-function EU()
-    if not CTL then return end
-    local lo  = vplo()
-    local tr  = ENGINE.tracks[CTL.selT]
-    local s   = tr.steps
-    local mu  = 0
-    for i = 1, 16 do
-        if STEP.muted(s[lo + i - 1]) then mu = mu | (1 << (i - 1)) end
-    end
-    local sel = CTL.selS - lo + 1
-    if sel < 1 or sel > 16 then sel = 0 end
-    -- visible cap: how many of the 16 slots are <= lastStep
-    local cap = tr.lastStep - lo + 1
-    if cap > 16 then cap = 16 elseif cap < 0 then cap = 0 end
-    immediate_send(1, 0, "EN16.U(" ..
-        mu .. "," .. CTL.focus .. "," .. sel .. "," .. cap .. ");paint()")
-end
-
--- ---- EN16 playhead push (per pulse, only on slot change) ------------------
--- Runs from MIDI rx; must NOT lazy-load UI. If CTL not yet loaded, skip
--- (no UI means no viewport concept; the user hasn't interacted yet).
-EN16_LAST_PH = -1
-
-local function en16_push_playhead()
-    if not CTL then return end
-    local pos = ENGINE.tracks[CTL.selT].pos
-    local lo  = vplo()
-    local slot
-    if pos == 0 then
-        slot = 0
-    else
-        local r = pos - lo + 1
-        slot = (r >= 1 and r <= 16) and r or 0
-    end
-    if slot ~= EN16_LAST_PH then
-        EN16_LAST_PH = slot
-        immediate_send(1, 0, "EN16.H(" .. slot .. ");paint()")
-    end
-end
-
--- Boot seed for EN16: clear playhead only. Full state push happens on
--- first input event after loadUI(). This keeps boot light.
+-- Boot seed for EN16: clear playhead. Full state push happens once UI loads.
 immediate_send(1, 0, "EN16.H(0);paint()")
+
+-- Cross-module receivers (EN16 -> VSN1). Defined as globals at init so
+-- the EN16 module can target them by name.
+function vsn1_t(i, d) loadAPP().fromEN16Turn(i, d) end
+function vsn1_p(i)    loadAPP().fromEN16Press(i)   end
 
 
 -- =============================================================================
 -- [2] MIDI RX  (external clock + transport)
 -- =============================================================================
+-- Pure-playback path: NEVER loads UI. Engine + MIDI live in Core.
+-- EN16 playhead push only happens once APP is loaded (post first input).
 
 self.rtmrx_cb = function(self, t)
-    if t == 0xF8 then
-        local events = ENGINE.onPulse()
-        if events then
-            for i = 1, #events do
-                local e = events[i]
-                if e.type == 1 then
-                    midi_send(e.ch, 0x90, e.pitch, e.vel)
-                else
-                    midi_send(e.ch, 0x80, e.pitch, 0)
-                end
-            end
-        end
-        en16_push_playhead()
-    elseif t == 0xFA then
-        ENGINE.onStart()
-        EN16_LAST_PH = -1
-    elseif t == 0xFB then
-        if not ENGINE.running then ENGINE.onStart() end
-        EN16_LAST_PH = -1
-    elseif t == 0xFC then
-        local off = ENGINE.onStop()
-        if off then
-            for i = 1, #off do
-                local e = off[i]
-                midi_send(e.ch, 0x80, e.pitch, 0)
-            end
-        end
-        EN16_LAST_PH = 0
+    local r = MIDIRX.handle(t, midi_send)
+    if r == "tick" then
+        if APP then APP.pushPlayhead() end
+    elseif r == "start" then
+        if APP then APP.lastPh = -1 end
+    elseif r == "stop" then
+        if APP then APP.lastPh = 0 end
         immediate_send(1, 0, "EN16.H(0);paint()")
     end
 end
@@ -151,7 +93,7 @@ end
 -- [3] SCREEN DRAW
 -- =============================================================================
 
-loadUI()
+loadAPP()
 CTL.draw(self)
 
 
@@ -159,101 +101,40 @@ CTL.draw(self)
 -- [4] KEYSWITCHES  (element_index 0..7  ->  idx 1..8)
 -- =============================================================================
 
-loadUI()
-local idx = self:element_index() + 1
-local pressed = (self:button_state() == 127)
-if idx == 8 then
-    CTL.setShift(pressed)
-    EU()
-elseif pressed and idx >= 1 and idx <= 7 then
-    CTL.onKey(idx)
-    EU()
-end
+loadAPP().onKey(self:element_index() + 1, self:button_state() == 127)
 
 
 -- =============================================================================
 -- [5] ENDLESS TURN
 -- =============================================================================
 
-loadUI()
 local v = self:endless_value()
-if v == 65 or v == 63 then
-    CTL.onEndless((v == 65) and 1 or -1)
-    EU()
-end
+if v == 65 then loadAPP().onTurn(1) elseif v == 63 then loadAPP().onTurn(-1) end
 
 
 -- =============================================================================
 -- [6] ENDLESS CLICK
 -- =============================================================================
 
-loadUI()
-if self:button_state() == 127 then
-    CTL.onEndlessClick()
-    EU()
-end
+if self:button_state() == 127 then loadAPP().onClick() end
 
 
 -- =============================================================================
 -- [7] SMALL BUTTONS  (element_index 9..12  ->  sidx 1..4)
 -- =============================================================================
 
-loadUI()
-if self:button_state() == 127 then
-    local sidx = self:element_index() - 8
-    if sidx >= 1 and sidx <= 4 then
-        CTL.onSmallBtn(sidx)
-        EN16_LAST_PH = -1                       -- viewport/track may have changed
-        EU()
-    end
-end
+if self:button_state() == 127 then loadAPP().onSmallBtn(self:element_index() - 8) end
 
 
 -- =============================================================================
 -- [8] CROSS-MODULE RECEIVERS  (EN16 -> VSN1)
--- -----------------------------------------------------------------------------
--- vsn1_t(i, d) = encoder i (1..16) turned by delta d (-1/+1)
--- vsn1_p(i)    = encoder i (1..16) pressed
---
--- These globals are defined at init. They lazy-load UI on first invocation
--- so EN16 can drive VSN1 even if no local input has happened yet.
 -- =============================================================================
-
-function vsn1_t(i, d)
-    loadUI()
-    if i < 1 or i > 16 then return end
-    local f = CTL.focus
-    if f == 5 or f == 7 then return end
-    local s = (CTL.viewport - 1) * 16 + i
-    if s > ENGINE.tracks[CTL.selT].lastStep then return end
-    CTL.setSelectedStep(s)
-    CTL.setParam(f, CTL.selT, s, d)
-    EU()
-end
-
-function vsn1_p(i)
-    loadUI()
-    if i < 1 or i > 16 then return end
-    local s = (CTL.viewport - 1) * 16 + i
-    if CTL.shift then
-        CTL.setSelectedStep(s)
-    elseif CTL.focus == 7 then
-        ENGINE.setLastStep(CTL.selT, s)
-        CTL.dirtyAll()
-    else
-        local stp = ENGINE.tracks[CTL.selT].steps[s]
-        ENGINE.setStepParam(CTL.selT, s, "mute",
-            STEP.muted(stp) and 0 or 1)
-        CTL.dirtyAll()
-    end
-    EU()
-end
+-- vsn1_t / vsn1_p defined as globals in [1]. Nothing per-event here.
 
 
 -- =============================================================================
 -- NOTES
--- -----------------------------------------------------------------------------
 -- * No internal clock. Polyrhythm = per-track lastStep + per-step dur.
--- * Zero allocations per pulse - locked by tests/test_no_alloc.lua.
+-- * Zero allocations per pulse.
 -- * Rebuild after src/ changes:  lua tools/build_dist.lua
 -- =============================================================================

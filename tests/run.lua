@@ -6,12 +6,10 @@ package.path = "src/?.lua;tests/?.lua;" .. package.path
 local tests = {
     "test_step",
     "test_track_advance",
-    "test_track_ratchet",
     "test_track_laststep",
     "test_engine",
     "test_no_alloc",
     "test_controls_strip",
-    "test_controls_key",
     "test_controls_swing",
     "test_swing",
     "test_dist_smoke",

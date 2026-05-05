@@ -9,6 +9,8 @@ local M = {}
 
 M.tracks = {}     -- public read; UI may read directly
 M.running = false
+M.rootPitch = 0   -- 0..11 (C..B); display-only key signature, global
+M.scaleMode = 0   -- 0 = major, 1 = minor; display-only, global
 local logFn = nil
 
 function M.init(opts)
@@ -72,6 +74,16 @@ function M.setTrackChan(t, ch)
     if ch < 1 then ch = 1 end
     if ch > 16 then ch = 16 end
     tr.chan = ch
+end
+
+-- Display-only key signature. Global to all tracks. Engine never reads
+-- these values during onPulse — they exist only for the UI to show.
+function M.setRootPitch(p)
+    M.rootPitch = p % 12
+end
+
+function M.setScaleMode(m)
+    M.scaleMode = (m ~= 0) and 1 or 0
 end
 
 return M

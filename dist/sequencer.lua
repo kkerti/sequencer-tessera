@@ -198,6 +198,8 @@ local Track = require("track")
 local M = {}
 M.tracks = {}
 M.running = false
+M.rootPitch = 0
+M.scaleMode = 0
 local logFn = nil
 function M.init(opts)
  opts = opts or {}
@@ -248,6 +250,12 @@ function M.setTrackChan(t, ch)
  if ch < 1 then ch = 1 end
  if ch > 16 then ch = 16 end
  tr.chan = ch
+end
+function M.setRootPitch(p)
+ M.rootPitch = p % 12
+end
+function M.setScaleMode(m)
+ M.scaleMode = (m ~= 0) and 1 or 0
 end
 return M
 

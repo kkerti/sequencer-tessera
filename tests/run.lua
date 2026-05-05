@@ -10,6 +10,8 @@ local tests = {
     "test_track_laststep",
     "test_engine",
     "test_no_alloc",
+    "test_controls_strip",
+    "test_controls_key",
     "test_dist_smoke",
 }
 

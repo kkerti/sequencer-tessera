@@ -45,6 +45,22 @@ with an extremely small memory footprint.
    on EN16 (encoders 1..16 = current viewport's 16 steps of selected
    track). Deep info on VSN1.
 
+## Grid screen draw model (VSN1)
+
+`scr:draw_swap()` is **smart**: the device only re-blits regions that
+were actually touched by `draw_*` calls since the previous swap. A full
+clear-then-draw pays for the whole screen; a single `draw_rectangle_filled`
++ `draw_swap` pays only for that rectangle's area.
+
+Implication for future optimisation: the strip-cell repaint can be made
+surgical by tracking last-drawn value per cell and only re-issuing the
+two `draw_*` calls (well + bar) for cells whose value changed. We
+currently full-redraw on any `dirty` flag because input volume is low
+and CPU headroom is large; revisit if/when the redraw cost shows up in
+profiling.
+
+Do not assume `draw_swap` blits the entire framebuffer.
+
 ## Layout
 
 ```
@@ -141,7 +157,7 @@ Events are consumed by a driver. Engine does no IO.
 | **track** | A single 64-step buffer + monophonic voice. Fixed length 64. |
 | **lastStep** | Per-track loop point. Track plays `1..lastStep` then wraps. Default 16. |
 | **viewport** | UI-only concept: which 16-step window of the buffer the screen + EN16 are showing. Indexed 1..4 (steps 1–16, 17–32, 33–48, 49–64). Global, not per track. **Not stored in the engine.** |
-| **mode** | The currently-edited focus (NOTE/VEL/GATE/MUTE/STEP/-/LASTSTEP). Selected by VSN1 keyswitches 1..7 (slot 6 reserved). DUR is reached as SHIFT+endless in GATE focus; RATCH as SHIFT+endless-click in MUTE focus. Each mode has a fixed RGB color defined in `controls.MODES`; the same color appears in the VSN1 header, the active param row, and the EN16 turn-layer LEDs. |
+| **mode** | The currently-edited focus (NOTE/VEL/GATE/MUTE/STEP/KEY/LASTSTEP). Selected by VSN1 keyswitches 1..7. DUR is reached as SHIFT+endless in GATE focus; RATCH as SHIFT+endless-click in MUTE focus. KEY (slot 6) edits a global, display-only key signature: turn = root pitch (12 chromatic steps), shift+turn or click = toggle major/minor. Engine never reads `Engine.rootPitch` / `Engine.scaleMode` during `onPulse` — they are metadata for the screen only. Each mode has a fixed RGB color defined in `controls.MODES`; the same color appears in the VSN1 header, the active param row, and the EN16 turn-layer LEDs. |
 | ~~region~~ | **DEPRECATED.** Used to mean an engine-coordinated 16-step window with global at-end-of-region switching. The engine no longer has regions. The word survives only as a casual synonym for "viewport" in old comments — prefer "viewport". |
 | ~~pattern~~ | **FORBIDDEN word.** Reserved. Pattern implies independent step buffers (Model B), which we explicitly do not have. |
 | ~~scene~~  | **FORBIDDEN.** |

@@ -5,16 +5,20 @@ local Step   = require("step")
 local M = {}
 
 -- mode table: parallel arrays, no name strings except a single label list
-local MR = {  30, 255, 240, 220,  60,  70, 230 }
-local MG = { 200, 140, 210,  50, 120,  70, 230 }
-local MB = { 220,  30,  40,  50, 255,  75, 230 }
-local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "--", "LAST" }
+local MR = {  30, 255, 240, 220,  60, 180, 230 }
+local MG = { 200, 140, 210,  50, 120,  90, 230 }
+local MB = { 220,  30,  40,  50, 255, 230,  75 }
+local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "KEY", "LAST" }
+
+-- 12 chromatic pitch-class names (sharps only, matches Step.noteName).
+local PC_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 
 M.MODE_NOTE     = 1
 M.MODE_VEL      = 2
 M.MODE_GATE     = 3
 M.MODE_MUTE     = 4
 M.MODE_STEP     = 5
+M.MODE_KEY      = 6
 M.MODE_LASTSTEP = 7
 M.MODES         = MN          -- shape kept for tests/UI consumers
 
@@ -79,6 +83,14 @@ function M.onEndless(dir)
     if f == 7 then
         local tr = Engine.tracks[M.selT]
         Engine.setLastStep(M.selT, tr.lastStep + dir)
+    elseif f == 6 then
+        if M.shift then
+            -- shift+turn: toggle major <-> minor on any motion
+            Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
+        else
+            -- turn: cycle root pitch through 12 chromatic classes
+            Engine.setRootPitch(Engine.rootPitch + dir)
+        end
     elseif f == 5 then
         local tr = Engine.tracks[M.selT]
         local s = M.selS + dir
@@ -94,6 +106,11 @@ end
 function M.onEndlessClick()
     local f = M.focus
     if f == 7 or f == 5 then return end
+    if f == 6 then
+        Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
+        dirty = true
+        return
+    end
     local stp = Engine.tracks[M.selT].steps[M.selS]
     if f == 4 and M.shift then
         Engine.setStepParam(M.selT, M.selS, "ratch",
@@ -106,7 +123,7 @@ function M.onEndlessClick()
 end
 
 function M.onKey(idx)
-    if idx < 1 or idx > 7 or idx == 6 or idx == M.focus then return end
+    if idx < 1 or idx > 7 or idx == M.focus then return end
     M.focus = idx; dirty = true
 end
 
@@ -164,9 +181,16 @@ function M.draw(scr)
 
     -- header
     local p = Step.pitch(stp)
+    local tail
+    if f == 6 then
+        tail = PC_NAMES[Engine.rootPitch + 1]
+            .. " " .. (Engine.scaleMode == 0 and "maj" or "min")
+    else
+        tail = Step.noteName(p)
+    end
     scr:draw_text_fast(
         "T" .. M.selT .. " S" .. M.selS .. " V" .. M.viewport
-            .. "  " .. MN[f] .. "  " .. Step.noteName(p),
+            .. "  " .. MN[f] .. "  " .. tail,
         4, 4, 14, rgb(f))
 
     -- param rows
@@ -198,24 +222,51 @@ function M.draw(scr)
     scr:draw_text_fast("last  " .. tr.lastStep, 6, LS_Y + 4, 14,
         f == 7 and C_FG or C_DIM)
 
-    -- 16-cell step strip (flat colors; no value-strength tinting)
+    -- 16-cell step strip.
+    --   well = full-cell-height background at low intensity in the focused
+    --          mode hue (always drawn, gives the column its visual frame).
+    --   bar  = bottom-anchored fill, height ∝ value, in the full mode hue
+    --          (drawn only for NOTE/VEL/GATE focus on in-range, non-muted steps).
+    --   OOR / MUTE override the well with a dedicated colour and skip the bar.
+    --   STEP / LASTSTEP focus: well only (no value to visualise per cell).
+    --   Selection: bright outline rectangle on top, unchanged.
+    -- Allocations are draw-rate only; the engine hot path is untouched.
     local lo = vplo(M.viewport)
-    local C_CELL  = { (MR[f] * 70) // 255, (MG[f] * 70) // 255, (MB[f] * 70) // 255 }
-    local C_MUTE  = { 30, 10, 10 }
+    local fr, fg_, fb = MR[f], MG[f], MB[f]
+    local C_WELL  = { (fr * 60) // 255, (fg_ * 60) // 255, (fb * 60) // 255 }
+    local C_BAR   = { fr, fg_, fb }
+    local C_MUTE  = { 70, 18, 22 }
+    local heat    = (f == 1 or f == 2 or f == 3)
+    local y0, y1  = STR_Y, STR_Y + STR_H - 1
     for c = 1, 16 do
-        local s = lo + c - 1
-        local x0 = (c - 1) * COL_W + 1
-        local x1 = x0 + COL_W - 3
-        local oor = (s > tr.lastStep)
+        local s   = lo + c - 1
+        local x0  = (c - 1) * COL_W + 1
+        local x1  = x0 + COL_W - 3
         local cs  = tr.steps[s]
-        local bg
-        if oor then bg = C_OOR
-        elseif Step.muted(cs) then bg = C_MUTE
-        else bg = C_CELL end
-        scr:draw_rectangle_filled(x0, STR_Y, x1, STR_Y + STR_H - 1, bg)
+        local oor = (s > tr.lastStep)
+        local mut = Step.muted(cs)
+
+        -- well
+        local wellC
+        if oor then wellC = C_OOR
+        elseif mut then wellC = C_MUTE
+        else wellC = C_WELL end
+        scr:draw_rectangle_filled(x0, y0, x1, y1, wellC)
+
+        -- bar
+        if heat and not oor and not mut then
+            local v
+            if f == 1 then v = Step.pitch(cs)
+            elseif f == 2 then v = Step.vel(cs)
+            else v = M.shift and Step.dur(cs) or Step.gate(cs) end
+            local bh = (STR_H * v) // 127
+            if bh > 0 then
+                scr:draw_rectangle_filled(x0, y1 - bh + 1, x1, y1, C_BAR)
+            end
+        end
 
         if s == M.selS then
-            scr:draw_rectangle(x0, STR_Y, x1, STR_Y + STR_H - 1, rgb(f))
+            scr:draw_rectangle(x0, y0, x1, y1, C_BAR)
         end
     end
 

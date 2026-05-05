@@ -34,10 +34,10 @@ local SRC = "src"
 -- Core bundle: pure logic, no IO, no UI.
 local CORE = {
     out   = "dist/sequencer.lua",
-    files = { "step", "track", "engine", "midi_rx" },
+    files = { "step", "track", "engine", "midi_rx", "persist" },
     namespaces = [[
 return {
-    Core     = { step = R.step, track = R.track, engine = R.engine, midi_rx = R.midi_rx },
+    Core     = { step = R.step, track = R.track, engine = R.engine, midi_rx = R.midi_rx, persist = R.persist },
     App      = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     HAL      = {},
@@ -46,6 +46,7 @@ return {
     track   = R.track,
     engine  = R.engine,
     midi_rx = R.midi_rx,
+    persist = R.persist,
 }
 ]],
 }

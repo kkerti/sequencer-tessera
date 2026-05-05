@@ -19,7 +19,8 @@
 --
 -- Hardware mapping:
 --   Screen     : 320x240 EDIT view (greyscale + mute red).
---   Keyswitch  : 1=STEP 2=NOTE 3=VEL 4=GATE 5=MUTE 6=LASTSTEP 7=- 8=SHIFT.
+--   Keyswitch  : 1=STEP 2=NOTE 3=VEL 4=GATE 5=MUTE 6=LASTSTEP
+--                7=LOAD (SHIFT+7=SAVE)  8=SHIFT.
 --   4 small btns: viewport (no shift) / track select (+ shift).
 --   Endless    : turn = act-per-mode; click = mute toggle on selected step.
 --                In GATE focus, SHIFT + turn edits dur (snaps ladder).
@@ -40,15 +41,22 @@ SEQ    = require("sequencer")
 ENGINE = SEQ.Core.engine
 STEP   = SEQ.Core.step
 MIDIRX = SEQ.Core.midi_rx
+PERSIST = SEQ.Core.persist
 APP    = nil
 CTL    = nil
 
 ENGINE.init({ trackCount = 4, stepsPerTrack = 64 })
 
--- Seed track 1 motif (kept here so the engine has content even if UI never loads).
-local notes = { 60, 63, 67, 70, 72, 67, 63, 60 }
-for i, p in ipairs(notes) do
-    ENGINE.tracks[1].steps[i] = STEP.pack({ pitch = p, vel = 100, dur = 6, gate = 3 })
+-- Autoload saved sequence from disk. Path lives in vsn1_app.SAVE_PATH but
+-- we hardcode the same string here to avoid pulling in the VSN1 bundle on
+-- the pure-playback path. If load succeeds, skip the hardcoded seed motif.
+if not PERSIST.load("sequencer_data.lua") then
+    -- Seed track 1 motif (fallback so the engine has content even if no
+    -- save file exists yet and the UI never loads).
+    local notes = { 60, 63, 67, 70, 72, 67, 63, 60 }
+    for i, p in ipairs(notes) do
+        ENGINE.tracks[1].steps[i] = STEP.pack({ pitch = p, vel = 100, dur = 6, gate = 3 })
+    end
 end
 
 -- Lazy loader. Called from every input scriptlet and the first screen

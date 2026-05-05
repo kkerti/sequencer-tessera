@@ -69,6 +69,9 @@ src/
   step.lua          packed-int step encode/decode
   track.lua         track state + advance
   engine.lua        4 tracks, onPulse, onStart, onStop
+  persist.lua       save/load engine state to disk (Lua chunk format).
+                    The only Core module that does IO. Triggered on boot
+                    (autoload) and SHIFT+key 7 (save) / bare key 7 (load).
   vsn1_app.lua      VSN1 entry-point logic (init, EU, MIDI rx, all input
                     handlers, cross-module receivers). Bundled into Core
                     so VSN1.lua's per-event scriptlets stay <800 chars.

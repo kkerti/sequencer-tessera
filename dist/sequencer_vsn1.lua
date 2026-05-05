@@ -12,7 +12,9 @@ R["vsn1_app"]=(function()
 
 local Engine = require("engine")
 local Step = require("step")
+local Persist = require("persist")
 local M = {}
+M.SAVE_PATH = "sequencer_data.lua"
 M.CTL = nil
 M.lastPh = -1
 local SBUF = {}
@@ -87,6 +89,15 @@ function M.onKey(idx, pressed)
  elseif pressed and idx >= 1 and idx <= 6 then
  CTL.onKey(idx)
  M.pushEN16()
+ elseif pressed and idx == 7 then
+ if CTL.shift then
+ Persist.save(M.SAVE_PATH)
+ else
+ if Persist.load(M.SAVE_PATH) then
+ CTL.dirtyAll()
+ M.pushEN16()
+ end
+ end
  end
 end
 function M.onTurn(dir)

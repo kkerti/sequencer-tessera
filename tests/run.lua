@@ -13,6 +13,7 @@ local tests = {
     "test_controls_swing",
     "test_swing",
     "test_dist_smoke",
+    "test_persist",
 }
 
 local total, passed = 0, 0

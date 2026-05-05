@@ -27,6 +27,7 @@ function M.test_dist_namespace_shape()
     if not mods.Core.step or not mods.Core.track or not mods.Core.engine then
         error("Core layer missing step/track/engine")
     end
+    if not mods.Core.persist then error("Core layer missing persist") end
     -- flat aliases for UI bundle's require-shim fallback
     if mods.engine ~= mods.Core.engine then
         error("flat alias mods.engine drifted from Core.engine")

@@ -16,10 +16,15 @@
 -- never requires this bundle.
 -- =============================================================================
 
-local Engine = require("engine")
-local Step   = require("step")
+local Engine  = require("engine")
+local Step    = require("step")
+local Persist = require("persist")
 
 local M = {}
+
+-- On-device path for the saved sequence file. Single source of truth so
+-- VSN1.lua's boot autoload and the SHIFT+key 7 save call agree.
+M.SAVE_PATH = "sequencer_data.lua"
 
 M.CTL    = nil       -- screen controls module (controls.lua exports)
 M.lastPh = -1        -- last playhead slot pushed to EN16
@@ -120,7 +125,8 @@ end
 -- Input handlers (each ends with pushEN16 to keep the satellite in sync)
 -- -----------------------------------------------------------------------------
 
--- Keyswitches 1..8. 1..6 = focus modes; 8 = SHIFT; 7 = unused.
+-- Keyswitches 1..8. 1..6 = focus modes; 7 = persist (load / SHIFT=save);
+-- 8 = SHIFT.
 function M.onKey(idx, pressed)
     local CTL = M.CTL
     if idx == 8 then
@@ -129,6 +135,15 @@ function M.onKey(idx, pressed)
     elseif pressed and idx >= 1 and idx <= 6 then
         CTL.onKey(idx)
         M.pushEN16()
+    elseif pressed and idx == 7 then
+        if CTL.shift then
+            Persist.save(M.SAVE_PATH)
+        else
+            if Persist.load(M.SAVE_PATH) then
+                CTL.dirtyAll()
+                M.pushEN16()
+            end
+        end
     end
 end
 

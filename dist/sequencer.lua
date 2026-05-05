@@ -200,6 +200,8 @@ M.tracks = {}
 M.running = false
 M.rootPitch = 0
 M.scaleMode = 0
+M.pulseCount = 0
+M.swing = 0
 local logFn = nil
 function M.init(opts)
  opts = opts or {}
@@ -211,11 +213,21 @@ function M.init(opts)
  M.tracks[i].chan = i
  end
  M.running = false
+ M.pulseCount = 0
+ M.swing = 0
+ M.rootPitch = 0
+ M.scaleMode = 0
+ M._swingOwed = {}
+ for i = 1, n do M._swingOwed[i] = 0 end
  logFn = opts.log
 end
 local function log(s) if logFn then logFn(s) end end
 function M.onStart()
- for i = 1, #M.tracks do Track.reset(M.tracks[i]) end
+ for i = 1, #M.tracks do
+ Track.reset(M.tracks[i])
+ M._swingOwed[i] = 0
+ end
+ M.pulseCount = 0
  M.running = true
  log("START")
 end
@@ -231,8 +243,28 @@ function M.onPulse()
  local out = {}
  local ts = M.tracks
  local n = #ts
+ local sw = M.swing
+ local pc = M.pulseCount
+ local owe = M._swingOwed
+ M.pulseCount = pc + 1
+ local swingPulse = sw > 0 and ((pc % 12) == 6)
  for i = 1, n do
- Track.advance(ts[i], out)
+ local tr = ts[i]
+ local owed = owe[i]
+ local atFire = (tr.stepAcc <= 0)
+ if atFire and swingPulse and owed == 0 then
+ tr.stepAcc = sw
+ tr.stepLen = sw
+ owe[i] = sw
+ atFire = false
+ end
+ Track.advance(tr, out)
+ if atFire and owed > 0 then
+ local left = tr.stepAcc - owed
+ if left < 0 then left = 0 end
+ tr.stepAcc = left
+ owe[i] = 0
+ end
  end
  if #out == 0 then return nil end
  return out
@@ -256,6 +288,10 @@ function M.setRootPitch(p)
 end
 function M.setScaleMode(m)
  M.scaleMode = (m ~= 0) and 1 or 0
+end
+function M.setSwing(s)
+ if s < 0 then s = 0 elseif s > 3 then s = 3 end
+ M.swing = s
 end
 return M
 

@@ -18,6 +18,7 @@ local MG = { 200, 140, 210, 50, 120, 90, 230 }
 local MB = { 220, 30, 40, 50, 255, 230, 75 }
 local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "KEY", "LAST" }
 local PC_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
+local SWING_PCT = { "50", "58", "67", "75" }
 M.MODE_NOTE = 1
 M.MODE_VEL = 2
 M.MODE_GATE = 3
@@ -31,6 +32,8 @@ M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
 local dirty = true
+local SWING_DETENTS = 4
+local swingAccum = 0
 local function setParam(i, t, s, d)
  local stp = Engine.tracks[t].steps[s]
  if i == 1 then
@@ -72,8 +75,22 @@ end
 function M.onEndless(dir)
  local f = M.focus
  if f == 7 then
+ if M.shift then
+ swingAccum = swingAccum + dir
+ local step = 0
+ if swingAccum >= SWING_DETENTS then
+ step = swingAccum // SWING_DETENTS
+ elseif swingAccum <= -SWING_DETENTS then
+ step = -((-swingAccum) // SWING_DETENTS)
+ end
+ if step ~= 0 then
+ Engine.setSwing(Engine.swing + step)
+ swingAccum = swingAccum - step * SWING_DETENTS
+ end
+ else
  local tr = Engine.tracks[M.selT]
  Engine.setLastStep(M.selT, tr.lastStep + dir)
+ end
  elseif f == 6 then
  if M.shift then
  Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
@@ -93,7 +110,15 @@ function M.onEndless(dir)
 end
 function M.onEndlessClick()
  local f = M.focus
- if f == 7 or f == 5 then return end
+ if f == 5 then return end
+ if f == 7 then
+ if M.shift then
+ Engine.setSwing(0)
+ swingAccum = 0
+ dirty = true
+ end
+ return
+ end
  if f == 6 then
  Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
  dirty = true
@@ -111,12 +136,13 @@ function M.onEndlessClick()
 end
 function M.onKey(idx)
  if idx < 1 or idx > 7 or idx == M.focus then return end
- M.focus = idx; dirty = true
+ M.focus = idx; swingAccum = 0; dirty = true
 end
 function M.setShift(b)
  b = b and true or false
  if b == M.shift then return end
  M.shift = b
+ swingAccum = 0
  dirty = true
 end
 function M.onSmallBtn(idx)
@@ -162,9 +188,13 @@ function M.draw(scr)
  else
  tail = Step.noteName(p)
  end
+ local sw = Engine.swing
+ local showSwHere = (f == 7 and M.shift)
+ local swSuffix = (sw > 0 and not showSwHere)
+ and (" sw " .. SWING_PCT[sw + 1] .. "%") or ""
  scr:draw_text_fast(
  "T" .. M.selT .. " S" .. M.selS .. " V" .. M.viewport
- .. " " .. MN[f] .. " " .. tail,
+ .. " " .. MN[f] .. " " .. tail .. swSuffix,
  4, 4, 14, rgb(f))
  for i = 1, PARAMS do
  local y = ROW_H * i
@@ -189,7 +219,13 @@ function M.draw(scr)
  if f == 7 then
  scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, rgb(7))
  end
- scr:draw_text_fast("last " .. tr.lastStep, 6, LS_Y + 4, 14,
+ local lsTxt
+ if f == 7 and M.shift then
+ lsTxt = "swing " .. SWING_PCT[Engine.swing + 1] .. "%"
+ else
+ lsTxt = "last " .. tr.lastStep
+ end
+ scr:draw_text_fast(lsTxt, 6, LS_Y + 4, 14,
  f == 7 and C_FG or C_DIM)
  local lo = vplo(M.viewport)
  local fr, fg_, fb = MR[f], MG[f], MB[f]

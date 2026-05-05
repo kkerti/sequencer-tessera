@@ -122,6 +122,16 @@ engine has no BPM concept; pulses arrive externally.
 prior step (`actPitch == p`) AND `gate >= stepLen`, the engine extends
 `actOff` instead of emitting OFF+ON. One MIDI message per legato join.
 
+**Swing** (global, 24 PPQN assumption): `Engine.swing` is 0..3 pulses of
+delay applied to fires that land on the off-beat 16th of a quarter
+(`pulseCount % 12 == 6`). Stored as an int (50/58/67/75% feel). Affects
+all 4 tracks identically. Implemented in `engine.onPulse` by pre-bumping
+the firing track's `stepAcc` so the fire is deferred by `swing` pulses;
+note-off and ratchet logic still tick every pulse. Swing only acts on
+fires that coincide with the swing grid — tracks programmed off-grid via
+`dur` are unaffected, by design. Engine still has no BPM concept; swing
+is expressed in clock pulses, not milliseconds.
+
 ## Per-track lastStep (polyrhythm)
 
 Each track has its own `lastStep` (default 16, range 1..64). The track

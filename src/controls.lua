@@ -13,6 +13,9 @@ local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "KEY", "LAST" }
 -- 12 chromatic pitch-class names (sharps only, matches Step.noteName).
 local PC_NAMES = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 
+-- Swing depth (pulses, 0..3 at 24 PPQN) → human-readable percent feel.
+local SWING_PCT = { "50", "58", "67", "75" }
+
 M.MODE_NOTE     = 1
 M.MODE_VEL      = 2
 M.MODE_GATE     = 3
@@ -34,6 +37,12 @@ M.viewportLo = vplo
 -- MUST be declared before any function that writes to it, otherwise the
 -- assignment binds to a global instead of this upvalue.
 local dirty = true
+
+-- Decimation accumulator for the swing edit gesture (LASTSTEP focus + shift).
+-- The encoder fires one detent per click; with swing range 0..3, raw 1:1
+-- response feels jumpy. We swallow SWING_DETENTS detents per emitted step.
+local SWING_DETENTS = 4
+local swingAccum = 0
 
 local function setParam(i, t, s, d)
     local stp = Engine.tracks[t].steps[s]
@@ -81,8 +90,24 @@ end
 function M.onEndless(dir)
     local f = M.focus
     if f == 7 then
-        local tr = Engine.tracks[M.selT]
-        Engine.setLastStep(M.selT, tr.lastStep + dir)
+        if M.shift then
+            -- shift+turn in LASTSTEP focus: adjust global swing 0..3,
+            -- decimated so a small motion reads cleanly through 4 stops.
+            swingAccum = swingAccum + dir
+            local step = 0
+            if swingAccum >= SWING_DETENTS then
+                step = swingAccum // SWING_DETENTS
+            elseif swingAccum <= -SWING_DETENTS then
+                step = -((-swingAccum) // SWING_DETENTS)
+            end
+            if step ~= 0 then
+                Engine.setSwing(Engine.swing + step)
+                swingAccum = swingAccum - step * SWING_DETENTS
+            end
+        else
+            local tr = Engine.tracks[M.selT]
+            Engine.setLastStep(M.selT, tr.lastStep + dir)
+        end
     elseif f == 6 then
         if M.shift then
             -- shift+turn: toggle major <-> minor on any motion
@@ -105,7 +130,16 @@ end
 
 function M.onEndlessClick()
     local f = M.focus
-    if f == 7 or f == 5 then return end
+    if f == 5 then return end
+    if f == 7 then
+        if M.shift then
+            -- shift+click in LASTSTEP focus: reset swing to straight (50%)
+            Engine.setSwing(0)
+            swingAccum = 0
+            dirty = true
+        end
+        return
+    end
     if f == 6 then
         Engine.setScaleMode(Engine.scaleMode == 0 and 1 or 0)
         dirty = true
@@ -124,13 +158,14 @@ end
 
 function M.onKey(idx)
     if idx < 1 or idx > 7 or idx == M.focus then return end
-    M.focus = idx; dirty = true
+    M.focus = idx; swingAccum = 0; dirty = true
 end
 
 function M.setShift(b)
     b = b and true or false
     if b == M.shift then return end
     M.shift = b
+    swingAccum = 0
     dirty = true
 end
 
@@ -188,9 +223,16 @@ function M.draw(scr)
     else
         tail = Step.noteName(p)
     end
+    local sw = Engine.swing
+    -- Header swing suffix: shown whenever swing is engaged, EXCEPT when the
+    -- LASTSTEP row is already displaying it (focus 7 + shift), to avoid
+    -- saying the same thing twice on the same screen.
+    local showSwHere = (f == 7 and M.shift)
+    local swSuffix = (sw > 0 and not showSwHere)
+        and ("  sw " .. SWING_PCT[sw + 1] .. "%") or ""
     scr:draw_text_fast(
         "T" .. M.selT .. " S" .. M.selS .. " V" .. M.viewport
-            .. "  " .. MN[f] .. "  " .. tail,
+            .. "  " .. MN[f] .. "  " .. tail .. swSuffix,
         4, 4, 14, rgb(f))
 
     -- param rows
@@ -214,12 +256,18 @@ function M.draw(scr)
         scr:draw_text_fast(txt, 6, y + 4, 14, fg)
     end
 
-    -- separator + lastStep row
+    -- separator + lastStep row (or swing row when shift is held in focus 7)
     scr:draw_rectangle_filled(0, LS_Y - 2, 319, LS_Y - 1, C_LINE)
     if f == 7 then
         scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, rgb(7))
     end
-    scr:draw_text_fast("last  " .. tr.lastStep, 6, LS_Y + 4, 14,
+    local lsTxt
+    if f == 7 and M.shift then
+        lsTxt = "swing  " .. SWING_PCT[Engine.swing + 1] .. "%"
+    else
+        lsTxt = "last  " .. tr.lastStep
+    end
+    scr:draw_text_fast(lsTxt, 6, LS_Y + 4, 14,
         f == 7 and C_FG or C_DIM)
 
     -- 16-cell step strip.

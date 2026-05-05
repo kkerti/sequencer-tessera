@@ -85,6 +85,50 @@ return R.controls_en16
 ]],
 }
 
+-- ---------- Euclidean bundles (separate engine + UI) ----------
+--
+-- Greenfield 4-track Euclidean sequencer. Loads onto the VSN1 module
+-- independently of the step-sequencer bundles. Same lazy-load split:
+-- Core (engine + track) at boot, UI (controls + vsn1 glue) on first
+-- input/draw.
+
+local EUCLID_CORE = {
+    out   = "dist/euclid.lua",
+    files = { "euclidean/track", "euclidean/engine" },
+    namespaces = [[
+return {
+    Core = { track = R["euclidean.track"], engine = R["euclidean.engine"] },
+    Controls = nil,
+    App = nil,
+    HAL = {},
+    -- flat aliases for the UI shim's fall-through path. The UI bundle
+    -- requires under the dotted form ("euclidean.track"); the host
+    -- `require` returns this table and the shim looks up the dotted key
+    -- directly via the alias map below.
+    ["euclidean.track"]  = R["euclidean.track"],
+    ["euclidean.engine"] = R["euclidean.engine"],
+}
+]],
+}
+
+local EUCLID_UI = {
+    out   = "dist/euclid_ui.lua",
+    files = { "euclidean/controls" },
+    namespaces = [[
+return {
+    screen = R["euclidean.controls"],
+}
+]],
+}
+
+local EUCLID_VSN1 = {
+    out   = "dist/euclid_vsn1.lua",
+    files = { "euclidean/vsn1_app" },
+    namespaces = [[
+return R["euclidean.vsn1_app"]
+]],
+}
+
 -- Require-shim variants ------------------------------------------------------
 
 local SHIM_CORE = [[
@@ -103,6 +147,20 @@ local function require(n)
     local r = R[n]
     if r ~= nil then return r end
     if not _seq then _seq = _hostReq("sequencer") end
+    return _seq[n]
+end
+]]
+
+-- Variant of SHIM_UI for the Euclidean UI/VSN1 bundles. The host-side
+-- Core bundle they delegate to is `require("euclid")`, not "sequencer".
+local SHIM_EUCLID_UI = [[
+local R={}
+local _hostReq = require
+local _seq
+local function require(n)
+    local r = R[n]
+    if r ~= nil then return r end
+    if not _seq then _seq = _hostReq("euclid") end
     return _seq[n]
 end
 ]]
@@ -215,7 +273,11 @@ local function buildBundle(spec, shim, header)
         local raw = read(SRC .. "/" .. name .. ".lua")
         rawTotal = rawTotal + #raw
         local body = collapseWs(stripAsserts(stripComments(raw)))
-        parts[#parts+1] = string.format("R[%q]=(function()\n%s\nend)()\n", name, body)
+        -- Register under the require-form key (dots), not the path form
+        -- (slashes), so that `require("euclidean.track")` inside a bundled
+        -- module resolves through the local R table.
+        local key = name:gsub("/", ".")
+        parts[#parts+1] = string.format("R[%q]=(function()\n%s\nend)()\n", key, body)
     end
     parts[#parts+1] = spec.namespaces
     local out = table.concat(parts)
@@ -240,5 +302,10 @@ buildBundle(VSN1, SHIM_UI,   "-- dist/sequencer_vsn1.lua (auto-generated; VSN1 h
 -- a pure shadow, no engine, no track, no step). The UI shim is included
 -- for future-proofing only; its fall-through path is currently unused.
 buildBundle(EN16, SHIM_UI, "-- dist/sequencer_en16.lua (auto-generated; EN16 satellite)\n")
+
+-- Euclidean (independent project; loaded onto VSN1 in place of step seq)
+buildBundle(EUCLID_CORE, SHIM_CORE,      "-- dist/euclid.lua (auto-generated; Euclidean Core)\n")
+buildBundle(EUCLID_UI,   SHIM_EUCLID_UI, "-- dist/euclid_ui.lua (auto-generated; Euclidean screen UI)\n")
+buildBundle(EUCLID_VSN1, SHIM_EUCLID_UI, "-- dist/euclid_vsn1.lua (auto-generated; Euclidean VSN1 glue)\n")
 
 io.write("verify: all bundles parse OK\n")

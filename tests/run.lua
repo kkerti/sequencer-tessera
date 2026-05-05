@@ -1,7 +1,7 @@
 -- tests/run.lua
 -- Minimal test runner. Discovers tests/*.lua (except this file), runs each.
 
-package.path = "src/?.lua;tests/?.lua;" .. package.path
+package.path = "src/?.lua;tests/?.lua;tests/euclidean/?.lua;" .. package.path
 
 local tests = {
     "test_step",
@@ -14,6 +14,11 @@ local tests = {
     "test_swing",
     "test_dist_smoke",
     "test_persist",
+    -- Euclidean (greenfield, isolated namespace)
+    "euclidean.test_track",
+    "euclidean.test_engine",
+    "euclidean.test_no_alloc",
+    "euclidean.test_dist_smoke",
 }
 
 local total, passed = 0, 0

@@ -39,22 +39,18 @@ TRACK  = EUC.Core.track
 APP    = nil
 CTL    = nil
 
--- Single track for now (per project brief). The engine still allocates the
--- table once; only the configured tracks make sound.
-ENGINE.init({ trackCount = 1 })
+-- Four tracks, each with a recognisable euclidean default so something
+-- audible happens immediately when external clock starts. Channels 0..3.
+--   T1 E(3,8)   tresillo         on C4   ch 0
+--   T2 E(5,8)   cinquillo        on D#4  ch 1
+--   T3 E(4,16)  four-on-floor    on G4   ch 2
+--   T4 E(7,12)  7-against-12     on A#4  ch 3
+ENGINE.init({ trackCount = 4 })
 
--- Seed track 1 with a recognisable euclidean pattern so something audible
--- happens immediately when external clock starts.
---   E(3,8) tresillo on C4, 16th-note step rate at 24 PPQN (ppstep = 6),
---   gate = 3 pulses (50% gate), velocity 100, channel 0.
-ENGINE.setSteps(1, 8)
-ENGINE.setEvents(1, 3)
-ENGINE.setRot(1, 0)
-ENGINE.setKey(1, 60)
-ENGINE.setVel(1, 100)
-ENGINE.setPpstep(1, 6)
-ENGINE.setGate(1, 3)
-ENGINE.setChan(1, 0)
+ENGINE.setSteps(1, 8);  ENGINE.setEvents(1, 3); ENGINE.setKey(1, 60); ENGINE.setPpstep(1, 6); ENGINE.setGate(1, 3); ENGINE.setChan(1, 0)
+ENGINE.setSteps(2, 8);  ENGINE.setEvents(2, 5); ENGINE.setKey(2, 63); ENGINE.setPpstep(2, 6); ENGINE.setGate(2, 3); ENGINE.setChan(2, 1)
+ENGINE.setSteps(3, 16); ENGINE.setEvents(3, 4); ENGINE.setKey(3, 67); ENGINE.setPpstep(3, 3); ENGINE.setGate(3, 2); ENGINE.setChan(3, 2)
+ENGINE.setSteps(4, 12); ENGINE.setEvents(4, 7); ENGINE.setKey(4, 70); ENGINE.setPpstep(4, 4); ENGINE.setGate(4, 2); ENGINE.setChan(4, 3)
 
 -- Lazy loader. Called from every input scriptlet and the first screen
 -- draw. Loads the screen UI bundle, the VSN1 handler bundle, wires them.

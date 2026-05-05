@@ -17,9 +17,16 @@
 --   hits     Lua int (bitmask, bit i set = step (i+1) is a hit)
 --
 -- Runtime (cleared on reset):
---   pos      0..steps-1   index of LAST fired step (-1 = none yet)
---   acc      pulses left in current step
---   actOff   pulses until note-off (0 = no active note)
+--   pos       0..steps-1   index of LAST fired step (-1 = none yet)
+--   acc       pulses left in current step
+--   actOff    pulses until note-off (0 = no active note)
+--   actPitch  pitch of the currently-sounding note (-1 = none).
+--             Captured at NOTE_ON time so that NOTE_OFF goes out on the
+--             pitch that was actually started, even if the user has since
+--             turned the KEY encoder. Without this, changing key mid-note
+--             leaves a hanging note on the old pitch.
+--   actChan   channel of the currently-sounding note. Same reasoning as
+--             actPitch but for setChan. Captured at NOTE_ON time.
 --
 -- Pattern algorithm: integer-bucket Euclidean. For step index i (0-based,
 -- after rotation), hit = ((i+1)*events)//steps ~= (i*events)//steps. This
@@ -68,19 +75,21 @@ M.recompute = recompute
 
 function M.new()
     local tr = {
-        steps   = 16,
-        events  = 4,
-        rot     = 0,
-        key     = 60,
-        vel     = 100,
-        gate    = 3,
-        ppstep  = 6,        -- 16th note at 24 PPQN
-        chan    = 0,
-        muted   = 0,
-        hits    = 0,
-        pos     = -1,
-        acc     = 0,
-        actOff  = 0,
+        steps    = 16,
+        events   = 4,
+        rot      = 0,
+        key      = 60,
+        vel      = 100,
+        gate     = 3,
+        ppstep   = 6,        -- 16th note at 24 PPQN
+        chan     = 0,
+        muted    = 0,
+        hits     = 0,
+        pos      = -1,
+        acc      = 0,
+        actOff   = 0,
+        actPitch = -1,
+        actChan  = 0,
     }
     recompute(tr)
     return tr
@@ -89,23 +98,26 @@ end
 -- ---------- runtime ----------
 
 function M.reset(tr)
-    tr.pos    = -1
-    tr.acc    = 0
-    tr.actOff = 0
+    tr.pos      = -1
+    tr.acc      = 0
+    tr.actOff   = 0
+    tr.actPitch = -1
 end
 
 local function emitOff(tr, out)
-    if tr.actOff > 0 then
-        out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
-        tr.actOff = 0
+    if tr.actOff > 0 and tr.actPitch >= 0 then
+        out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
+        tr.actOff   = 0
+        tr.actPitch = -1
     end
 end
 M.emitOff = emitOff
 
 function M.allOff(tr, out)
-    if tr.actOff > 0 then
-        out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
-        tr.actOff = 0
+    if tr.actOff > 0 and tr.actPitch >= 0 then
+        out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
+        tr.actOff   = 0
+        tr.actPitch = -1
     end
 end
 
@@ -116,7 +128,8 @@ function M.advance(tr, out)
     if tr.actOff > 0 then
         tr.actOff = tr.actOff - 1
         if tr.actOff == 0 then
-            out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
+            out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
+            tr.actPitch = -1
         end
     end
 
@@ -131,14 +144,17 @@ function M.advance(tr, out)
         if tr.muted == 0 and (tr.hits >> p) & 1 == 1 then
             -- if a prior note is still sounding, close it before re-firing
             if tr.actOff > 0 then
-                out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
-                tr.actOff = 0
+                out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
+                tr.actOff   = 0
+                tr.actPitch = -1
             end
             local g = tr.gate
             if g > d then g = d end
             if g > 0 then
                 out[#out+1] = { type=EV_ON, pitch=tr.key, vel=tr.vel, ch=tr.chan }
-                tr.actOff = g
+                tr.actOff   = g
+                tr.actPitch = tr.key
+                tr.actChan  = tr.chan
             end
         end
     end

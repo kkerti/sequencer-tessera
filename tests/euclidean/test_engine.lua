@@ -85,4 +85,29 @@ function M.test_setEvents_recomputes_pattern()
     eq(Engine.tracks[1].hits, 0xFF)
 end
 
+-- Regression: changing key while a note is sounding must NOT leave the
+-- old pitch hanging. The eventual NOTE_OFF must address the pitch that
+-- was actually started, not the new key. Same invariant for chan.
+function M.test_setKey_midnote_does_not_hang_old_pitch()
+    Engine.init({ trackCount = 1 })
+    Engine.setSteps(1, 4); Engine.setEvents(1, 4)
+    Engine.setPpstep(1, 4); Engine.setGate(1, 4); Engine.setKey(1, 60)
+    Engine.onStart()
+    -- pulse 1 fires step 0 (a hit) -> NOTE_ON 60. actOff = 4.
+    local ev = Engine.onPulse()
+    eq(ev[1].type, Track.EV_ON); eq(ev[1].pitch, 60)
+    -- user turns KEY encoder up to 67 mid-note
+    Engine.setKey(1, 67)
+    -- ticks 2..4 just count down; OFF lands at the start of pulse 5
+    -- (when actOff hits 0 after decrement). Drain pulses until we see it.
+    local off
+    for _ = 1, 6 do
+        local r = Engine.onPulse()
+        if r then for i = 1, #r do if r[i].type == Track.EV_OFF then off = r[i] break end end end
+        if off then break end
+    end
+    if not off then error("expected a NOTE_OFF after key change") end
+    eq(off.pitch, 60, "OFF must address the original pitch, not the new key")
+end
+
 return M

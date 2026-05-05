@@ -44,6 +44,8 @@ function M.new()
  pos = -1,
  acc = 0,
  actOff = 0,
+ actPitch = -1,
+ actChan = 0,
  }
  recompute(tr)
  return tr
@@ -52,25 +54,29 @@ function M.reset(tr)
  tr.pos = -1
  tr.acc = 0
  tr.actOff = 0
+ tr.actPitch = -1
 end
 local function emitOff(tr, out)
- if tr.actOff > 0 then
- out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
+ if tr.actOff > 0 and tr.actPitch >= 0 then
+ out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
  tr.actOff = 0
+ tr.actPitch = -1
  end
 end
 M.emitOff = emitOff
 function M.allOff(tr, out)
- if tr.actOff > 0 then
- out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
+ if tr.actOff > 0 and tr.actPitch >= 0 then
+ out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
  tr.actOff = 0
+ tr.actPitch = -1
  end
 end
 function M.advance(tr, out)
  if tr.actOff > 0 then
  tr.actOff = tr.actOff - 1
  if tr.actOff == 0 then
- out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
+ out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
+ tr.actPitch = -1
  end
  end
  if tr.acc <= 0 then
@@ -82,14 +88,17 @@ function M.advance(tr, out)
  tr.acc = d
  if tr.muted == 0 and (tr.hits >> p) & 1 == 1 then
  if tr.actOff > 0 then
- out[#out+1] = { type=EV_OFF, pitch=tr.key, vel=0, ch=tr.chan }
+ out[#out+1] = { type=EV_OFF, pitch=tr.actPitch, vel=0, ch=tr.actChan }
  tr.actOff = 0
+ tr.actPitch = -1
  end
  local g = tr.gate
  if g > d then g = d end
  if g > 0 then
  out[#out+1] = { type=EV_ON, pitch=tr.key, vel=tr.vel, ch=tr.chan }
  tr.actOff = g
+ tr.actPitch = tr.key
+ tr.actChan = tr.chan
  end
  end
  end

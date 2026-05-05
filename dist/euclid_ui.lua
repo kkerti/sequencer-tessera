@@ -20,6 +20,29 @@ M.MODE_STEPS = 3
 M.MODE_KEY = 4
 M.MODE_RATE = 5
 M.MODE_MUTE = 6
+local RATE_LADDER = { 3, 6, 12, 18, 24, 30 }
+local RATE_NAMES = { "1/32", "1/16", "1/8", "1/8.", "1/4", "1/4." }
+local function rateStep(cur, dir)
+ local L = RATE_LADDER
+ if dir > 0 then
+ for i = 1, #L do
+ if L[i] > cur then return L[i] end
+ end
+ return L[#L]
+ else
+ for i = #L, 1, -1 do
+ if L[i] < cur then return L[i] end
+ end
+ return L[1]
+ end
+end
+M._rateStep = rateStep
+local function rateLabel(p)
+ for i = 1, #RATE_LADDER do
+ if RATE_LADDER[i] == p then return RATE_NAMES[i] end
+ end
+ return tostring(p) .. "p"
+end
 M.selT = 1
 M.focus = 1
 M.shift = false
@@ -55,8 +78,7 @@ local function applyDelta(t, f, d)
  local big = M.shift and 12 or 1
  Engine.setKey(t, tr.key + d * big)
  elseif f == M.MODE_RATE then
- local big = M.shift and 12 or 1
- Engine.setPpstep(t, tr.ppstep + d * big)
+ Engine.setPpstep(t, rateStep(tr.ppstep, d))
  elseif f == M.MODE_MUTE then
  end
 end
@@ -104,12 +126,6 @@ local function ringPoint(R, i, n)
  CY + math.floor(R * math.sin(a) + 0.5),
  a
 end
-local function drawRingOutline(scr, R)
- for i = 0, 23 do
- local x, y = ringPoint(R, i, 24)
- scr:draw_pixel(x, y, C_RING)
- end
-end
 local PX, PY = {}, {}
 local DX, DY = { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
 local function drawTrack(scr, ti, tr, R, isSel)
@@ -118,7 +134,6 @@ local function drawTrack(scr, ti, tr, R, isSel)
  local c = muted and C_MUTE or col
  local rDot, rRest
  if isSel then rDot, rRest = 8, 4 else rDot, rRest = 5, 2 end
- drawRingOutline(scr, R)
  local nh = 0
  for i = 0, tr.steps - 1 do
  local x, y = ringPoint(R, i, tr.steps)
@@ -191,7 +206,7 @@ function M.draw(scr)
  { lbl = "pulses ", val = tr.events, mode = M.MODE_EVENTS },
  { lbl = "steps ", val = tr.steps, mode = M.MODE_STEPS },
  { lbl = "key ", val = tr.key, mode = M.MODE_KEY },
- { lbl = "rate ", val = tr.ppstep, mode = M.MODE_RATE },
+ { lbl = "rate ", val = rateLabel(tr.ppstep), mode = M.MODE_RATE },
  }
  for i = 1, #ROWS do
  local y = py + 14 + (i - 1) * 12

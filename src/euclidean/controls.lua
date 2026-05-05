@@ -6,13 +6,14 @@
 -- pips. A polygon (closed) connects each track's hits in its colour. A
 -- per-track playhead marker travels its own ring.
 --
--- Focus modes (selected with VSN1 keyswitches 1..4):
+-- Focus modes (selected with VSN1 keyswitches 1..5):
 --   1 ROTATE    encoder edits rot      (0..steps-1, wraps)
 --   2 EVENTS    encoder edits k        (0..steps)
 --   3 STEPS     encoder edits n        (1..32; clamps k, rot)
 --   4 KEY       encoder edits MIDI key (0..127; SHIFT = +/-12)
--- Modes 5 RATE / 6 MUTE remain in the table (engine API still supports them)
--- but are not bound to a keyswitch in the current spec.
+--   5 RATE      encoder edits ppstep   (1..127 pulses per step; polyrhythm)
+-- MODE_MUTE (6) is not bound to a keyswitch; mute is toggled via encoder
+-- click instead (mirrors the step sequencer convention).
 --
 -- Track selection: small buttons 1..4 (no shift). With SHIFT held, small
 -- buttons 1..4 still select track (we have no viewport concept). SHIFT+key 1..4
@@ -33,6 +34,43 @@ M.MODE_STEPS  = 3
 M.MODE_KEY    = 4
 M.MODE_RATE   = 5
 M.MODE_MUTE   = 6
+
+-- Musical RATE ladder (pulses per pattern step, assumes 24 PPQN clock).
+-- Mirrors the step sequencer's `dur` ladder for cross-module consistency.
+--   3  = 32nd            6  = 16th             12 = 8th
+--   18 = dotted-8th      24 = quarter          30 = dotted-quarter
+-- Encoder snaps to the next entry in turn direction. Off-ladder values
+-- (e.g. ppstep=4 from a hand-edited boot patch) jump to the nearest
+-- on-ladder neighbour in the requested direction on first turn.
+local RATE_LADDER = { 3, 6, 12, 18, 24, 30 }
+local RATE_NAMES  = { "1/32", "1/16", "1/8", "1/8.", "1/4", "1/4." }
+
+-- Step `cur` along RATE_LADDER by `dir` (+1 / -1). Off-ladder values are
+-- snapped to the closest neighbour on the requested side, then nudged.
+local function rateStep(cur, dir)
+    local L = RATE_LADDER
+    if dir > 0 then
+        for i = 1, #L do
+            if L[i] > cur then return L[i] end
+        end
+        return L[#L]    -- already at top: clamp
+    else
+        for i = #L, 1, -1 do
+            if L[i] < cur then return L[i] end
+        end
+        return L[1]     -- already at bottom: clamp
+    end
+end
+M._rateStep = rateStep   -- exposed for tests
+
+-- Pretty-print ppstep for the PARAMS row. Off-ladder values shown as raw
+-- pulse count so the field stays diagnosable.
+local function rateLabel(p)
+    for i = 1, #RATE_LADDER do
+        if RATE_LADDER[i] == p then return RATE_NAMES[i] end
+    end
+    return tostring(p) .. "p"
+end
 
 -- selection state
 M.selT  = 1
@@ -63,8 +101,6 @@ function M.onKey(idx)
 end
 
 function M.onSmallBtn(idx)
-    -- Both bare and shift-held press selects track for now. SHIFT slot
-    -- reserved for future preset/copy features.
     if idx < 1 or idx > 4 then return end
     M.setSelectedTrack(idx)
 end
@@ -81,8 +117,7 @@ local function applyDelta(t, f, d)
         local big = M.shift and 12 or 1
         Engine.setKey(t, tr.key + d * big)
     elseif f == M.MODE_RATE then
-        local big = M.shift and 12 or 1
-        Engine.setPpstep(t, tr.ppstep + d * big)
+        Engine.setPpstep(t, rateStep(tr.ppstep, d))
     elseif f == M.MODE_MUTE then
         -- nothing on turn; click toggles
     end
@@ -147,27 +182,21 @@ local function ringPoint(R, i, n)
            a
 end
 
--- Faint sampled outline for a ring. 24 sample points reads as a circle.
-local function drawRingOutline(scr, R)
-    for i = 0, 23 do
-        local x, y = ringPoint(R, i, 24)
-        scr:draw_pixel(x, y, C_RING)
-    end
-end
-
 -- Scratch arrays for polygon vertices and diamond. Reused per draw to
 -- avoid per-track table churn. Max hits per track == MAX_STEPS == 32, +1 close.
 local PX, PY = {}, {}
 local DX, DY = { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
 
+-- Per-track ring painter. NO ring outline: 24 draw_pixel × 4 rings = 96
+-- draw_pixel calls per frame was the dominant on-device cost (confirmed
+-- via the EXP harness, see commit history). Hit pips alone mark the ring;
+-- density and rotation remain readable from pip distribution.
 local function drawTrack(scr, ti, tr, R, isSel)
     local col   = PAL[ti] or PAL[1]
     local muted = tr.muted == 1
     local c     = muted and C_MUTE or col
     local rDot, rRest
     if isSel then rDot, rRest = 8, 4 else rDot, rRest = 5, 2 end
-
-    drawRingOutline(scr, R)
 
     local nh = 0
     for i = 0, tr.steps - 1 do
@@ -267,7 +296,7 @@ function M.draw(scr)
         { lbl = "pulses ",  val = tr.events, mode = M.MODE_EVENTS },
         { lbl = "steps  ",  val = tr.steps,  mode = M.MODE_STEPS  },
         { lbl = "key    ",  val = tr.key,    mode = M.MODE_KEY    },
-        { lbl = "rate   ",  val = tr.ppstep, mode = M.MODE_RATE   },
+        { lbl = "rate   ",  val = rateLabel(tr.ppstep), mode = M.MODE_RATE   },
     }
     for i = 1, #ROWS do
         local y = py + 14 + (i - 1) * 12
@@ -304,7 +333,7 @@ function M.draw(scr)
         scr:draw_text_fast("MUTE", px + 60, py + 132, 8, C_MUTE)
     end
 
-    -- footer hint strip (mirror mock)
+    -- footer hint strip
     scr:draw_rectangle_filled(0, H - 16, W - 1, H - 1, C_HD)
     scr:draw_text_fast("K1=rot K2=ev K3=st K4=key  small=trk  enc=edit (SHIFT x12)",
                        4, H - 12, 8, C_DIM)

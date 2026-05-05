@@ -22,7 +22,7 @@ function M.onKey(idx, pressed)
  local CTL = M.CTL
  if idx == 8 then
  CTL.setShift(pressed)
- elseif pressed and idx >= 1 and idx <= 4 then
+ elseif pressed and idx >= 1 and idx <= 5 then
  CTL.onKey(idx)
  end
 end

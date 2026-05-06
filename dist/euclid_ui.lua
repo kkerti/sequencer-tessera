@@ -12,14 +12,15 @@ R["euclidean.controls"]=(function()
 
 local Engine = require("euclidean.engine")
 local M = {}
-local MN = { "ROTATE", "EVENTS", "STEPS", "KEY", "RATE", "MUTE" }
+local MN = { "STEPS", "PULSES", "ROTATE", "RATE", "PITCH", "BPM", "MUTE" }
 M.MODES = MN
-M.MODE_ROTATE = 1
+M.MODE_STEPS = 1
 M.MODE_EVENTS = 2
-M.MODE_STEPS = 3
-M.MODE_KEY = 4
-M.MODE_RATE = 5
-M.MODE_MUTE = 6
+M.MODE_ROTATE = 3
+M.MODE_RATE = 4
+M.MODE_KEY = 5
+M.MODE_BPM = 6
+M.MODE_MUTE = 7
 local RATE_LADDER = { 3, 6, 12, 18, 24, 30 }
 local RATE_NAMES = { "1/32", "1/16", "1/8", "1/8.", "1/4", "1/4." }
 local function rateStep(cur, dir)
@@ -47,6 +48,8 @@ M.selT = 1
 M.focus = 1
 M.shift = false
 local dirty = true
+M.App = nil
+function M.setApp(app) M.App = app; dirty = true end
 local function dAll() dirty = true end
 M.dirtyAll = dAll
 function M.setShift(b)
@@ -60,6 +63,10 @@ function M.setSelectedTrack(t)
 end
 function M.onKey(idx)
  if idx < 1 or idx > #MN or idx == M.focus then return end
+ if idx == M.MODE_BPM then
+ local A = M.App
+ if not (A and A.clockMode == "internal") then return end
+ end
  M.focus = idx; dirty = true
 end
 function M.onSmallBtn(idx)
@@ -79,6 +86,12 @@ local function applyDelta(t, f, d)
  Engine.setKey(t, tr.key + d * big)
  elseif f == M.MODE_RATE then
  Engine.setPpstep(t, rateStep(tr.ppstep, d))
+ elseif f == M.MODE_BPM then
+ local A = M.App
+ if A and A.setBpm and A.getBpm then
+ local big = M.shift and 10 or 1
+ A.setBpm(A.getBpm() + d * big)
+ end
  elseif f == M.MODE_MUTE then
  end
 end
@@ -201,24 +214,35 @@ function M.draw(scr)
  scr:draw_text_fast("/" .. tr.steps, CX - 10, CY + 6, 8, C_DIM)
  local px, py = 234, 28
  scr:draw_text_fast("PARAMS", px, py, 8, C_DIM)
- local ROWS = {
- { lbl = "rotate ", val = tr.rot, mode = M.MODE_ROTATE },
- { lbl = "pulses ", val = tr.events, mode = M.MODE_EVENTS },
- { lbl = "steps ", val = tr.steps, mode = M.MODE_STEPS },
- { lbl = "key ", val = tr.key, mode = M.MODE_KEY },
- { lbl = "rate ", val = rateLabel(tr.ppstep), mode = M.MODE_RATE },
- }
- for i = 1, #ROWS do
+ local LBL = M._rowLbl
+ local MODE = M._rowMode
+ if not LBL then
+ LBL = { "steps ", "pulses ", "rotate ", "rate ", "pitch ", "bpm " }
+ MODE = { M.MODE_STEPS, M.MODE_EVENTS, M.MODE_ROTATE, M.MODE_RATE, M.MODE_KEY, M.MODE_BPM }
+ M._rowLbl, M._rowMode = LBL, MODE
+ end
+ local VAL = M._rowVal
+ if not VAL then VAL = {}; M._rowVal = VAL end
+ VAL[1] = tr.steps
+ VAL[2] = tr.events
+ VAL[3] = tr.rot
+ VAL[4] = rateLabel(tr.ppstep)
+ VAL[5] = tr.key
+ local nRows = 5
+ local A = M.App
+ if A and A.clockMode == "internal" and A.getBpm then
+ nRows = 6
+ VAL[6] = A.getBpm()
+ end
+ for i = 1, nRows do
  local y = py + 14 + (i - 1) * 12
- local active = (ROWS[i].mode == M.focus)
+ local active = (MODE[i] == M.focus)
  if active then
  scr:draw_rectangle_filled(px - 2, y - 1, W - 2, y + 9, C_HI)
  end
  local fg = active and C_HIFG or C_FG
- scr:draw_text_fast(ROWS[i].lbl .. tostring(ROWS[i].val), px, y, 8, fg)
+ scr:draw_text_fast(LBL[i] .. tostring(VAL[i]), px, y, 8, fg)
  end
- local dens = (tr.steps > 0) and ((tr.events * 100) // tr.steps) or 0
- scr:draw_text_fast("density " .. dens .. "%", px, py + 14 + 5 * 12, 8, C_DIM)
  local pcol = (tr.muted == 1) and C_MUTE or tcol
  scr:draw_text_fast("PATTERN", px, py + 92, 8, C_DIM)
  local row1_chars, row2_chars = {}, {}
@@ -238,7 +262,7 @@ function M.draw(scr)
  scr:draw_text_fast("MUTE", px + 60, py + 132, 8, C_MUTE)
  end
  scr:draw_rectangle_filled(0, H - 16, W - 1, H - 1, C_HD)
- scr:draw_text_fast("K1=rot K2=ev K3=st K4=key small=trk enc=edit (SHIFT x12)",
+ scr:draw_text_fast("K1=st K2=pls K3=rot K4=rate K5=pit small=trk enc=edit",
  4, H - 12, 8, C_DIM)
  scr:draw_swap()
 end

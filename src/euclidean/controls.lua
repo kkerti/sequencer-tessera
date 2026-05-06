@@ -6,14 +6,18 @@
 -- pips. A polygon (closed) connects each track's hits in its colour. A
 -- per-track playhead marker travels its own ring.
 --
--- Focus modes (selected with VSN1 keyswitches 1..5):
---   1 ROTATE    encoder edits rot      (0..steps-1, wraps)
---   2 EVENTS    encoder edits k        (0..steps)
---   3 STEPS     encoder edits n        (1..32; clamps k, rot)
---   4 KEY       encoder edits MIDI key (0..127; SHIFT = +/-12)
---   5 RATE      encoder edits ppstep   (1..127 pulses per step; polyrhythm)
--- MODE_MUTE (6) is not bound to a keyswitch; mute is toggled via encoder
--- click instead (mirrors the step sequencer convention).
+-- Focus modes (selected with VSN1 keyswitches 1..5; row order mirrors
+-- physical keyswitch order — keyswitch N selects PARAMS row N):
+--   1 STEPS     encoder edits n        (1..32; clamps k, rot)
+--   2 PULSES    encoder edits k        (0..steps)             [a.k.a. EVENTS]
+--   3 ROTATE    encoder edits rot      (0..steps-1, wraps)
+--   4 RATE      encoder edits ppstep   (snaps to {3,6,12,18,24,30} pulses)
+--   5 PITCH     encoder edits MIDI key (0..127; SHIFT = +/-12)
+-- MODE_BPM (6) is conditionally available — only when the App layer reports
+-- clockMode == "internal" (set via App.setClockMode in VSN1-euclid.lua boot).
+-- When unbound, keyswitch 6 is a no-op.
+-- MODE_MUTE (7) is never keyswitch-bound; mute is toggled via encoder click
+-- (mirrors the step sequencer convention).
 --
 -- Track selection: small buttons 1..4 (no shift). With SHIFT held, small
 -- buttons 1..4 still select track (we have no viewport concept). SHIFT+key 1..4
@@ -26,14 +30,15 @@ local Engine = require("euclidean.engine")
 
 local M = {}
 
-local MN = { "ROTATE", "EVENTS", "STEPS", "KEY", "RATE", "MUTE" }
+local MN = { "STEPS", "PULSES", "ROTATE", "RATE", "PITCH", "BPM", "MUTE" }
 M.MODES = MN
-M.MODE_ROTATE = 1
-M.MODE_EVENTS = 2
-M.MODE_STEPS  = 3
-M.MODE_KEY    = 4
-M.MODE_RATE   = 5
-M.MODE_MUTE   = 6
+M.MODE_STEPS  = 1
+M.MODE_EVENTS = 2     -- screen label "PULSES"; engine field is `events`
+M.MODE_ROTATE = 3
+M.MODE_RATE   = 4
+M.MODE_KEY    = 5     -- screen label "PITCH"; engine field is `key`
+M.MODE_BPM    = 6     -- only reachable when App.clockMode == "internal"
+M.MODE_MUTE   = 7
 
 -- Musical RATE ladder (pulses per pattern step, assumes 24 PPQN clock).
 -- Mirrors the step sequencer's `dur` ladder for cross-module consistency.
@@ -79,6 +84,12 @@ M.shift = false
 
 local dirty = true
 
+-- App handle — set by vsn1_app.init() so we can read/write BPM and ask
+-- whether the BPM row should be visible (clockMode == "internal").
+-- Optional: if nil, BPM features are simply hidden.
+M.App   = nil
+function M.setApp(app) M.App = app; dirty = true end
+
 local function dAll() dirty = true end
 M.dirtyAll = dAll
 
@@ -97,6 +108,15 @@ end
 
 function M.onKey(idx)
     if idx < 1 or idx > #MN or idx == M.focus then return end
+    -- MODE_BPM (6) is only selectable when the App reports internal clock.
+    -- This keeps the keyswitch a no-op in external-clock mode where BPM
+    -- has no meaning (clock comes from the host).
+    if idx == M.MODE_BPM then
+        local A = M.App
+        if not (A and A.clockMode == "internal") then return end
+    end
+    -- MODE_MUTE (7) has no encoder action; we still let it focus (would
+    -- only matter if a future keyswitch binding is added).
     M.focus = idx; dirty = true
 end
 
@@ -118,6 +138,12 @@ local function applyDelta(t, f, d)
         Engine.setKey(t, tr.key + d * big)
     elseif f == M.MODE_RATE then
         Engine.setPpstep(t, rateStep(tr.ppstep, d))
+    elseif f == M.MODE_BPM then
+        local A = M.App
+        if A and A.setBpm and A.getBpm then
+            local big = M.shift and 10 or 1
+            A.setBpm(A.getBpm() + d * big)
+        end
     elseif f == M.MODE_MUTE then
         -- nothing on turn; click toggles
     end
@@ -288,28 +314,45 @@ function M.draw(scr)
 
     -- right column: PARAMS + PATTERN, with brightness-only highlight on
     -- the focused row so the encoder's effect is unambiguous.
+    -- Row order matches keyswitch order: keyswitch N selects row N.
+    -- Row data lives in three parallel arrays (label / value / mode) so
+    -- we can rebuild values per draw without allocating row-tables. This
+    -- isn't the hot path but `draw` runs at ~20 fps and prior versions
+    -- allocated ~5 small tables per frame here.
     local px, py = 234, 28
     scr:draw_text_fast("PARAMS", px, py, 8, C_DIM)
 
-    local ROWS = {
-        { lbl = "rotate ",  val = tr.rot,    mode = M.MODE_ROTATE },
-        { lbl = "pulses ",  val = tr.events, mode = M.MODE_EVENTS },
-        { lbl = "steps  ",  val = tr.steps,  mode = M.MODE_STEPS  },
-        { lbl = "key    ",  val = tr.key,    mode = M.MODE_KEY    },
-        { lbl = "rate   ",  val = rateLabel(tr.ppstep), mode = M.MODE_RATE   },
-    }
-    for i = 1, #ROWS do
+    local LBL  = M._rowLbl
+    local MODE = M._rowMode
+    if not LBL then
+        LBL  = { "steps  ", "pulses ", "rotate ", "rate   ", "pitch  ", "bpm    " }
+        MODE = { M.MODE_STEPS, M.MODE_EVENTS, M.MODE_ROTATE, M.MODE_RATE, M.MODE_KEY, M.MODE_BPM }
+        M._rowLbl, M._rowMode = LBL, MODE
+    end
+    local VAL = M._rowVal
+    if not VAL then VAL = {}; M._rowVal = VAL end
+    VAL[1] = tr.steps
+    VAL[2] = tr.events
+    VAL[3] = tr.rot
+    VAL[4] = rateLabel(tr.ppstep)
+    VAL[5] = tr.key
+
+    local nRows = 5
+    local A = M.App
+    if A and A.clockMode == "internal" and A.getBpm then
+        nRows = 6
+        VAL[6] = A.getBpm()
+    end
+
+    for i = 1, nRows do
         local y = py + 14 + (i - 1) * 12
-        local active = (ROWS[i].mode == M.focus)
+        local active = (MODE[i] == M.focus)
         if active then
             scr:draw_rectangle_filled(px - 2, y - 1, W - 2, y + 9, C_HI)
         end
         local fg = active and C_HIFG or C_FG
-        scr:draw_text_fast(ROWS[i].lbl .. tostring(ROWS[i].val), px, y, 8, fg)
+        scr:draw_text_fast(LBL[i] .. tostring(VAL[i]), px, y, 8, fg)
     end
-    -- density (read-only derived value)
-    local dens = (tr.steps > 0) and ((tr.events * 100) // tr.steps) or 0
-    scr:draw_text_fast("density " .. dens .. "%", px, py + 14 + 5 * 12, 8, C_DIM)
 
     -- PATTERN: ASCII X/. row in track colour (or red if muted).
     local pcol = (tr.muted == 1) and C_MUTE or tcol
@@ -335,7 +378,7 @@ function M.draw(scr)
 
     -- footer hint strip
     scr:draw_rectangle_filled(0, H - 16, W - 1, H - 1, C_HD)
-    scr:draw_text_fast("K1=rot K2=ev K3=st K4=key  small=trk  enc=edit (SHIFT x12)",
+    scr:draw_text_fast("K1=st K2=pls K3=rot K4=rate K5=pit  small=trk  enc=edit",
                        4, H - 12, 8, C_DIM)
 
     scr:draw_swap()

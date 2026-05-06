@@ -56,10 +56,10 @@ function M.test_euclid_vsn1_loads_via_core()
     if ret ~= app then error("init() must return the app module") end
     if app.CTL ~= ui.screen then error("init() must store controls in CTL") end
 
-    -- end-to-end: focus to STEPS (mode 3 in current spec: 1=ROTATE 2=EVENTS
-    -- 3=STEPS 4=KEY), encoder turn changes selected track's steps.
+    -- end-to-end: focus to STEPS (mode 1 in current spec: 1=STEPS 2=PULSES
+    -- 3=ROTATE 4=RATE 5=PITCH), encoder turn changes selected track's steps.
     local before = core.Core.engine.tracks[1].steps
-    app.onKey(3, true)             -- MODE_STEPS
+    app.onKey(1, true)             -- MODE_STEPS
     app.onTurn(1)                  -- +1 step
     if core.Core.engine.tracks[1].steps ~= before + 1 then
         error("end-to-end: encoder turn did not bump steps")

@@ -45,13 +45,13 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Per-focus value extractor for EN16 LED brightness.
--- f: 1=STEP 2=NOTE 3=VEL 4=GATE(+shift -> dur) 5=MUTE 6=LASTSTEP
+-- f: 1=NOTE 2=VEL 3=GATE(+shift -> dur) 4=MUTE 5=LASTSTEP
 -- -----------------------------------------------------------------------------
 
 local function valueFor(stp, f, shift)
-    if f == 2 then return Step.pitch(stp) end
-    if f == 3 then return Step.vel(stp) end
-    if f == 4 then
+    if f == 1 then return Step.pitch(stp) end
+    if f == 2 then return Step.vel(stp) end
+    if f == 3 then
         if shift then return Step.dur(stp) end
         return Step.gate(stp)
     end
@@ -125,14 +125,17 @@ end
 -- Input handlers (each ends with pushEN16 to keep the satellite in sync)
 -- -----------------------------------------------------------------------------
 
--- Keyswitches 1..8. 1..6 = focus modes; 7 = persist (load / SHIFT=save);
--- 8 = SHIFT.
+-- Keyswitches 1..8. 1..5 = focus modes (NOTE VEL GATE MUTE LASTSTEP);
+-- 7 = persist (load / SHIFT=save); 8 = SHIFT (toggle).
 function M.onKey(idx, pressed)
     local CTL = M.CTL
     if idx == 8 then
+        -- SHIFT keyswitch is configured as a hardware toggle, so each press
+        -- reports its latched state directly (127 = engaged, 0 = released).
+        -- Adopt it verbatim; no local flip needed.
         CTL.setShift(pressed)
         M.pushEN16()
-    elseif pressed and idx >= 1 and idx <= 6 then
+    elseif pressed and idx >= 1 and idx <= 5 then
         CTL.onKey(idx)
         M.pushEN16()
     elseif pressed and idx == 7 then
@@ -172,7 +175,7 @@ function M.fromEN16Turn(i, d)
     local CTL = M.CTL
     if i < 1 or i > 16 then return end
     local f = CTL.focus
-    if f == CTL.MODE_STEP or f == CTL.MODE_LASTSTEP then return end
+    if f == CTL.MODE_LASTSTEP then return end
     local s = (CTL.viewport - 1) * 16 + i
     if s > Engine.tracks[CTL.selT].lastStep then return end
     CTL.setSelectedStep(s)

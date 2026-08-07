@@ -12,12 +12,11 @@ R["controls_en16"]=(function()
 
 local M = {}
 M.NUM_ENC = 16
-M.MODE_STEP = 1
-M.MODE_NOTE = 2
-M.MODE_VEL = 3
-M.MODE_GATE = 4
-M.MODE_MUTE = 5
-M.MODE_LASTSTEP = 6
+M.MODE_NOTE = 1
+M.MODE_VEL = 2
+M.MODE_GATE = 3
+M.MODE_MUTE = 4
+M.MODE_LASTSTEP = 5
 M.PAL = {
  { 60, 130, 255 },
  { 255, 140, 20 },
@@ -25,7 +24,7 @@ M.PAL = {
  { 180, 80, 220 },
 }
 M.mu = 0
-M.focus = 2
+M.focus = 1
 M.sel = 1
 M.cap = 16
 M.tr = 1

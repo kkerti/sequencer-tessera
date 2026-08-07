@@ -24,9 +24,9 @@ function M.init(controls)
  return M
 end
 local function valueFor(stp, f, shift)
- if f == 2 then return Step.pitch(stp) end
- if f == 3 then return Step.vel(stp) end
- if f == 4 then
+ if f == 1 then return Step.pitch(stp) end
+ if f == 2 then return Step.vel(stp) end
+ if f == 3 then
  if shift then return Step.dur(stp) end
  return Step.gate(stp)
  end
@@ -86,7 +86,7 @@ function M.onKey(idx, pressed)
  if idx == 8 then
  CTL.setShift(pressed)
  M.pushEN16()
- elseif pressed and idx >= 1 and idx <= 6 then
+ elseif pressed and idx >= 1 and idx <= 5 then
  CTL.onKey(idx)
  M.pushEN16()
  elseif pressed and idx == 7 then
@@ -117,7 +117,7 @@ function M.fromEN16Turn(i, d)
  local CTL = M.CTL
  if i < 1 or i > 16 then return end
  local f = CTL.focus
- if f == CTL.MODE_STEP or f == CTL.MODE_LASTSTEP then return end
+ if f == CTL.MODE_LASTSTEP then return end
  local s = (CTL.viewport - 1) * 16 + i
  if s > Engine.tracks[CTL.selT].lastStep then return end
  CTL.setSelectedStep(s)

@@ -36,8 +36,8 @@ end
 
 -- Layout constants mirrored from controls.lua. If they drift, update here.
 local COL_W = 20
-local STR_Y = 22 * (1 + 5) + 2 + 22 + 4   -- ROW_H*(1+PARAMS) + 2 + LS_H + 4 = 160
-local STR_H = 240 - STR_Y - 1              -- 79
+local STR_Y = 22 * (1 + 4) + 2 + 22 + 4   -- ROW_H*(1+PARAMS) + 2 + LS_H + 4 = 138
+local STR_H = 240 - STR_Y - 1              -- 101
 local STR_BOT = STR_Y + STR_H - 1          -- 238
 
 -- Returns the well rect for cell c (1..16): the rect spanning the full
@@ -154,19 +154,19 @@ function M.test_oor_cell_has_no_bar_and_uses_oor_well_colour()
     eq(w.r, 35, "oor well R"); eq(w.g, 35, "oor well G"); eq(w.b, 40, "oor well B")
 end
 
-function M.test_step_focus_draws_no_bar()
+function M.test_mute_focus_draws_no_bar()
     setup()
     local tr = Engine.tracks[1]
     tr.steps[1] = Step.pack({ pitch=127, vel=127, dur=127, gate=127 })
-    Controls.focus = Controls.MODE_STEP
+    Controls.focus = Controls.MODE_MUTE
     Controls.dirtyAll()
 
     local scr = newScr()
     Controls.draw(scr)
-    -- STEP focus: wells but no bars on any in-range cell
+    -- MUTE focus: wells but no bars on any in-range cell
     for c = 1, 16 do
         if cellBar(scr, c) then
-            error("STEP focus must not draw a bar (cell " .. c .. ")")
+            error("MUTE focus must not draw a bar (cell " .. c .. ")")
         end
     end
 end

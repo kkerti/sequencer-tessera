@@ -13,7 +13,7 @@ R["controls"]=(function()
 local Engine = require("engine")
 local Step = require("step")
 local M = {}
-local MN = { "STEP", "NOTE", "VEL", "GATE", "MUTE", "LAST" }
+local MN = { "NOTE", "VEL", "GATE", "MUTE", "LAST" }
 local SWING_PCT = { "50", "58", "67", "75" }
 local DUR_LADDER = { 3, 6, 12, 18, 24, 30 }
 local function durIndex(v)
@@ -24,14 +24,13 @@ local function durIndex(v)
  end
  return best
 end
-M.MODE_STEP = 1
-M.MODE_NOTE = 2
-M.MODE_VEL = 3
-M.MODE_GATE = 4
-M.MODE_MUTE = 5
-M.MODE_LASTSTEP = 6
+M.MODE_NOTE = 1
+M.MODE_VEL = 2
+M.MODE_GATE = 3
+M.MODE_MUTE = 4
+M.MODE_LASTSTEP = 5
 M.MODES = MN
-M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 2, false
+M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
 local dirty = true
@@ -46,17 +45,17 @@ end
 local function setParam(i, t, s, d)
  local stp = Engine.tracks[t].steps[s]
  local big = M.shift and 12 or 1
- if i == 2 then
+ if i == 1 then
  Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d * big)
- elseif i == 3 then
+ elseif i == 2 then
  Engine.setStepParam(t, s, "vel", Step.vel(stp) + d * big)
- elseif i == 4 then
+ elseif i == 3 then
  if M.shift then
  bumpDur(t, s, d)
  else
  Engine.setStepParam(t, s, "gate", Step.gate(stp) + d)
  end
- elseif i == 5 then
+ elseif i == 4 then
  Engine.setStepParam(t, s, "mute", Step.muted(stp) and 0 or 1)
  end
  dirty = true
@@ -101,12 +100,6 @@ function M.onEndless(dir)
  local tr = Engine.tracks[M.selT]
  Engine.setLastStep(M.selT, tr.lastStep + dir)
  end
- elseif f == M.MODE_STEP then
- local tr = Engine.tracks[M.selT]
- local s = M.selS + dir
- if s < 1 then s = tr.lastStep end
- if s > tr.lastStep then s = 1 end
- M.setSelectedStep(s); return
  elseif f >= M.MODE_NOTE and f <= M.MODE_MUTE then
  setParam(f, M.selT, M.selS, dir)
  end
@@ -114,7 +107,6 @@ function M.onEndless(dir)
 end
 function M.onEndlessClick()
  local f = M.focus
- if f == M.MODE_STEP then return end
  if f == M.MODE_LASTSTEP then
  if M.shift then
  Engine.setSwing(0)
@@ -152,6 +144,7 @@ local C_HIFG = { 255, 255, 255 }
 local C_WELL = { 55, 55, 58 }
 local C_BAR = { 220, 220, 225 }
 local C_MUTE = { 160, 30, 30 }
+local C_SHIFT = { 255, 140, 20 }
 local C_TRACK = {
  { 60, 130, 255 },
  { 255, 140, 20 },
@@ -159,7 +152,7 @@ local C_TRACK = {
  { 180, 80, 220 },
 }
 local ROW_H = 22
-local PARAMS = 5
+local PARAMS = 4
 local LS_Y = ROW_H * (1 + PARAMS) + 2
 local LS_H = ROW_H
 local STR_Y = LS_Y + LS_H + 4
@@ -174,16 +167,17 @@ function M.draw(scr)
  local sh = M.shift
  scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
  local sw = Engine.swing
- local showSwHere = (f == M.MODE_LASTSTEP and sh)
+ local showSwHere = sh
  local swSuffix = (sw > 0 and not showSwHere) and " sw" or ""
  local tcol = C_TRACK[M.selT] or C_FG
  scr:draw_rectangle_filled(2, 2, 38, 20, tcol)
  scr:draw_text_fast("T" .. M.selT, 8, 4, 16, C_HIFG)
  scr:draw_text_fast(
- "S" .. M.selS .. " V" .. M.viewport
- .. " " .. MN[f] .. " " .. Step.noteName(Step.pitch(stp))
- .. swSuffix,
+ "S" .. M.selS .. " V" .. M.viewport .. swSuffix,
  56, 4, 16, C_FG)
+ if sh then
+ scr:draw_text_fast("SHIFT", 232, 4, 16, C_SHIFT)
+ end
  for i = 1, PARAMS do
  local y = ROW_H * i
  local active = (i == f)
@@ -192,14 +186,12 @@ function M.draw(scr)
  end
  local fg = active and C_HIFG or C_DIM
  local txt
- if i == M.MODE_STEP then
- txt = "step " .. M.selS
- elseif i == M.MODE_NOTE then
+ if i == M.MODE_NOTE then
  txt = "note " .. Step.pitch(stp) .. " " .. Step.noteName(Step.pitch(stp))
  elseif i == M.MODE_VEL then
  txt = "vel " .. Step.vel(stp)
  elseif i == M.MODE_GATE then
- if sh and active then
+ if sh then
  txt = "dur " .. Step.dur(stp)
  else
  txt = "gate " .. Step.gate(stp)
@@ -215,7 +207,7 @@ function M.draw(scr)
  scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, C_HI)
  end
  local lsTxt
- if lsActive and sh then
+ if sh then
  lsTxt = "swing " .. SWING_PCT[sw + 1] .. "%"
  else
  lsTxt = "last " .. tr.lastStep

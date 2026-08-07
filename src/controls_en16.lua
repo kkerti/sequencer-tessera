@@ -31,12 +31,11 @@ local M = {}
 M.NUM_ENC = 16
 
 -- mode constants (kept in sync with controls.lua)
-M.MODE_STEP     = 1
-M.MODE_NOTE     = 2
-M.MODE_VEL      = 3
-M.MODE_GATE     = 4
-M.MODE_MUTE     = 5
-M.MODE_LASTSTEP = 6
+M.MODE_NOTE     = 1
+M.MODE_VEL      = 2
+M.MODE_GATE     = 3
+M.MODE_MUTE     = 4
+M.MODE_LASTSTEP = 5
 
 -- Track palette as RGB triples.
 -- 1=blue, 2=orange, 3=green, 4=purple
@@ -50,7 +49,7 @@ M.PAL = {
 -- ---- state ----------------------------------------------------------------
 
 M.mu    = 0
-M.focus = 2    -- default NOTE
+M.focus = 1    -- default NOTE
 M.sel   = 1
 M.cap   = 16
 M.tr    = 1

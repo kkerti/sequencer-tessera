@@ -19,8 +19,8 @@
 --
 -- Hardware mapping:
 --   Screen     : 320x240 EDIT view (greyscale + mute red).
---   Keyswitch  : 1=STEP 2=NOTE 3=VEL 4=GATE 5=MUTE 6=LASTSTEP
---                7=LOAD (SHIFT+7=SAVE)  8=SHIFT.
+--   Keyswitch  : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=LASTSTEP
+--                7=LOAD (SHIFT+7=SAVE)  8=SHIFT (toggle; LED = full-bright orange).
 --   4 small btns: viewport (no shift) / track select (+ shift).
 --   Endless    : turn = act-per-mode; click = mute toggle on selected step.
 --                In GATE focus, SHIFT + turn edits dur (snaps ladder).
@@ -111,13 +111,24 @@ CTL.draw(self)
 
 loadAPP().onKey(self:element_index() + 1, self:button_state() == 127)
 
+-- SHIFT LED (element 7 = keyswitch 8): full-bright orange while the toggle
+-- is active, off otherwise. onKey flips CTL.shift on the press edge, so by
+-- the time this runs the state already reflects the new value.
+if self:element_index() == 7 then
+    if CTL.shift then
+        led_color(7, 2, 255, 140, 20, 0)
+    else
+        led_color(7, 2, 0, 0, 0, 0)
+    end
+end
+
 
 -- =============================================================================
 -- [5] ENDLESS TURN
 -- =============================================================================
 
-local v = self:endless_value()
-if v == 65 then loadAPP().onTurn(1) elseif v == 63 then loadAPP().onTurn(-1) end
+local d = self:endless_value() - 64
+if d ~= 0 then loadAPP().onTurn(d) end
 
 
 -- =============================================================================

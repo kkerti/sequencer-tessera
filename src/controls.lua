@@ -1,5 +1,7 @@
 -- controls.lua  (slim, no colors)
--- Mode order:  1=STEP  2=NOTE  3=VEL  4=GATE  5=MUTE  6=LASTSTEP
+-- Mode order:  1=NOTE  2=VEL  3=GATE  4=MUTE  5=LASTSTEP
+-- (STEP mode was dropped: the selected step is shown in the header and
+--  edited directly via the buttons.)
 -- Highlight via brightness only (no per-mode RGB hues).
 -- Mute is the only colored signal (red), shown in the strip + on EN16.
 local Engine = require("engine")
@@ -7,7 +9,7 @@ local Step   = require("step")
 
 local M = {}
 
-local MN = { "STEP", "NOTE", "VEL", "GATE", "MUTE", "LAST" }
+local MN = { "NOTE", "VEL", "GATE", "MUTE", "LAST" }
 
 -- Swing depth (pulses, 0..3 at 24 PPQN) → human-readable percent feel.
 local SWING_PCT = { "50", "58", "67", "75" }
@@ -27,16 +29,15 @@ local function durIndex(v)
     return best
 end
 
-M.MODE_STEP     = 1
-M.MODE_NOTE     = 2
-M.MODE_VEL      = 3
-M.MODE_GATE     = 4
-M.MODE_MUTE     = 5
-M.MODE_LASTSTEP = 6
+M.MODE_NOTE     = 1
+M.MODE_VEL      = 2
+M.MODE_GATE     = 3
+M.MODE_MUTE     = 4
+M.MODE_LASTSTEP = 5
 M.MODES         = MN
 
 -- selection state (UI only)
-M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 2, false
+M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
@@ -59,18 +60,18 @@ local function setParam(i, t, s, d)
     local stp = Engine.tracks[t].steps[s]
     -- Shift-coarse: pitch / vel / gate move in increments of 12.
     local big = M.shift and 12 or 1
-    if i == 2 then
+    if i == 1 then
         Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d * big)
-    elseif i == 3 then
+    elseif i == 2 then
         Engine.setStepParam(t, s, "vel", Step.vel(stp) + d * big)
-    elseif i == 4 then
+    elseif i == 3 then
         if M.shift then
             -- shift+turn in GATE focus = edit dur (along ladder)
             bumpDur(t, s, d)
         else
             Engine.setStepParam(t, s, "gate", Step.gate(stp) + d)
         end
-    elseif i == 5 then
+    elseif i == 4 then
         Engine.setStepParam(t, s, "mute", Step.muted(stp) and 0 or 1)
     end
     dirty = true
@@ -121,12 +122,6 @@ function M.onEndless(dir)
             local tr = Engine.tracks[M.selT]
             Engine.setLastStep(M.selT, tr.lastStep + dir)
         end
-    elseif f == M.MODE_STEP then
-        local tr = Engine.tracks[M.selT]
-        local s = M.selS + dir
-        if s < 1 then s = tr.lastStep end
-        if s > tr.lastStep then s = 1 end
-        M.setSelectedStep(s); return
     elseif f >= M.MODE_NOTE and f <= M.MODE_MUTE then
         setParam(f, M.selT, M.selS, dir)
     end
@@ -135,7 +130,6 @@ end
 
 function M.onEndlessClick()
     local f = M.focus
-    if f == M.MODE_STEP then return end
     if f == M.MODE_LASTSTEP then
         if M.shift then
             -- shift+click in LASTSTEP: reset swing to straight (50%)
@@ -180,6 +174,7 @@ local C_HIFG  = { 255, 255, 255 }       -- active row text (pure white)
 local C_WELL  = {  55,  55,  58 }       -- strip well (always)
 local C_BAR   = { 220, 220, 225 }       -- strip bar (value-driven)
 local C_MUTE  = { 160,  30,  30 }       -- mute red (strip + selection)
+local C_SHIFT = { 255, 140,  20 }       -- shift indicator (orange)
 
 -- Track palette: T1=blue, T2=orange, T3=green, T4=purple. Mirrors
 -- controls_en16.PAL so the chip on screen matches the LED hue.
@@ -192,7 +187,7 @@ local C_TRACK = {
 
 -- Layout (320x240)
 local ROW_H  = 22                 -- header & each value row
-local PARAMS = 5                  -- STEP, NOTE, VEL, GATE, MUTE
+local PARAMS = 4                  -- NOTE, VEL, GATE, MUTE
 local LS_Y   = ROW_H * (1 + PARAMS) + 2     -- separator above lastStep
 local LS_H   = ROW_H
 local STR_Y  = LS_Y + LS_H + 4
@@ -210,13 +205,17 @@ function M.draw(scr)
 
     scr:draw_rectangle_filled(0, 0, 319, 239, C_BG)
 
-    -- header: [T#]   S V  MODE  noteName [sw]
+    -- header: [T#]  S V MODE  noteName [sw]
     -- T-chip is a small filled rect in the track's palette colour, with
-    -- the track number drawn on top in white. Rest of header is C_FG.
-    -- Swing indicator is just "sw" — the LASTSTEP row carries the % value
+    -- the track number drawn on top in white. The mode name + current
+    -- value that used to follow S/V are redundant (the param rows already
+    -- show them), so that slot now holds a SHIFT indicator (orange).
+    -- Swing indicator is "sw" — the LASTSTEP row carries the % value
     -- when the user wants to see/edit it.
     local sw = Engine.swing
-    local showSwHere = (f == M.MODE_LASTSTEP and sh)
+    -- The LASTSTEP row shows the swing % whenever SHIFT is active, so the
+    -- header "sw" suffix is only needed when shift is off (or swing is 0).
+    local showSwHere = sh
     local swSuffix = (sw > 0 and not showSwHere) and "  sw" or ""
 
     local tcol = C_TRACK[M.selT] or C_FG
@@ -224,10 +223,12 @@ function M.draw(scr)
     scr:draw_text_fast("T" .. M.selT, 8, 4, 16, C_HIFG)
 
     scr:draw_text_fast(
-        "S" .. M.selS .. " V" .. M.viewport
-            .. "  " .. MN[f] .. "  " .. Step.noteName(Step.pitch(stp))
-            .. swSuffix,
+        "S" .. M.selS .. " V" .. M.viewport .. swSuffix,
         56, 4, 16, C_FG)
+
+    if sh then
+        scr:draw_text_fast("SHIFT", 232, 4, 16, C_SHIFT)
+    end
 
     -- param rows
     for i = 1, PARAMS do
@@ -238,15 +239,13 @@ function M.draw(scr)
         end
         local fg = active and C_HIFG or C_DIM
         local txt
-        if i == M.MODE_STEP then
-            txt = "step  " .. M.selS
-        elseif i == M.MODE_NOTE then
+        if i == M.MODE_NOTE then
             txt = "note  " .. Step.pitch(stp) .. "  " .. Step.noteName(Step.pitch(stp))
         elseif i == M.MODE_VEL then
             txt = "vel   " .. Step.vel(stp)
         elseif i == M.MODE_GATE then
-            -- show gate by default; under shift in GATE focus, show dur preview
-            if sh and active then
+            -- show gate by default; under shift, show dur (its shift variant)
+            if sh then
                 txt = "dur   " .. Step.dur(stp)
             else
                 txt = "gate  " .. Step.gate(stp)
@@ -264,7 +263,8 @@ function M.draw(scr)
         scr:draw_rectangle_filled(0, LS_Y, 319, LS_Y + LS_H - 1, C_HI)
     end
     local lsTxt
-    if lsActive and sh then
+    -- Under SHIFT the LASTSTEP row always shows its shift variant (swing).
+    if sh then
         lsTxt = "swing  " .. SWING_PCT[sw + 1] .. "%"
     else
         lsTxt = "last   " .. tr.lastStep

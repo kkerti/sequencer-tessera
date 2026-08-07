@@ -22,7 +22,7 @@ function M.save(path)
     f:write("return{swing=", Engine.swing, ",tracks={")
     for ti = 1, #Engine.tracks do
         local tr = Engine.tracks[ti]
-        f:write("{chan=", tr.chan, ",lastStep=", tr.lastStep, ",steps={")
+        f:write("{chan=", tr.chan, ",lastStep=", tr.lastStep, ",scale=", tr.scale, ",steps={")
         local s = tr.steps
         for i = 1, tr.cap do
             if i > 1 then f:write(",") end
@@ -58,6 +58,9 @@ function M.load(path)
             end
             if type(td.lastStep) == "number" then
                 Engine.setLastStep(ti, td.lastStep | 0)
+            end
+            if type(td.scale) == "number" then
+                Engine.setTrackScale(ti, td.scale | 0)
             end
             if type(td.steps) == "table" then
                 local ds = td.steps

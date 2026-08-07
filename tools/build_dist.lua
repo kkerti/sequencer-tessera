@@ -34,16 +34,20 @@ local SRC = "src"
 -- Core bundle: pure logic, no IO, no UI.
 local CORE = {
     out   = "dist/sequencer.lua",
-    files = { "step", "track", "engine", "midi_rx", "persist" },
+    -- Order matters: bundles execute top-to-bottom and the require shim
+    -- only resolves already-built modules. Dependencies must precede
+    -- consumers (step, scale before track; track before engine).
+    files = { "step", "scale", "track", "engine", "midi_rx", "persist" },
     namespaces = [[
 return {
-    Core     = { step = R.step, track = R.track, engine = R.engine, midi_rx = R.midi_rx, persist = R.persist },
+    Core     = { step = R.step, track = R.track, scale = R.scale, engine = R.engine, midi_rx = R.midi_rx, persist = R.persist },
     App      = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     HAL      = {},
     -- flat aliases (same table refs); UI bundle resolves through these
     step    = R.step,
     track   = R.track,
+    scale   = R.scale,
     engine  = R.engine,
     midi_rx = R.midi_rx,
     persist = R.persist,

@@ -62,9 +62,50 @@ end
 return M
 
 end)()
+R["scale"]=(function()
+
+local M = {}
+M.SCALES = {
+ { name = "off", short = "off", mask = 0x000 },
+ { name = "maj", short = "Maj", mask = 0xAB5 },
+ { name = "min", short = "Min", mask = 0x5AD },
+ { name = "maj pent", short = "MajP", mask = 0x295 },
+ { name = "min pent", short = "MinP", mask = 0x4A9 },
+}
+function M.quantize(p, mask)
+ if mask == 0 then return p end
+ local pc = p % 12
+ if (mask >> pc) & 1 == 1 then return p end
+ local base = (p // 12) * 12
+ for d = 1, 12 do
+ local up = pc + d
+ if up < 12 then
+ if (mask >> up) & 1 == 1 then return base + up end
+ else
+ local u = up - 12
+ if (mask >> u) & 1 == 1 then return base + 12 + u end
+ end
+ local dn = pc - d
+ if dn >= 0 then
+ if (mask >> dn) & 1 == 1 then return base + dn end
+ else
+ local dd = dn + 12
+ if (mask >> dd) & 1 == 1 then
+ local r = base - 12 + dd
+ if r < 0 then return 0 end
+ return r
+ end
+ end
+ end
+ return p
+end
+return M
+
+end)()
 R["track"]=(function()
 
 local Step = require("step")
+local Scale = require("scale")
 local M = {}
 M.DEFAULT_LAST_STEP = 16
 function M.new(cap)
@@ -77,6 +118,7 @@ function M.new(cap)
  cap = cap,
  chan = 0,
  lastStep = M.DEFAULT_LAST_STEP,
+ scale = 1,
  pos = 0,
  stepAcc = 0,
  stepLen = 0,
@@ -104,6 +146,8 @@ local function fireStep(tr, out)
  local p, v, g = Step.pitch(s), Step.vel(s), Step.gate(s)
  if g <= 0 then return end
  if g > tr.stepLen then g = tr.stepLen end
+ local sc = tr.scale
+ if sc ~= 1 then p = Scale.quantize(p, Scale.SCALES[sc].mask) end
  if tr.actPitch == p and g >= tr.stepLen and tr.actOff > 0 then
  tr.actOff = g
  else
@@ -144,6 +188,10 @@ function M.setLastStep(tr, n)
  if n < 1 then n = 1 elseif n > tr.cap then n = tr.cap end
  tr.lastStep = n
 end
+function M.setScale(tr, idx)
+ if idx < 1 then idx = 1 elseif idx > #Scale.SCALES then idx = #Scale.SCALES end
+ tr.scale = idx
+end
 function M.reset(tr)
  tr.pos = 0
  tr.stepAcc = 0
@@ -160,8 +208,10 @@ end)()
 R["engine"]=(function()
 
 local Track = require("track")
+local Scale = require("scale")
 local M = {}
 M.tracks = {}
+M.scales = Scale.SCALES
 M.running = false
 M.pulseCount = 0
 M.swing = 0
@@ -244,6 +294,10 @@ function M.setTrackChan(t, ch)
  if ch > 15 then ch = 15 end
  tr.chan = ch
 end
+function M.setTrackScale(t, idx)
+ local tr = M.tracks[t]; if not tr then return end
+ Track.setScale(tr, idx)
+end
 function M.setSwing(s)
  if s < 0 then s = 0 elseif s > 3 then s = 3 end
  M.swing = s
@@ -293,7 +347,7 @@ function M.save(path)
  f:write("return{swing=", Engine.swing, ",tracks={")
  for ti = 1, #Engine.tracks do
  local tr = Engine.tracks[ti]
- f:write("{chan=", tr.chan, ",lastStep=", tr.lastStep, ",steps={")
+ f:write("{chan=", tr.chan, ",lastStep=", tr.lastStep, ",scale=", tr.scale, ",steps={")
  local s = tr.steps
  for i = 1, tr.cap do
  if i > 1 then f:write(",") end
@@ -327,6 +381,9 @@ function M.load(path)
  if type(td.lastStep) == "number" then
  Engine.setLastStep(ti, td.lastStep | 0)
  end
+ if type(td.scale) == "number" then
+ Engine.setTrackScale(ti, td.scale | 0)
+ end
  if type(td.steps) == "table" then
  local ds = td.steps
  local s = tr.steps
@@ -343,13 +400,14 @@ return M
 
 end)()
 return {
-    Core     = { step = R.step, track = R.track, engine = R.engine, midi_rx = R.midi_rx, persist = R.persist },
+    Core     = { step = R.step, track = R.track, scale = R.scale, engine = R.engine, midi_rx = R.midi_rx, persist = R.persist },
     App      = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     Controls = nil,   -- lazy-loaded; require("sequencer_ui") to populate
     HAL      = {},
     -- flat aliases (same table refs); UI bundle resolves through these
     step    = R.step,
     track   = R.track,
+    scale   = R.scale,
     engine  = R.engine,
     midi_rx = R.midi_rx,
     persist = R.persist,

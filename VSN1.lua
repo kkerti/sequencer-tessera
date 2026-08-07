@@ -142,7 +142,15 @@ if self:button_state() == 127 then loadAPP().onClick() end
 -- [7] SMALL BUTTONS  (element_index 9..12  ->  sidx 1..4)
 -- =============================================================================
 
-if self:button_state() == 127 then loadAPP().onSmallBtn(self:element_index() - 8) end
+-- [7] SMALL BUTTONS  (element_index 9..12  ->  sidx 1..4)
+-- Press + release both dispatched. Buttons 11/12 use the release edge to
+-- disarm their LOAD/SAVE chord; 9/10 act on press only.
+
+if self:button_state() == 127 then
+    loadAPP().onSmallBtn(self:element_index() - 8, true)
+else
+    loadAPP().onSmallBtn(self:element_index() - 8, false)
+end
 
 
 -- =============================================================================

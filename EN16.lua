@@ -52,8 +52,7 @@ end
 -- echo back the new packed-int via S(i,p) which updates shadow + dirties.
 -- =============================================================================
 
-local v = self:endless_value()
-local d = (v == 65) and 1 or (v == 63 and -1 or 0)
+local d = self:endless_value() - 64
 if d ~= 0 then
     immediate_send(-1, 0,
         "vsn1_t(" .. (self:element_index() + 1) .. "," .. d .. ")")

@@ -8,6 +8,7 @@ local tests = {
     "test_track_advance",
     "test_track_laststep",
     "test_engine",
+    "test_scale",
     "test_no_alloc",
     "test_controls_strip",
     "test_controls_swing",

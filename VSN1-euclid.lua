@@ -180,8 +180,8 @@ loadAPP().onKey(self:element_index() + 1, self:button_state() == 127)
 -- [5] ENDLESS TURN                  PASTE into endless turn event
 -- =============================================================================
 
-local v = self:endless_value()
-if v == 65 then loadAPP().onTurn(1) elseif v == 63 then loadAPP().onTurn(-1) end
+local d = self:endless_value() - 64
+if d ~= 0 then loadAPP().onTurn(d) end
 
 
 -- =============================================================================

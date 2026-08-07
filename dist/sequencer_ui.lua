@@ -13,7 +13,7 @@ R["controls"]=(function()
 local Engine = require("engine")
 local Step = require("step")
 local M = {}
-local MN = { "NOTE", "VEL", "GATE", "MUTE", "LAST" }
+local MN = { "NOTE", "VEL", "GATE", "MUTE", "LAST", "SCALE" }
 local SWING_PCT = { "50", "58", "67", "75" }
 local DUR_LADDER = { 3, 6, 12, 18, 24, 30 }
 local function durIndex(v)
@@ -29,8 +29,10 @@ M.MODE_VEL = 2
 M.MODE_GATE = 3
 M.MODE_MUTE = 4
 M.MODE_LASTSTEP = 5
+M.MODE_SCALE = 6
 M.MODES = MN
 M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
+M.arm = nil
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
 local dirty = true
@@ -100,6 +102,10 @@ function M.onEndless(dir)
  local tr = Engine.tracks[M.selT]
  Engine.setLastStep(M.selT, tr.lastStep + dir)
  end
+ elseif f == M.MODE_SCALE then
+ local nxt = Engine.tracks[M.selT].scale + dir
+ if nxt < 1 then nxt = #Engine.scales elseif nxt > #Engine.scales then nxt = 1 end
+ Engine.setTrackScale(M.selT, nxt)
  elseif f >= M.MODE_NOTE and f <= M.MODE_MUTE then
  setParam(f, M.selT, M.selS, dir)
  end
@@ -127,7 +133,18 @@ function M.setShift(b)
  b = b and true or false
  if b == M.shift then return end
  M.shift = b
+ M.arm = nil
  swingAccum = 0
+ dirty = true
+end
+function M.setArm(v)
+ if v == "load" or v == "save" then
+ if v == M.arm then return end
+ M.arm = v
+ else
+ if M.arm == nil then return end
+ M.arm = nil
+ end
  dirty = true
 end
 function M.onSmallBtn(idx)
@@ -153,10 +170,15 @@ local C_TRACK = {
 }
 local ROW_H = 22
 local PARAMS = 4
-local LS_Y = ROW_H * (1 + PARAMS) + 2
+local SC_Y = ROW_H * (1 + PARAMS) + 2
+local SC_H = ROW_H
+local LS_Y = SC_Y + SC_H + 2
 local LS_H = ROW_H
 local STR_Y = LS_Y + LS_H + 4
-local STR_H = 240 - STR_Y - 1
+local FOOT_H = ROW_H
+local FOOT_Y = 240 - FOOT_H
+local SLOT_W = 320 / 4
+local STR_H = FOOT_Y - STR_Y - 1
 local COL_W = 20
 function M.draw(scr)
  if not dirty then return end
@@ -178,6 +200,10 @@ function M.draw(scr)
  if sh then
  scr:draw_text_fast("SHIFT", 232, 4, 16, C_SHIFT)
  end
+ local armTxt = (M.arm == "load") and "LOAD" or ((M.arm == "save") and "SAVE" or nil)
+ if armTxt then
+ scr:draw_text_fast(armTxt, 232, 4, 16, C_SHIFT)
+ end
  for i = 1, PARAMS do
  local y = ROW_H * i
  local active = (i == f)
@@ -188,6 +214,7 @@ function M.draw(scr)
  local txt
  if i == M.MODE_NOTE then
  txt = "note " .. Step.pitch(stp) .. " " .. Step.noteName(Step.pitch(stp))
+ .. " " .. Engine.scales[tr.scale].short
  elseif i == M.MODE_VEL then
  txt = "vel " .. Step.vel(stp)
  elseif i == M.MODE_GATE then
@@ -201,6 +228,13 @@ function M.draw(scr)
  end
  scr:draw_text_fast(txt, 6, y + 4, 16, fg)
  end
+ scr:draw_rectangle_filled(0, SC_Y - 2, 319, SC_Y - 1, C_LINE)
+ local scActive = (f == M.MODE_SCALE)
+ if scActive then
+ scr:draw_rectangle_filled(0, SC_Y, 319, SC_Y + SC_H - 1, C_HI)
+ end
+ scr:draw_text_fast("scale " .. Engine.scales[tr.scale].short, 6, SC_Y + 4, 16,
+ scActive and C_HIFG or C_DIM)
  scr:draw_rectangle_filled(0, LS_Y - 2, 319, LS_Y - 1, C_LINE)
  local lsActive = (f == M.MODE_LASTSTEP)
  if lsActive then
@@ -235,13 +269,24 @@ function M.draw(scr)
  elseif f == M.MODE_VEL then v = Step.vel(cs)
  else v = sh and Step.dur(cs) or Step.gate(cs) end
  local bh = (STR_H * v) // 127
- if bh > 0 then
+ if v > 0 then
+ if bh < 1 then bh = 1 end
  scr:draw_rectangle_filled(x0, y1 - bh + 1, x1, y1, C_BAR)
  end
  end
  if s == M.selS then
  scr:draw_rectangle(x0, y0, x1, y1, C_BAR)
  end
+ end
+ scr:draw_rectangle_filled(0, FOOT_Y - 2, 319, FOOT_Y - 1, C_LINE)
+ local labels
+ if sh then
+ labels = { "T1", "T2", "T3", "T4" }
+ else
+ labels = { "V1", "V2", "LOAD", "SAVE" }
+ end
+ for i = 1, 4 do
+ scr:draw_text_fast(labels[i], (i - 1) * SLOT_W + 6, FOOT_Y + 4, 16, C_DIM)
  end
  scr:draw_swap()
 end

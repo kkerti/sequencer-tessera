@@ -19,7 +19,8 @@
 -- Per-pulse cost: a few comparisons + a decrement when a note is active.
 -- Zero allocations per pulse.
 
-local Step = require("step")
+local Step  = require("step")
+local Scale = require("scale")
 
 local M = {}
 
@@ -38,6 +39,8 @@ function M.new(cap)
         cap      = cap,
         chan     = 0,
         lastStep = M.DEFAULT_LAST_STEP,
+        -- scale index into Scale.SCALES; 1 = off (chromatic)
+        scale    = 1,
         -- runtime
         pos      = 0,        -- last fired step (0 = none yet)
         stepAcc  = 0,        -- pulses left in current step (counts down)
@@ -73,6 +76,10 @@ local function fireStep(tr, out)
     if g <= 0 then return end
     -- gate cannot exceed step length
     if g > tr.stepLen then g = tr.stepLen end
+    -- Scale quantization: snap emitted pitch onto the track's scale.
+    -- Applied before legato compare so note-ons/offs share the same value.
+    local sc = tr.scale
+    if sc ~= 1 then p = Scale.quantize(p, Scale.SCALES[sc].mask) end
 
     -- Legato: same pitch, full gate, currently sustaining a same-pitch note.
     if tr.actPitch == p and g >= tr.stepLen and tr.actOff > 0 then
@@ -122,6 +129,11 @@ end
 function M.setLastStep(tr, n)
     if n < 1 then n = 1 elseif n > tr.cap then n = tr.cap end
     tr.lastStep = n
+end
+
+function M.setScale(tr, idx)
+    if idx < 1 then idx = 1 elseif idx > #Scale.SCALES then idx = #Scale.SCALES end
+    tr.scale = idx
 end
 
 -- start/stop housekeeping

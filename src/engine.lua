@@ -3,11 +3,13 @@
 --
 -- No regions. Polyrhythm comes from per-track lastStep + per-step dur.
 
-local Track = require("track")
+local Track  = require("track")
+local Scale  = require("scale")
 
 local M = {}
 
 M.tracks = {}     -- public read; UI may read directly
+M.scales = Scale.SCALES  -- public read; scale definitions (name + mask)
 M.running = false
 M.pulseCount = 0  -- absolute pulse counter since last onStart; for swing grid
 M.swing = 0       -- 0..3 pulses of delay applied to off-beat 16ths (24 PPQN)
@@ -118,6 +120,12 @@ function M.setTrackChan(t, ch)
     if ch < 0 then ch = 0 end
     if ch > 15 then ch = 15 end
     tr.chan = ch
+end
+
+-- Select the quantization scale for a track (index into M.scales; 1 = off).
+function M.setTrackScale(t, idx)
+    local tr = M.tracks[t]; if not tr then return end
+    Track.setScale(tr, idx)
 end
 
 -- Global swing depth in pulses (0..3 at 24 PPQN → 50/58/67/75% feel).

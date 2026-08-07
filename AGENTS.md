@@ -161,6 +161,8 @@ local events = engine.onPulse()  -- array of {type, pitch, vel, ch} or nil
 engine.setStepParam(t, i, name, val)   -- name ∈ pitch/vel/dur/gate/mute
 engine.setLastStep(t, n)
 engine.setTrackChan(t, ch)
+engine.setTrackScale(t, idx)           -- idx into engine.scales (1 = off)
+engine.scales                          -- { {name=, mask=}, ... } read-only
 ```
 
 Events are consumed by a driver. Engine does no IO.
@@ -173,7 +175,8 @@ Events are consumed by a driver. Engine does no IO.
 | **track** | A single 64-step buffer + monophonic voice. Fixed length 64. |
 | **lastStep** | Per-track loop point. Track plays `1..lastStep` then wraps. Default 16. |
 | **viewport** | UI-only concept: which 16-step window of the buffer the screen + EN16 are showing. Indexed 1..4 (steps 1–16, 17–32, 33–48, 49–64). Global, not per track. **Not stored in the engine.** |
-| **mode** | The currently-edited focus (STEP/NOTE/VEL/GATE/MUTE/LASTSTEP). Selected by VSN1 keyswitches 1..6. DUR is reached as SHIFT+endless in GATE focus and snaps to the musical ladder `{3, 6, 12, 18, 24, 30}` pulses. SHIFT+turn in NOTE/VEL/GATE focus coarsens the increment to ±12 (octave / loud-soft / long-short jumps). The VSN1 screen and EN16 LEDs use no per-mode hue: highlight is brightness-only on the active param row, and EN16 LED brightness reflects the focused parameter's value per visible step. The selected step is rendered at max brightness; muted steps are red on EN16. |
+| **mode** | The currently-edited focus (NOTE/VEL/GATE/MUTE/LASTSTEP/SCALE). Selected by VSN1 keyswitches 1..6. DUR is reached as SHIFT+endless in GATE focus and snaps to the musical ladder `{3, 6, 12, 18, 24, 30}` pulses. SHIFT+turn in NOTE/VEL/GATE focus coarsens the increment to ±12 (octave / loud-soft / long-short jumps). SCALE focus cycles the selected track's quantization scale. The VSN1 screen and EN16 LEDs use no per-mode hue: highlight is brightness-only on the active param row, and EN16 LED brightness reflects the focused parameter's value per visible step. The selected step is rendered at max brightness; muted steps are red on EN16. |
+| **scale** | Per-track pitch quantization. `engine.scales[idx]` = `{name, mask}` where `mask` is a 12-bit pitch-class set (bit k = class k). Applied live at fire time in `track.lua`: the emitted pitch is snapped to the nearest on-scale tone, octave-aware. Raw pitch stays stored in the step; set `scale = 1` (off) to hear the unquantized pitches. Represented as one int per track (`tr.scale`), zero per-pulse allocation (a bounded bit-scan only when a scale-enabled step fires). Persisted per track. |
 | ~~region~~ | **DEPRECATED.** Used to mean an engine-coordinated 16-step window with global at-end-of-region switching. The engine no longer has regions. The word survives only as a casual synonym for "viewport" in old comments — prefer "viewport". |
 | ~~pattern~~ | **FORBIDDEN word.** Reserved. Pattern implies independent step buffers (Model B), which we explicitly do not have. |
 | ~~scene~~  | **FORBIDDEN.** |

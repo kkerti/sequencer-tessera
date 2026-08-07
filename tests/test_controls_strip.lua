@@ -36,9 +36,12 @@ end
 
 -- Layout constants mirrored from controls.lua. If they drift, update here.
 local COL_W = 20
-local STR_Y = 22 * (1 + 4) + 2 + 22 + 4   -- ROW_H*(1+PARAMS) + 2 + LS_H + 4 = 138
-local STR_H = 240 - STR_Y - 1              -- 101
-local STR_BOT = STR_Y + STR_H - 1          -- 238
+-- ROW_H*(1+PARAMS) + 2 + SC_H + 2 + LS_H + 4 = 162 (scale row added)
+local STR_Y = 22 * (1 + 4) + 2 + 22 + 2 + 22 + 4
+-- 22px footer at the bottom for the 4 small-button labels shrinks the strip.
+local FOOT_H = 22
+local STR_H = 240 - FOOT_H - STR_Y - 1      -- 55
+local STR_BOT = STR_Y + STR_H - 1           -- 216
 
 -- Returns the well rect for cell c (1..16): the rect spanning the full
 -- strip height in the cell's column.

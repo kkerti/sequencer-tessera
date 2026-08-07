@@ -176,9 +176,9 @@ end
 -- =============================================================================
 
 loadUI()
-local v = self:endless_value()
-if v == 65 or v == 63 then
-    CTL.onEndless((v == 65) and 1 or -1)
+local d = self:endless_value() - 64
+if d ~= 0 then
+    CTL.onEndless(d)
     EU()
 end
 

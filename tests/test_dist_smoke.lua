@@ -17,6 +17,22 @@ function M.test_dist_loads_and_runs()
     if not ev or ev[1].pitch ~= 60 then error("dist runtime: bad event") end
 end
 
+function M.test_dist_scale_settable_through_bundle()
+    -- Regression: the Core bundle once built track before scale, so
+    -- require("scale") resolved nil inside the bundle and setTrackScale
+    -- crashed on device. Lock the dependency ordering.
+    local mods = dofile("dist/sequencer.lua")
+    local Engine = mods.Core.engine
+    Engine.init({ trackCount = 1 })
+    Engine.setTrackScale(1, 3)
+    if Engine.tracks[1].scale ~= 3 then
+        error("dist: setTrackScale did not take effect")
+    end
+    if not Engine.scales or not mods.Core.scale then
+        error("dist: scale module not present in Core bundle")
+    end
+end
+
 function M.test_dist_namespace_shape()
     local mods = dofile("dist/sequencer.lua")
     if not mods.Core     then error("missing Core layer")     end
@@ -27,6 +43,7 @@ function M.test_dist_namespace_shape()
     if not mods.Core.step or not mods.Core.track or not mods.Core.engine then
         error("Core layer missing step/track/engine")
     end
+    if not mods.Core.scale then error("Core layer missing scale") end
     if not mods.Core.persist then error("Core layer missing persist") end
     -- flat aliases for UI bundle's require-shim fallback
     if mods.engine ~= mods.Core.engine then

@@ -83,10 +83,22 @@ function M.pushPlayhead()
 end
 function M.onKey(idx, pressed)
  local CTL = M.CTL
+ if pressed and CTL.arm and idx >= 1 and idx <= 7 then
+ local p = "d" .. (idx - 1) .. ".lua"
+ if CTL.arm == "save" then
+ Persist.save(p)
+ else
+ if Persist.load(p) then CTL.dirtyAll() end
+ end
+ CTL.setArm(nil)
+ CTL.dirtyAll()
+ M.pushEN16()
+ return
+ end
  if idx == 8 then
  CTL.setShift(pressed)
  M.pushEN16()
- elseif pressed and idx >= 1 and idx <= 5 then
+ elseif pressed and idx >= 1 and idx <= #CTL.MODES then
  CTL.onKey(idx)
  M.pushEN16()
  elseif pressed and idx == 7 then
@@ -108,16 +120,27 @@ function M.onClick()
  M.CTL.onEndlessClick()
  M.pushEN16()
 end
-function M.onSmallBtn(sidx)
- M.CTL.onSmallBtn(sidx)
+function M.onSmallBtn(sidx, pressed)
+ local CTL = M.CTL
+ if CTL.shift then
+ CTL.onSmallBtn(sidx)
  M.lastPh = -1
  M.pushEN16()
+ elseif sidx == 1 or sidx == 2 then
+ if pressed then CTL.onSmallBtn(sidx) end
+ M.lastPh = -1
+ M.pushEN16()
+ elseif sidx == 3 then
+ CTL.setArm(pressed and "load" or nil)
+ elseif sidx == 4 then
+ CTL.setArm(pressed and "save" or nil)
+ end
 end
 function M.fromEN16Turn(i, d)
  local CTL = M.CTL
  if i < 1 or i > 16 then return end
  local f = CTL.focus
- if f == CTL.MODE_LASTSTEP then return end
+ if f == CTL.MODE_LASTSTEP or f == CTL.MODE_SCALE then return end
  local s = (CTL.viewport - 1) * 16 + i
  if s > Engine.tracks[CTL.selT].lastStep then return end
  CTL.setSelectedStep(s)

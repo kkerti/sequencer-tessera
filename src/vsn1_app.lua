@@ -125,17 +125,35 @@ end
 -- Input handlers (each ends with pushEN16 to keep the satellite in sync)
 -- -----------------------------------------------------------------------------
 
--- Keyswitches 1..8. 1..5 = focus modes (NOTE VEL GATE MUTE LASTSTEP);
+-- Keyswitches 1..8. 1..6 = focus modes (NOTE VEL GATE MUTE LASTSTEP SCALE);
 -- 7 = persist (load / SHIFT=save); 8 = SHIFT (toggle).
 function M.onKey(idx, pressed)
     local CTL = M.CTL
+    -- Armed slot chord (hold small button 11/12, tap keyswitch 0..6 = slot).
+    -- Intercepts keyswitches idx 1..7 while armed; slot = idx-1. SHIFT (8) is
+    -- excluded. Clearing M.arm on 11/12 release means the load/save only fires
+    -- while the button is genuinely held — a stray later keyswitch can't trigger it.
+    if pressed and CTL.arm and idx >= 1 and idx <= 7 then
+        local p = "d" .. (idx - 1) .. ".lua"
+        if CTL.arm == "save" then
+            Persist.save(p)
+        else
+            if Persist.load(p) then CTL.dirtyAll() end
+        end
+        CTL.setArm(nil)
+        CTL.dirtyAll()
+        M.pushEN16()
+        return
+    end
     if idx == 8 then
-        -- SHIFT keyswitch is configured as a hardware toggle, so each press
-        -- reports its latched state directly (127 = engaged, 0 = released).
-        -- Adopt it verbatim; no local flip needed.
+        -- SHIFT keyswitch is configured as a hardware toggle: each physical
+        -- press flips the keyswitch latch, and the scriptlet reports the
+        -- latched state here (127 = engaged, 0 = released) on each change.
+        -- Adopt it verbatim — a local flip here would double-toggle because
+        -- the scriptlet also fires on the release transition.
         CTL.setShift(pressed)
         M.pushEN16()
-    elseif pressed and idx >= 1 and idx <= 5 then
+    elseif pressed and idx >= 1 and idx <= #CTL.MODES then
         CTL.onKey(idx)
         M.pushEN16()
     elseif pressed and idx == 7 then
@@ -160,11 +178,25 @@ function M.onClick()
     M.pushEN16()
 end
 
--- Small buttons 1..4: viewport (no shift) / track select (+ shift).
-function M.onSmallBtn(sidx)
-    M.CTL.onSmallBtn(sidx)
-    M.lastPh = -1     -- viewport/track may have changed; force playhead repush
-    M.pushEN16()
+-- Small buttons 1..4. With SHIFT active they are track selectors (1..4).
+-- Without SHIFT: 1,2 = viewport (first/second 16) as-is; 3,4 = LOAD/SAVE arm
+-- chords. Arm sets on press, clears on release. Returns a bool so the caller
+-- can skip the EN16 repush when nothing changed (e.g. arm-only edges).
+function M.onSmallBtn(sidx, pressed)
+    local CTL = M.CTL
+    if CTL.shift then
+        CTL.onSmallBtn(sidx)      -- track select (1..4)
+        M.lastPh = -1
+        M.pushEN16()
+    elseif sidx == 1 or sidx == 2 then
+        if pressed then CTL.onSmallBtn(sidx) end   -- viewport 1/2 on press edge
+        M.lastPh = -1
+        M.pushEN16()
+    elseif sidx == 3 then
+        CTL.setArm(pressed and "load" or nil)      -- button 11 = LOAD chord
+    elseif sidx == 4 then
+        CTL.setArm(pressed and "save" or nil)      -- button 12 = SAVE chord
+    end
 end
 
 -- -----------------------------------------------------------------------------
@@ -175,7 +207,7 @@ function M.fromEN16Turn(i, d)
     local CTL = M.CTL
     if i < 1 or i > 16 then return end
     local f = CTL.focus
-    if f == CTL.MODE_LASTSTEP then return end
+    if f == CTL.MODE_LASTSTEP or f == CTL.MODE_SCALE then return end
     local s = (CTL.viewport - 1) * 16 + i
     if s > Engine.tracks[CTL.selT].lastStep then return end
     CTL.setSelectedStep(s)

@@ -9,8 +9,9 @@ local function eq(a, b, msg)
 end
 
 local TMP = "/tmp/sequencer_test_save.lua"
+local SLOT = "/tmp/d3.lua"
 
-local function rm() os.remove(TMP) end
+local function rm() os.remove(TMP) os.remove(SLOT) end
 
 function M.test_save_load_roundtrip()
     Engine.init({ trackCount = 4, stepsPerTrack = 64 })
@@ -21,12 +22,14 @@ function M.test_save_load_roundtrip()
     Engine.setLastStep(2, 12)
     Engine.setLastStep(3, 14)
     Engine.setTrackChan(4, 9)
+    Engine.setTrackScale(1, 2)   -- major
+    Engine.setTrackScale(3, 4)   -- major pent
     Engine.setSwing(2)
 
     local snap = {}
     for ti = 1, 4 do
         local tr = Engine.tracks[ti]
-        local s = { chan=tr.chan, lastStep=tr.lastStep, steps={} }
+        local s = { chan=tr.chan, lastStep=tr.lastStep, scale=tr.scale, steps={} }
         for i = 1, tr.cap do s.steps[i] = tr.steps[i] end
         snap[ti] = s
     end
@@ -38,6 +41,7 @@ function M.test_save_load_roundtrip()
     Engine.init({ trackCount = 4, stepsPerTrack = 64 })
     eq(Engine.swing, 0, "swing post-init")
     eq(Engine.tracks[2].lastStep, 16, "lastStep post-init")
+    eq(Engine.tracks[1].scale, 1, "scale post-init")
 
     eq(Persist.load(TMP), true, "load returned false")
 
@@ -45,6 +49,7 @@ function M.test_save_load_roundtrip()
     for ti = 1, 4 do
         eq(Engine.tracks[ti].chan, snap[ti].chan, "chan t" .. ti)
         eq(Engine.tracks[ti].lastStep, snap[ti].lastStep, "lastStep t" .. ti)
+        eq(Engine.tracks[ti].scale, snap[ti].scale, "scale t" .. ti)
         for i = 1, 64 do
             eq(Engine.tracks[ti].steps[i], snap[ti].steps[i], "step t" .. ti .. " i" .. i)
         end
@@ -63,6 +68,22 @@ function M.test_load_corrupt_file_returns_false()
     local f = io.open(TMP, "w"); f:write("this is not lua {{{"); f:close()
     eq(Persist.load(TMP), false)
     rm()
+end
+
+-- Slot files are independent of the default save path: save into one slot,
+-- wipe, load it back, and confirm the default save is untouched.
+function M.test_slot_roundtrip()
+    Engine.init({ trackCount = 4, stepsPerTrack = 64 })
+    os.remove(SLOT)
+    Engine.tracks[1].steps[1] = Step.pack({ pitch=71, vel=90, dur=9, gate=5 })
+    Engine.setLastStep(2, 10)
+    eq(Persist.save(SLOT), true, "slot save returned false")
+
+    local slotFirst = Engine.tracks[1].steps[1]
+    Engine.init({ trackCount = 4, stepsPerTrack = 64 })
+    eq(Persist.load(SLOT), true, "slot load returned false")
+    eq(Engine.tracks[1].steps[1], slotFirst, "slot step restored")
+    eq(Engine.tracks[2].lastStep, 10, "slot lastStep restored")
 end
 
 function M.test_load_preserves_runtime_fields()

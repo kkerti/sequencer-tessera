@@ -13,9 +13,9 @@ R["controls"]=(function()
 local Engine = require("engine")
 local Step = require("step")
 local M = {}
-local MN = { "NOTE", "VEL", "GATE", "MUTE", "LAST", "SCALE" }
+local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "LAST" }
 local SWING_PCT = { "50", "58", "67", "75" }
-local DUR_LADDER = { 3, 6, 12, 18, 24, 30 }
+local DUR_LADDER = { 6, 12, 24, 36, 48, 72 }
 local function durIndex(v)
  local best, bestd = 1, math.huge
  for i = 1, #DUR_LADDER do
@@ -28,8 +28,8 @@ M.MODE_NOTE = 1
 M.MODE_VEL = 2
 M.MODE_GATE = 3
 M.MODE_MUTE = 4
-M.MODE_LASTSTEP = 5
-M.MODE_SCALE = 6
+M.MODE_STEP = 5
+M.MODE_LASTSTEP = 6
 M.MODES = MN
 M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 M.arm = nil
@@ -102,7 +102,9 @@ function M.onEndless(dir)
  local tr = Engine.tracks[M.selT]
  Engine.setLastStep(M.selT, tr.lastStep + dir)
  end
- elseif f == M.MODE_SCALE then
+ elseif f == M.MODE_STEP then
+ M.setSelectedStep(M.selS + dir)
+ elseif f == M.MODE_NOTE and M.shift then
  local nxt = Engine.tracks[M.selT].scale + dir
  if nxt < 1 then nxt = #Engine.scales elseif nxt > #Engine.scales then nxt = 1 end
  Engine.setTrackScale(M.selT, nxt)
@@ -205,9 +207,7 @@ local C_TRACK = {
 }
 local ROW_H = 22
 local PARAMS = 4
-local SC_Y = ROW_H * (1 + PARAMS) + 2
-local SC_H = ROW_H
-local LS_Y = SC_Y + SC_H + 2
+local LS_Y = ROW_H * (1 + PARAMS) + 2
 local LS_H = ROW_H
 local STR_Y = LS_Y + LS_H + 4
 local FOOT_H = ROW_H
@@ -266,13 +266,6 @@ function M.draw(scr)
  end
  scr:draw_text_fast(txt, 6, y + 4, 16, fg)
  end
- scr:draw_rectangle_filled(0, SC_Y - 2, 319, SC_Y - 1, C_LINE)
- local scActive = (f == M.MODE_SCALE)
- if scActive then
- scr:draw_rectangle_filled(0, SC_Y, 319, SC_Y + SC_H - 1, C_HI)
- end
- scr:draw_text_fast("scale " .. Engine.scales[tr.scale].short, 6, SC_Y + 4, 16,
- scActive and C_HIFG or C_DIM)
  scr:draw_rectangle_filled(0, LS_Y - 2, 319, LS_Y - 1, C_LINE)
  local lsActive = (f == M.MODE_LASTSTEP)
  if lsActive then

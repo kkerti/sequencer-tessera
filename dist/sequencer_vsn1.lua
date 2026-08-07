@@ -138,8 +138,13 @@ function M.fromEN16Turn(i, d)
  local CTL = M.CTL
  if i < 1 or i > 16 then return end
  local f = CTL.focus
- if f == CTL.MODE_LASTSTEP or f == CTL.MODE_SCALE then return end
+ if f == CTL.MODE_LASTSTEP then return end
  local s = (CTL.viewport - 1) * 16 + i
+ if f == CTL.MODE_STEP then
+ CTL.setSelectedStep(s)
+ M.pushEN16()
+ return
+ end
  if s > Engine.tracks[CTL.selT].lastStep then return end
  CTL.setSelectedStep(s)
  CTL.setParam(f, CTL.selT, s, d)

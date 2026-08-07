@@ -122,7 +122,7 @@ function M.test_random_gate_with_shift_randomizes_dur_from_ladder()
     Controls.setRandom(true)
     Controls.shift = true
     Controls.randomizeParam(Controls.MODE_GATE)
-    local ladder = { 3, 6, 12, 18, 24, 30 }
+    local ladder = { 6, 12, 24, 36, 48, 72 }
     local touched = false
     for i = 1, Engine.tracks[1].lastStep do
         local d = Step.dur(step(i))

@@ -1,7 +1,8 @@
 -- controls.lua  (slim, no colors)
--- Mode order:  1=NOTE  2=VEL  3=GATE  4=MUTE  5=LASTSTEP  6=SCALE
--- (STEP mode was dropped: the selected step is shown in the header and
---  edited directly via the buttons.)
+-- Mode order:  1=NOTE  2=VEL  3=GATE  4=MUTE  5=STEP  6=LASTSTEP
+-- (SCALE is not a mode: it is reached as SHIFT+turn in NOTE focus, and its
+--  name stays visible in the NOTE row. STEP focus moves the selected step
+--  so a single VSN1 can walk through steps before editing their params.)
 -- Highlight via brightness only (no per-mode RGB hues).
 -- Mute is the only colored signal (red), shown in the strip + on EN16.
 local Engine = require("engine")
@@ -9,7 +10,7 @@ local Step   = require("step")
 
 local M = {}
 
-local MN = { "NOTE", "VEL", "GATE", "MUTE", "LAST", "SCALE" }
+local MN = { "NOTE", "VEL", "GATE", "MUTE", "STEP", "LAST" }
 
 -- Swing depth (pulses, 0..3 at 24 PPQN) → human-readable percent feel.
 local SWING_PCT = { "50", "58", "67", "75" }
@@ -17,7 +18,7 @@ local SWING_PCT = { "50", "58", "67", "75" }
 -- Allowed duration ladder (musical: 16th, 8th, qtr, dotted-qtr, half, dotted-half
 -- @ 24 PPQN). Encoder turns walk this ladder; values outside the ladder are
 -- clamped/snapped on entry.
-local DUR_LADDER = { 3, 6, 12, 18, 24, 30 }
+local DUR_LADDER = { 6, 12, 24, 36, 48, 72 }
 
 local function durIndex(v)
     -- snap value to nearest ladder index (returns 1..#DUR_LADDER)
@@ -33,8 +34,8 @@ M.MODE_NOTE     = 1
 M.MODE_VEL      = 2
 M.MODE_GATE     = 3
 M.MODE_MUTE     = 4
-M.MODE_LASTSTEP = 5
-M.MODE_SCALE    = 6
+M.MODE_STEP     = 5
+M.MODE_LASTSTEP = 6
 M.MODES         = MN
 
 -- selection state (UI only)
@@ -123,8 +124,11 @@ function M.onEndless(dir)
             local tr = Engine.tracks[M.selT]
             Engine.setLastStep(M.selT, tr.lastStep + dir)
         end
-    elseif f == M.MODE_SCALE then
-        -- cycle the selected track's scale; 1 = off, wrap both ways
+    elseif f == M.MODE_STEP then
+        -- STEP focus: move the selected step through the sequence.
+        M.setSelectedStep(M.selS + dir)
+    elseif f == M.MODE_NOTE and M.shift then
+        -- shift+turn in NOTE: cycle the selected track's scale (1 = off).
         local nxt = Engine.tracks[M.selT].scale + dir
         if nxt < 1 then nxt = #Engine.scales elseif nxt > #Engine.scales then nxt = 1 end
         Engine.setTrackScale(M.selT, nxt)
@@ -196,7 +200,7 @@ end
 
 -- Randomize one parameter across all steps 1..lastStep of the selected track.
 -- i is a mode constant: NOTE pitch, VEL vel, GATE gate (shift -> dur from the
--- musical ladder), MUTE mute toggle. LASTSTEP/SCALE are not randomized.
+-- musical ladder), MUTE mute toggle. STEP/LASTSTEP are not randomized.
 function M.randomizeParam(i)
     seedRng()
     local tr = Engine.tracks[M.selT]
@@ -254,9 +258,10 @@ local C_TRACK = {
 local ROW_H  = 22                 -- header & each value row
 local PARAMS = 4                  -- NOTE, VEL, GATE, MUTE
 -- Scale + lastStep rows stack one after the other beneath the 4 param rows.
-local SC_Y   = ROW_H * (1 + PARAMS) + 2     -- separator above scale row
-local SC_H   = ROW_H
-local LS_Y   = SC_Y + SC_H + 2              -- separator above lastStep row
+-- (Scale row dropped: scale is now shown inside the NOTE row and edited via
+--  SHIFT+turn in NOTE. The freed row goes to the strip so the value bars
+--  are taller.)
+local LS_Y   = ROW_H * (1 + PARAMS) + 2              -- separator above lastStep row
 local LS_H   = ROW_H
 local STR_Y  = LS_Y + LS_H + 4
 -- Footer: one 22px line at the bottom of the screen, annotating the 4 small
@@ -341,15 +346,6 @@ function M.draw(scr)
         end
         scr:draw_text_fast(txt, 6, y + 4, 16, fg)
     end
-
-    -- separator + scale row
-    scr:draw_rectangle_filled(0, SC_Y - 2, 319, SC_Y - 1, C_LINE)
-    local scActive = (f == M.MODE_SCALE)
-    if scActive then
-        scr:draw_rectangle_filled(0, SC_Y, 319, SC_Y + SC_H - 1, C_HI)
-    end
-    scr:draw_text_fast("scale  " .. Engine.scales[tr.scale].short, 6, SC_Y + 4, 16,
-        scActive and C_HIFG or C_DIM)
 
     -- separator + lastStep / swing row
     scr:draw_rectangle_filled(0, LS_Y - 2, 319, LS_Y - 1, C_LINE)

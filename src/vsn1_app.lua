@@ -125,7 +125,7 @@ end
 -- Input handlers (each ends with pushEN16 to keep the satellite in sync)
 -- -----------------------------------------------------------------------------
 
--- Keyswitches 1..8. 1..6 = focus modes (NOTE VEL GATE MUTE LASTSTEP SCALE);
+-- Keyswitches 1..8. 1..6 = focus modes (NOTE VEL GATE MUTE STEP LASTSTEP);
 -- 7 = RANDOM hold (momentary; while held param-mode presses randomize);
 -- 8 = SHIFT (toggle). Persist (LOAD/SAVE) lives on the small-button arm chords.
 function M.onKey(idx, pressed)
@@ -210,8 +210,14 @@ function M.fromEN16Turn(i, d)
     local CTL = M.CTL
     if i < 1 or i > 16 then return end
     local f = CTL.focus
-    if f == CTL.MODE_LASTSTEP or f == CTL.MODE_SCALE then return end
+    if f == CTL.MODE_LASTSTEP then return end
     local s = (CTL.viewport - 1) * 16 + i
+    if f == CTL.MODE_STEP then
+        -- STEP focus on EN16: encoder maps 1:1 to the visible step.
+        CTL.setSelectedStep(s)
+        M.pushEN16()
+        return
+    end
     if s > Engine.tracks[CTL.selT].lastStep then return end
     CTL.setSelectedStep(s)
     CTL.setParam(f, CTL.selT, s, d)

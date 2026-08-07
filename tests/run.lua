@@ -12,6 +12,7 @@ local tests = {
     "test_no_alloc",
     "test_controls_strip",
     "test_controls_swing",
+    "test_controls_random",
     "test_swing",
     "test_dist_smoke",
     "test_persist",

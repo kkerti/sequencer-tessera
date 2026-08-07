@@ -33,6 +33,7 @@ M.MODE_SCALE = 6
 M.MODES = MN
 M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 M.arm = nil
+M.random = false
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
 local dirty = true
@@ -46,11 +47,10 @@ local function bumpDur(t, s, d)
 end
 local function setParam(i, t, s, d)
  local stp = Engine.tracks[t].steps[s]
- local big = M.shift and 12 or 1
  if i == 1 then
- Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d * big)
+ Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d)
  elseif i == 2 then
- Engine.setStepParam(t, s, "vel", Step.vel(stp) + d * big)
+ Engine.setStepParam(t, s, "vel", Step.vel(stp) + d)
  elseif i == 3 then
  if M.shift then
  bumpDur(t, s, d)
@@ -147,6 +147,41 @@ function M.setArm(v)
  end
  dirty = true
 end
+function M.setRandom(b)
+ b = b and true or false
+ if b == M.random then return end
+ M.random = b
+ dirty = true
+end
+local rngSeeded = false
+local function seedRng()
+ if rngSeeded then return end
+ rngSeeded = true
+ if os and os.time then math.randomseed(os.time()) end
+end
+function M.randomizeParam(i)
+ seedRng()
+ local tr = Engine.tracks[M.selT]
+ local lastStep = tr.lastStep
+ for s = 1, lastStep do
+ local stp = tr.steps[s]
+ if i == M.MODE_NOTE then
+ Engine.setStepParam(M.selT, s, "pitch", math.random(0, 127))
+ elseif i == M.MODE_VEL then
+ Engine.setStepParam(M.selT, s, "vel", math.random(0, 127))
+ elseif i == M.MODE_GATE then
+ if M.shift then
+ Engine.setStepParam(M.selT, s, "dur", DUR_LADDER[math.random(#DUR_LADDER)])
+ else
+ local d = Step.dur(stp)
+ Engine.setStepParam(M.selT, s, "gate", (d >= 1) and math.random(1, d) or 0)
+ end
+ elseif i == M.MODE_MUTE then
+ Engine.setStepParam(M.selT, s, "mute", math.random(0, 1))
+ end
+ end
+ dirty = true
+end
 function M.onSmallBtn(idx)
  if idx < 1 or idx > 4 then return end
  if M.shift then M.setSelectedTrack(idx) else M.setViewport(idx) end
@@ -203,6 +238,9 @@ function M.draw(scr)
  local armTxt = (M.arm == "load") and "LOAD" or ((M.arm == "save") and "SAVE" or nil)
  if armTxt then
  scr:draw_text_fast(armTxt, 232, 4, 16, C_SHIFT)
+ end
+ if M.random then
+ scr:draw_text_fast("RNDM", 272, 4, 16, C_SHIFT)
  end
  for i = 1, PARAMS do
  local y = ROW_H * i

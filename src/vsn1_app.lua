@@ -126,7 +126,8 @@ end
 -- -----------------------------------------------------------------------------
 
 -- Keyswitches 1..8. 1..6 = focus modes (NOTE VEL GATE MUTE LASTSTEP SCALE);
--- 7 = persist (load / SHIFT=save); 8 = SHIFT (toggle).
+-- 7 = RANDOM hold (momentary; while held param-mode presses randomize);
+-- 8 = SHIFT (toggle). Persist (LOAD/SAVE) lives on the small-button arm chords.
 function M.onKey(idx, pressed)
     local CTL = M.CTL
     -- Armed slot chord (hold small button 11/12, tap keyswitch 0..6 = slot).
@@ -153,18 +154,20 @@ function M.onKey(idx, pressed)
         -- the scriptlet also fires on the release transition.
         CTL.setShift(pressed)
         M.pushEN16()
-    elseif pressed and idx >= 1 and idx <= #CTL.MODES then
-        CTL.onKey(idx)
+    elseif idx == 7 then
+        -- RANDOM hold (keyswitch 7). Momentary: we act on both the press
+        -- (engage) and release (disengage) edges. While held, param-mode
+        -- presses randomize instead of switching focus. Persist (LOAD/SAVE)
+        -- has moved off this key onto the small-button arm chords.
+        CTL.setRandom(pressed)
         M.pushEN16()
-    elseif pressed and idx == 7 then
-        if CTL.shift then
-            Persist.save(M.SAVE_PATH)
+    elseif pressed and idx >= 1 and idx <= #CTL.MODES then
+        if CTL.random then
+            CTL.randomizeParam(idx)
         else
-            if Persist.load(M.SAVE_PATH) then
-                CTL.dirtyAll()
-                M.pushEN16()
-            end
+            CTL.onKey(idx)
         end
+        M.pushEN16()
     end
 end
 

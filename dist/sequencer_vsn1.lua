@@ -98,18 +98,16 @@ function M.onKey(idx, pressed)
  if idx == 8 then
  CTL.setShift(pressed)
  M.pushEN16()
+ elseif idx == 7 then
+ CTL.setRandom(pressed)
+ M.pushEN16()
  elseif pressed and idx >= 1 and idx <= #CTL.MODES then
- CTL.onKey(idx)
- M.pushEN16()
- elseif pressed and idx == 7 then
- if CTL.shift then
- Persist.save(M.SAVE_PATH)
+ if CTL.random then
+ CTL.randomizeParam(idx)
  else
- if Persist.load(M.SAVE_PATH) then
- CTL.dirtyAll()
+ CTL.onKey(idx)
+ end
  M.pushEN16()
- end
- end
  end
 end
 function M.onTurn(dir)

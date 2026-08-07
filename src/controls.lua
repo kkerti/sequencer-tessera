@@ -40,6 +40,7 @@ M.MODES         = MN
 -- selection state (UI only)
 M.selT, M.selS, M.viewport, M.focus, M.shift = 1, 1, 1, 1, false
 M.arm = nil   -- UI state: nil | "load" | "save" (armed slot chord on small buttons 11/12)
+M.random = false -- RANDOM hold flag (keyswitch 7): while held, param-mode presses randomize
 
 local function vplo(v) return (v - 1) * 16 + 1 end
 M.viewportLo = vplo
@@ -60,12 +61,10 @@ end
 
 local function setParam(i, t, s, d)
     local stp = Engine.tracks[t].steps[s]
-    -- Shift-coarse: pitch / vel / gate move in increments of 12.
-    local big = M.shift and 12 or 1
     if i == 1 then
-        Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d * big)
+        Engine.setStepParam(t, s, "pitch", Step.pitch(stp) + d)
     elseif i == 2 then
-        Engine.setStepParam(t, s, "vel", Step.vel(stp) + d * big)
+        Engine.setStepParam(t, s, "vel", Step.vel(stp) + d)
     elseif i == 3 then
         if M.shift then
             -- shift+turn in GATE focus = edit dur (along ladder)
@@ -177,6 +176,53 @@ function M.setArm(v)
     dirty = true
 end
 
+-- RANDOM hold (keyswitch 7). While engaged, param-mode presses below call
+-- randomizeParam instead of switching focus.
+function M.setRandom(b)
+    b = b and true or false
+    if b == M.random then return end
+    M.random = b
+    dirty = true
+end
+
+-- One-time RNG seed (once user actually randomizes). Guarded: `os` may be
+-- absent on device; leave math.random at its default seed then.
+local rngSeeded = false
+local function seedRng()
+    if rngSeeded then return end
+    rngSeeded = true
+    if os and os.time then math.randomseed(os.time()) end
+end
+
+-- Randomize one parameter across all steps 1..lastStep of the selected track.
+-- i is a mode constant: NOTE pitch, VEL vel, GATE gate (shift -> dur from the
+-- musical ladder), MUTE mute toggle. LASTSTEP/SCALE are not randomized.
+function M.randomizeParam(i)
+    seedRng()
+    local tr = Engine.tracks[M.selT]
+    local lastStep = tr.lastStep
+    for s = 1, lastStep do
+        local stp = tr.steps[s]
+        if i == M.MODE_NOTE then
+            Engine.setStepParam(M.selT, s, "pitch", math.random(0, 127))
+        elseif i == M.MODE_VEL then
+            Engine.setStepParam(M.selT, s, "vel", math.random(0, 127))
+        elseif i == M.MODE_GATE then
+            if M.shift then
+                -- shift+gate under RANDOM randomizes dur, from the ladder
+                Engine.setStepParam(M.selT, s, "dur", DUR_LADDER[math.random(#DUR_LADDER)])
+            else
+                -- gate random within 1..dur (valid; dur=0 -> gate 0)
+                local d = Step.dur(stp)
+                Engine.setStepParam(M.selT, s, "gate", (d >= 1) and math.random(1, d) or 0)
+            end
+        elseif i == M.MODE_MUTE then
+            Engine.setStepParam(M.selT, s, "mute", math.random(0, 1))
+        end
+    end
+    dirty = true
+end
+
 function M.onSmallBtn(idx)
     if idx < 1 or idx > 4 then return end
     if M.shift then M.setSelectedTrack(idx) else M.setViewport(idx) end
@@ -262,6 +308,11 @@ function M.draw(scr)
     local armTxt = (M.arm == "load") and "LOAD" or ((M.arm == "save") and "SAVE" or nil)
     if armTxt then
         scr:draw_text_fast(armTxt, 232, 4, 16, C_SHIFT)
+    end
+    -- RANDOM hold flag (keyswitch 7), same style as SHIFT/LOAD/SAVE. Drawn at
+    -- its own column so it can coexist with SHIFT (needed for RANDOM+dur).
+    if M.random then
+        scr:draw_text_fast("RNDM", 272, 4, 16, C_SHIFT)
     end
 
     -- param rows

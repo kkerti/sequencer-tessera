@@ -20,11 +20,19 @@
 -- Hardware mapping:
 --   Screen     : 320x240 EDIT view (greyscale + mute red).
 --   Keyswitch  : 1=NOTE 2=VEL 3=GATE 4=MUTE 5=LASTSTEP
---                7=LOAD (SHIFT+7=SAVE)  8=SHIFT (toggle; LED = full-bright orange).
---   4 small btns: viewport (no shift) / track select (+ shift).
+--                6=SCALE 7=RANDOM (hold; param presses randomize) 8=SHIFT
+--                (toggle; LED = full-bright orange).
+--   4 small btns: viewport (no shift) / track select (+ shift) +
+--                LOAD/SAVE arm chords (buttons 3/4).
 --   Endless    : turn = act-per-mode; click = mute toggle on selected step.
 --                In GATE focus, SHIFT + turn edits dur (snaps ladder).
 --                Shift + turn coarsens NOTE/VEL/GATE by x12.
+--
+-- RANDOM hold: hold keyswitch 7 (header shows "RNDM"), press a param
+--   mode (NOTE/VEL/GATE/MUTE) to randomize that parameter across all steps
+--   1..lastStep of the selected track. With SHIFT latched, GATE randomizes
+--   dur (from the musical ladder) instead of gate. LASTSTEP/SCALE are not
+--   randomized.
 --
 -- EN16 satellite (optional, dx=+1, dy=0):
 --   VSN1 -> EN16   "EN16.U(mu,f,sel,cap,v1..v16);paint()"

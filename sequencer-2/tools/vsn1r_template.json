@@ -1,0 +1,276 @@
+{
+    "id": "9ff356ee-6766-4d7b-8564-00d6cd9ed102",
+    "modifiedAt": "2026-08-07T12:05:57.484Z",
+    "createdAt": "2026-08-06T13:54:22.197Z",
+    "name": "Note Step Sequencer ",
+    "description": "Click here to add description",
+    "type": "VSN1R",
+    "version": {
+        "major": "1",
+        "minor": "6",
+        "patch": "9"
+    },
+    "configType": "profile",
+    "configs": [
+        {
+            "controlElementNumber": 0,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{234,0,255,0.5},{234,0,255,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 1,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{0,255,157,0.5},{0,255,157,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 2,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{255,166,0,0.5},{255,166,0,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 3,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{255,0,38,0.5},{255,0,38,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 4,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{21,0,255,0.4},{0,132,255,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 5,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{255,97,186,0.5},{255,97,186,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 6,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{255,0,0,0.31},{255,98,26,1}}) self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 7,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{255,60,0,1}})self:glp(-1,-1)--[[@cb]] loadAPP().onKey(self:ind()+1,self:bst()==127)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 8,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Endless Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bst()==127 then loadAPP().onClick()end"
+                },
+                {
+                    "event": 7,
+                    "config": "--[[@sen]] self:epmo(1)self:epv0(50)self:epmi(0)self:epma(127)self:epse(50)--[[@cb]] local d=self:epva()-64 if d~=0 then loadAPP().onTurn(d)end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 9,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@cb]] if self:bst()==127 then loadAPP().onSmallBtn(self:ind()-8,true)else loadAPP().onSmallBtn(self:ind()-8,false)end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 10,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@cb]] if self:bst()==127 then loadAPP().onSmallBtn(self:ind()-8,true)else loadAPP().onSmallBtn(self:ind()-8,false)end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 11,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@cb]] if self:bst()==127 then loadAPP().onSmallBtn(self:ind()-8,true)else loadAPP().onSmallBtn(self:ind()-8,false)end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 12,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@cb]] if self:bst()==127 then loadAPP().onSmallBtn(self:ind()-8,true)else loadAPP().onSmallBtn(self:ind()-8,false)end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 13,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] glsb(255)"
+                },
+                {
+                    "event": 8,
+                    "config": "--[[@cb]] loadAPP()CTL.draw(self)"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 255,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] SEQ=require(\"sequencer\")ENGINE=SEQ.Core.engine STEP=SEQ.Core.step MIDIRX=SEQ.Core.midi_rx PERSIST=SEQ.Core.persist APP=nil CTL=nil ENGINE.init({trackCount=4,stepsPerTrack=64})if not PERSIST.load(\"sequencer_data.lua\")then local notes={60,63,67,70,72,67,63,60}for i,p in ipairs(notes)do ENGINE.tracks[1].steps[i]=STEP.pack({pitch=p,vel=100,dur=6,gate=3})end end function loadAPP()if APP then return APP end local UI=require(\"sequencer_ui\")CTL=UI.screen APP=require(\"sequencer_vsn1\").init(CTL)return APP end gis(1,0,\"EN16.H(0);paint()\")function vsn1_t(i,d)loadAPP().fromEN16Turn(i,d)end function vsn1_p(i)loadAPP().fromEN16Press(i)end grxm(2,3)self.rtmrx_cb=function(self,h,t)local r=MIDIRX.handle(t,gms)if r==\"tick\" then if APP then APP.pushPlayhead()end elseif r==\"start\" then if APP then APP.lastPh=-1 end elseif r==\"stop\" then if APP then APP.lastPh=0 end gis(1,0,\"EN16.H(0);paint()\")end end"
+                },
+                {
+                    "event": 4,
+                    "config": "--[[@cb]] gpl(gpn())"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        }
+    ],
+    "virtualPath": "",
+    "files": [],
+    "fileName": "Note Step Sequencer  1.json",
+    "isEditable": true,
+    "syncStatus": "local"
+}

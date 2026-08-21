@@ -1,0 +1,3 @@
+# Reference manuals (large binaries)
+docs/manuals/**/*
+docs/manuals/*/

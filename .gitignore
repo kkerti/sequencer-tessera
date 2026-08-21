@@ -13,7 +13,3 @@ __pycache__/
 
 # Logs
 tui.log
-
-# Reference manuals (large binaries)
-docs/manuals/*.pdf
-docs/manuals/*/

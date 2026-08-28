@@ -295,6 +295,7 @@ function M.click(down)
         local steps = E.song.steps
         if #steps > 0 then
             M.songCur = clamp(M.songCur, 1, #steps)
+            E.song.pos = M.songCur
             E.setSequence(steps[M.songCur]); emitOut()
         end
     end

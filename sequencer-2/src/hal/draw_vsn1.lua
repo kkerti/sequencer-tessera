@@ -1,6 +1,6 @@
 -- draw_vsn1.lua — the on-device VSN1 screen (UI bundle). Three M4 modes:
 --   PLAY  — piano roll + playhead (top); staged param + status (bottom).
---           SETUP (SHIFT+KS4) = full-screen param grid within PLAY.
+--           SETUP (ENTER button) = full-screen param grid within PLAY.
 --   STEP  — piano roll + playhead + step cursor (top); note editor (bottom).
 --   SEQ   — piano roll + playhead (top); sequence/song builder (bottom).
 -- Real Grid draw API is scr:draw_*; ends with scr:draw_swap(). Called as

@@ -283,6 +283,20 @@ do
     ok(#Engine.song.steps == 2, "songAdd chains sequence ids")
 end
 
+-- 15) REGRESSION: setTrackMute clears out even on the unmute path ----------
+-- Engine.out persists between pulses; setTrackMute(false) must not leave the
+-- previous pulse's note-on in the buffer (control.lua emitOut() would re-send
+-- it, hanging the note on device).
+do
+    Engine.init{ trackCount = 1 }
+    Event.add(Engine.tracks[1].pattern.events, 60, 0, 6, 100)
+    Engine.onStart()
+    local o = Engine.onPulse()            -- emits note-on 60 -> out.n == 1
+    ok(o.n == 1, "pulse emitted one note-on")
+    Engine.setTrackMute(1, false)         -- unmute: must clear the stale buffer
+    ok(Engine.out.n == 0, "setTrackMute(false) leaves out.n == 0 (no stale note-on)")
+end
+
 -- =========================================================================
 -- APP layer: staged commit, 3 modes, draw smoke test
 -- =========================================================================

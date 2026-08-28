@@ -37,8 +37,6 @@ SETUP = (
 
 # control-element callbacks: (element, event) -> callback body (after --[[@cb]]).
 # Prefix-preserving (keeps the element's --[[@s..]] hardware setup).
-# ALL control is on keyswitches 0-7 + the encoder; small buttons 9-12 are dead
-# on the hardware, so we don't wire them at all.
 CB = {
     (13, 8): "loadUI() DRAW(self,ENGINE,CTL)",                        # screen draw
     (8, 7):  "local d=self:epva()-64 if d~=0 then loadUI().turn(d)end",  # encoder turn

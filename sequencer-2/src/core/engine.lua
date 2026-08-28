@@ -139,10 +139,10 @@ function M.setTrackMute(track, muted)
     if not seq or track < 1 or track > #M.tracks then
         return M.out
     end
+    M.out.n = 0
     seq.mute[track] = muted and true or false
     M.tracks[track].seqMute = seq.mute[track]
     if seq.mute[track] then
-        M.out.n = 0
         Track.flush(M.tracks[track], M.out)  -- silence a track the moment it mutes
     end
     return M.out

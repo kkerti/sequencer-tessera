@@ -4,13 +4,16 @@
 Clones the proven "Note Step Sequencer" element skeleton (tools/vsn1r_template.json)
 so the editor sees a COMPLETE module (a partial profile makes it throw
 "Cannot read properties of undefined (reading 'events')"). Overrides only the
-elements seq-2 uses; for control elements it PRESERVES each event's hardware
-setup prefix (the --[[@s..]] markers) and swaps just the --[[@cb]] callback, so
-LED/encoder config still applies.
+elements seq-2 uses; every control element stays in its PLAINEST event mode —
+plain bst()/epva() callbacks, no bmo/toggle/momentary element setup. LED
+lighting is decoupled: a dedicated render pass (src/hal/leds.lua) runs from the
+draw event and drives each element's LED via led_color() from CTL/engine state.
+For control elements it PRESERVES the template's non-behaviour setup prefix
+(the --[[@s..]] LEDs prev config) and swaps just the --[[@cb]] callback.
 
 Control map (see docs/DEPLOY.md):
   el 255 ev0  system setup: require Core, init 4 tracks, arm MIDI rx, lazy UI
-  el 13  ev8  screen draw (PLAY / STEP / SEQ)
+  el 13  ev8  screen draw + LED render pass (PLAY / STEP / SEQ)
   el 8   ev7/ev3  encoder turn (stage/slot/cursor) / click (reroll/field/jump)
   el 0-7 ev3  keyswitches: mode-specific direct actions, 7 = MODE cycle
   el 9-12 ev3 small buttons: 9 = BACK, 10 = ENTER, 11 = NAP, 12 = COMMIT
@@ -30,23 +33,24 @@ SETUP = (
     'SEQ=require("seq2")ENGINE=SEQ.engine MIDIRX=SEQ.midirx '
     'NOOP=setmetatable({},{__index=function()return function()end end})'
     'function loadAPP()return NOOP end function vsn1_p()end function vsn1_t()end function paint()end '
-    'function loadUI()if not CTL then local U=require("seq2_ui")CTL=U.control DRAW=U.draw CTL.bind(ENGINE,SEQ)end return CTL end '
+    'function loadUI()if not CTL then local U=require("seq2_ui")CTL=U.control DRAW=U.draw LEDS=U.leds CTL.bind(ENGINE,SEQ)end return CTL end '
     'ENGINE.init({trackCount=4})'
     'grxm(2,3)self.rtmrx_cb=function(self,h,t)MIDIRX.handle(t,gms)end'
 )
 
-# control-element callbacks: (element, event) -> callback body (after --[[@cb]]).
-# Prefix-preserving (keeps the element's --[[@s..]] hardware setup).
+# Encoder turn keeps its --[[@sen]] relative-mode setup (epmo(1)) — needed for
+# the epva() delta. Prefix-preserving: only the callback is swapped.
 CB = {
-    (13, 8): "loadUI() DRAW(self,ENGINE,CTL)",                        # screen draw
-    (8, 7):  "local d=self:epva()-64 if d~=0 then loadUI().turn(d)end",  # encoder turn
-    (8, 3):  "loadUI().click(self:bst()==127)",                       # encoder click
+    (8, 7): "local d=self:epva()-64 if d~=0 then loadUI().turn(d)end",  # encoder turn (relative)
 }
-for _k in range(8):                                                   # keyswitches 0-7
-    CB[(_k, 3)] = f"loadUI().key({_k},self:bst()==127)"
-# small buttons 9-12 (under the screen): BACK / ENTER / NAP / COMMIT.
-# Callback-only (no --[[@sbc]] bmo setup): the bmo'd buttons never fired.
-CB_FULL = { (_b, 3): f"loadUI().button({_b},self:bst()==127)" for _b in range(9, 13) }
+# Everything else is callback-only (set_event drops the template's bmo/glc/glp/
+# momentary element setup): plain bst()/epva() callbacks. LEDs are driven only
+# by the LED render pass (src/hal/leds.lua) from the draw event, never by
+# firmware element behaviour.
+CB_FULL = { (_k, 3): f"loadUI().key({_k},self:bst()==127)" for _k in range(8) }           # keyswitches 0-7
+CB_FULL.update({ (_b, 3): f"loadUI().button({_b},self:bst()==127)" for _b in range(9, 13) })  # small buttons 9-12
+CB_FULL[(8, 3)]  = "loadUI().click(self:bst()==127)"                                        # encoder click
+CB_FULL[(13, 8)] = "loadUI() DRAW(self,ENGINE,CTL)LEDS(ENGINE,CTL)"                         # draw + LED pass
 
 assert len(SETUP) <= 900, f"setup event {len(SETUP)} > 900 chars"
 for k, v in {**CB, **CB_FULL}.items():

@@ -33,6 +33,7 @@ local CORE = {
 local UI = {
     { key = "control", path = "src/app/control.lua"  },
     { key = "draw",    path = "src/hal/draw_vsn1.lua" },
+    { key = "leds",    path = "src/hal/leds.lua"     },
 }
 
 local CORE_NS = [[
@@ -42,7 +43,7 @@ return {
     range=R.range, random=R.random, scalefx=R.scale, sequence=R.sequence,
 }
 ]]
-local UI_NS = "return { draw=R.draw.draw, control=R.control }\n"
+local UI_NS = "return { draw=R.draw.draw, control=R.control, leds=R.leds.update }\n"
 
 local SHIM_CORE = "local R={}\nlocal function require(n) return R[n] end\n"
 -- UI shim: local module first, else delegate to the loaded Core bundle.

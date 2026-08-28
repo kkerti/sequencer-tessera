@@ -471,4 +471,100 @@ end
 return M
 
 end)()
-return { draw=R.draw.draw, control=R.control }
+R["leds"]=(function()
+
+local M = {}
+local frame = 0
+local OFF = { 0, 0, 0 }
+local DIM = { 36, 36, 40 }
+local WHITE = { 235, 235, 235 }
+local ORANGE = { 249, 150, 0 }
+local ORANGE_DIM = { 120, 70, 0 }
+local GREEN = { 90, 220, 120 }
+local RED = { 220, 60, 60 }
+local RED_DIM = { 120, 40, 40 }
+local CYAN = { 0, 200, 220 }
+local PURPLE = { 160, 90, 220 }
+local function blink(f) return (f % 40) < 20 end
+local function napLed(tr, b)
+ if not tr.nap.armed then return DIM end
+ if tr.nap.muted then return RED end
+ return b and RED or RED_DIM
+end
+local function commitLed(tr, b)
+ if not tr.dirty then return DIM end
+ return b and ORANGE or ORANGE_DIM
+end
+function M.compute(eng, ctl, f)
+ local lit = {}
+ for el = 0, 12 do lit[el] = OFF end
+ if not eng or not ctl then return lit end
+ local b = blink(f)
+ local mode = ctl.mode
+ local tr = eng.tracks[ctl.track]
+ if mode == "PLAY" then
+ local PLAY_KEY = { 3, 2, 1, 6, 7 }
+ for k = 0, 4 do
+ lit[k] = (not ctl.setup and ctl.sel == PLAY_KEY[k + 1]) and WHITE or DIM
+ end
+ lit[5] = tr.auto.armed and GREEN or DIM
+ lit[6] = DIM
+ lit[7] = ORANGE
+ lit[9] = DIM
+ lit[10] = ctl.setup and WHITE or DIM
+ lit[11] = napLed(tr, b)
+ lit[12] = commitLed(tr, b)
+ elseif mode == "STEP" then
+ lit[0] = DIM
+ lit[1] = DIM
+ lit[2] = DIM
+ lit[3] = DIM
+ lit[4] = DIM
+ lit[5] = DIM
+ lit[6] = DIM
+ lit[7] = CYAN
+ lit[9] = DIM
+ lit[10] = DIM
+ lit[11] = napLed(tr, b)
+ lit[12] = commitLed(tr, b)
+ else
+ local seq = eng.sequences[eng.currentSeq]
+ if ctl.seqPage == "SLOT" then
+ for k = 0, 3 do
+ lit[k] = (ctl.seqTrack == k + 1) and WHITE or DIM
+ end
+ lit[4] = OFF
+ lit[5] = seq.mute[ctl.seqTrack] and RED or DIM
+ lit[6] = OFF
+ lit[7] = PURPLE
+ lit[10] = WHITE
+ else
+ lit[0] = DIM
+ lit[1] = DIM
+ lit[2] = DIM
+ lit[3] = OFF
+ lit[4] = OFF
+ lit[5] = OFF
+ lit[6] = OFF
+ lit[7] = PURPLE
+ lit[10] = DIM
+ end
+ lit[9] = DIM
+ lit[11] = napLed(tr, b)
+ lit[12] = DIM
+ end
+ return lit
+end
+function M.update(eng, ctl)
+ frame = frame + 1
+ if not led_color then return end
+ local lit = M.compute(eng, ctl, frame)
+ for el = 0, 12 do
+ local c = lit[el] or OFF
+ led_color(el, 2, c[1], c[2], c[3], 0)
+ end
+end
+return M
+
+end)()
+return { draw=R.draw.draw, control=R.control, leds=R.leds.update }

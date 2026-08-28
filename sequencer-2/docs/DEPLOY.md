@@ -104,14 +104,42 @@ the event scripts changed.
 - Verify the exact `grxm(2,3)` args and MIDI routing on device — copied verbatim
   from the proven profile.
 
+## LED model (decoupled from control)
+
+**Path chosen: (2) — plainest element mode; LED lighting is its own task.**
+All control elements ship in their plainest event mode — plain
+`bst()`/`epva()` callbacks, with no `bmo` toggle/momentary and no element-level
+`glc`/`glp` colour setup. `bmo` would only buy LED brightness tied to
+toggle/momentary state; we reject that coupling so element behaviour never
+carries logic.
+
+- **Renderer:** `src/hal/leds.lua` (bundled in `seq2_ui`) exports `leds(eng, ctl)`.
+  It is called once per **screen draw event** (el 13 ev 8 → `…LEDS(ENGINE,CTL)`),
+  i.e. off the pulse hot path at ≤20 fps, and drives every element's LED via the
+  Grid global `led_color(element, led, r, g, b, brightness)` (LED index **2** —
+  the primary LED the proven seq-1 profiles light in `../sequencer-1/configs/*.lua`;
+  the brightness ceiling is `led_value(element, led, brightness)` if needed).
+- **Single source of truth:** `M.compute(eng, ctl, frame)` returns a pure table
+  `lit[0..12] = {r,g,b}` derived only from `CTL.mode/setup/seqPage`, `track`,
+  `sel`, seq-track selection, `nap.armed` + `nap.muted`, `auto.armed`, `dirty`,
+  and the current sequence's mute mask. No LED state is stored independently.
+- **Blink/breathe** (nap armed, commit-pending) is computed in Lua from a frame
+  tick (`frame % 40 < 20`), never from firmware element behaviour.
+- Palette: mode = KS7 colour (PLAY orange / STEP cyan / SEQ purple); selected
+  item = white; AUTO = green; NAP = red (blinks while armed+awake, steady while
+  napping); COMMIT = orange (blinks while `dirty`); mute = red.
+
+**The one exception** to "no element setup" is the encoder turn event, which
+keeps its `--[[@sen]] self:epmo(1)…` relative-mode setup — that's the *only*
+way `epva()` returns a ±1 delta, and it is encoder physics, not toggle/LED logic.
+
 ## Hardware quirks found on-device
 
 - **Encoder = relative.** The endless push-encoder (el 8, event 7) is set to
   relative mode via `--[[@sen]] self:epmo(1)…`; a turn sends 63 (CCW) / 65 (CW),
   so the callback delta is `self:epva()-64` (±1). If it ever behaves like an
   absolute knob, check the endless element's mode in the editor UI.
-- **Small-button events.** Small buttons 9–12 DO fire their press event (they
-  sit under the screen and are wired as BACK/ENTER/NAP/COMMIT). They are shipped
-  **callback-only** (`--[[@cb]]`, no `--[[@sbc]] self:bmo(...)` setup) — the
-  `bmo`'d variant from the template did not fire. Button/keyswitch press =
-  `self:bst()==127`.
+- **Small-button events.** Small buttons 9–12 fire their press event exactly like
+  keyswitches 0–7 (`self:bst()==127`). All control elements ship in plainest
+  mode (no `bmo`) — see "LED model" above; LED feedback is rendered separately
+  via `led_color()`.

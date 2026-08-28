@@ -402,6 +402,35 @@ do
     ok(tr2.auto.due, "auto-reroll due set")
     Control.frame()
     ok(not tr2.auto.due and tr2.gen.seed == sd + 1, "frame() services auto-reroll off hot path")
+
+    -- H) LED pass is pure and derived entirely from CTL/engine state
+    local LEDs = require("leds")
+    Control.mode = "PLAY"; Control.setup = false; Control.track = 1
+
+    local on  = LEDs.compute(Engine, Control, 10)   -- blink phase ON
+    ok(on[7][1] == 249 and on[7][2] == 150, "PLAY mode key (KS7) LED is orange")
+
+    Engine.tracks[1].dirty = true
+    local c1 = LEDs.compute(Engine, Control, 10)
+    local c2 = LEDs.compute(Engine, Control, 30)
+    ok(c1[12][1] == 249 and c2[12][1] == 120,
+       "COMMIT LED blinks orange vs half-dim while dirty")
+    Engine.tracks[1].dirty = false
+    ok(LEDs.compute(Engine, Control, 10)[12][1] == 36, "COMMIT LED dim when not dirty")
+
+    require("track").armNap(Engine.tracks[1], 2, 2)
+    local n = LEDs.compute(Engine, Control, 10)
+    ok(n[11][1] == 220 and n[11][2] == 60, "NAP LED red when armed")
+    require("track").disarmNap(Engine.tracks[1])
+
+    Control.mode = "SEQ"; Control.seqPage = "SLOT"; Control.seqTrack = 3
+    local s = LEDs.compute(Engine, Control, 10)
+    ok(s[2][1] == 235 and s[0][1] == 36, "SEQ SLOT lights the selected track's key")
+    ok(s[7][1] == 160, "SEQ mode key (KS7) LED is purple")
+
+    -- H2) LED update() is a no-op without the Grid global (headless safety)
+    LEDs.update(Engine, Control)                 -- led_color is nil here -> must not error
+    ok(true, "LEDs.update runs safe without led_color global")
 end
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))

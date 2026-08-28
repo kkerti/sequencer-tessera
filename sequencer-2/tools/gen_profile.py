@@ -12,14 +12,16 @@ For control elements it PRESERVES the template's non-behaviour setup prefix
 (the --[[@s..]] LEDs prev config) and swaps just the --[[@cb]] callback.
 
 Control map (see docs/DEPLOY.md):
-  el 255 ev0  system setup: require Core, init 4 tracks, arm MIDI rx, lazy UI
-  el 13  ev8  screen draw + LED render pass (PLAY / STEP / SEQ)
-  el 8   ev7/ev3  encoder turn (stage/slot/cursor) / click (reroll/field/jump)
+  el 255 ev0  system setup: require Core (seq2+seq2b), init 2 tracks, arm MIDI
+               rx, lazy UI (seq2_ctl/seq2_ui/seq2_gen on first input/draw)
+  el 13  ev8  screen draw (text-only views) + throttled LED render pass
+  el 8   ev7/ev3  encoder turn (stage/slot) / click (reroll/field)
   el 0-7 ev3  keyswitches: mode-specific direct actions, 7 = MODE cycle
   el 9-12 ev3 small buttons: 9 = BACK, 10 = ENTER, 11 = NAP, 12 = COMMIT
 
-Module Lua bundles (dist/seq2.lua, dist/seq2_ui.lua) upload SEPARATELY as
-`seq2` / `seq2_ui`. Run:  python3 tools/gen_profile.py [--install]
+Module Lua bundles (dist/seq2.lua, seq2b, seq2_ctl, seq2_ui, seq2_gen — all
+PLAIN TEXT) upload SEPARATELY under those exact require names.
+Run:  python3 tools/gen_profile.py [--install]
 """
 import json, os, sys, time, uuid, copy
 
@@ -28,13 +30,21 @@ ROOT = os.path.dirname(HERE)
 TEMPLATE = os.path.join(HERE, "vsn1r_template.json")
 
 # --- element 255, event 0: system setup (<= 900 chars) ---------------------
+# LEAN layout (see docs/DEPLOY.md): 5 text bundles, each small enough not to
+# trip the module watchdog on load. Core (seq2 + seq2b) at setup; control /
+# draw lazy on first input/draw. Demo patterns are generated HERE (not only in
+# lazy control.bind) so pure playback never depends on the UI bundles loading.
+# Device-code rules: NO collectgarbage, NO package.loaded, NO string.format.
 SETUP = (
-    '--[[@cb]] if package and package.loaded then package.loaded.seq2=nil package.loaded.seq2_ui=nil end CTL=nil DRAW=nil '
-    'SEQ=require("seq2")ENGINE=SEQ.engine MIDIRX=SEQ.midirx '
+    '--[[@cb]] CTL=nil DRAW=nil LEDS=nil '
+    'SEQ=require("seq2")SEQB=require("seq2b")ENGINE=SEQB.engine MIDIRX=SEQB.midirx '
     'NOOP=setmetatable({},{__index=function()return function()end end})'
     'function loadAPP()return NOOP end function vsn1_p()end function vsn1_t()end function paint()end '
-    'function loadUI()if not CTL then local U=require("seq2_ui")CTL=U.control DRAW=U.draw LEDS=U.leds CTL.bind(ENGINE,SEQ)end return CTL end '
-    'ENGINE.init({trackCount=4})'
+    'function loadUI()if not CTL then CTL=require("seq2_ctl").control local U=require("seq2_ui")DRAW=U.draw LEDS=U.leds CTL.bind(ENGINE,SEQ)end return CTL end '
+    'ENGINE.init({trackCount=2})'
+    'G=require("seq2_gen").generate '
+    'G.run(ENGINE.tracks[1].pattern,{scaleIndex=3,root=9,hits=7,seed=1,pitchRoot=60,pitchSpread=6,velRoot=100,velSpread=20,gateRoot=6})'
+    'G.run(ENGINE.tracks[2].pattern,{scaleIndex=8,root=9,hits=4,seed=2,pitchRoot=40,pitchSpread=4,velRoot=110,velSpread=15,gateRoot=18})'
     'grxm(2,3)self.rtmrx_cb=function(self,h,t)MIDIRX.handle(t,gms)end'
 )
 
@@ -50,7 +60,8 @@ CB = {
 CB_FULL = { (_k, 3): f"loadUI().key({_k},self:bst()==127)" for _k in range(8) }           # keyswitches 0-7
 CB_FULL.update({ (_b, 3): f"loadUI().button({_b},self:bst()==127)" for _b in range(9, 13) })  # small buttons 9-12
 CB_FULL[(8, 3)]  = "loadUI().click(self:bst()==127)"                                        # encoder click
-CB_FULL[(13, 8)] = "loadUI() DRAW(self,ENGINE,CTL)LEDS(ENGINE,CTL)"                         # draw + LED pass
+# draw every frame; LED pass throttled to every 4th frame (cheap on the heap)
+CB_FULL[(13, 8)] = "loadUI() DRAW(self,ENGINE,CTL) C=(C or 0)+1 if C%4==0 then LEDS(ENGINE,CTL)end"
 
 assert len(SETUP) <= 900, f"setup event {len(SETUP)} > 900 chars"
 for k, v in {**CB, **CB_FULL}.items():
@@ -89,21 +100,21 @@ def main():
     now = int(time.time() * 1000)
     prof.update({
         "id": str(uuid.uuid4()),
-        "name": "Sequencer 2",
+        "name": "Sequencer Magnetar",
         "description": "seq-2: 4 tracks, staged generative euclid + sequence/song",
-        "fileName": "Sequencer 2.json",
+        "fileName": "Sequencer Magnetar.json",
         "createdAt": now, "modifiedAt": now,
         "isEditable": True, "syncStatus": "local",
     })
 
     data = json.dumps(prof)
-    out = os.path.join(ROOT, "dist", "Sequencer 2.json")
+    out = os.path.join(ROOT, "dist", "Sequencer Magnetar.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w").write(data)
     print(f"wrote {out}  ({len(data)} B)")
 
     if "--install" in sys.argv:
-        dst = os.path.expanduser("~/Documents/grid-userdata/configs/Sequencer 2.json")
+        dst = os.path.expanduser("~/Documents/grid-userdata/configs/Sequencer Magnetar.json")
         open(dst, "w").write(data)
         print(f"wrote {dst}")
 

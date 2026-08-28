@@ -74,23 +74,14 @@ function M.compute(eng, ctl, f)
         lit[11] = napLed(tr, b)
         lit[12] = commitLed(tr, b)
 
-    else -- SEQ
+    else -- SEQ (slot picker only; SONG page was cut for the lean build)
         local seq = eng.sequences[eng.currentSeq]
-        if ctl.seqPage == "SLOT" then
-            for k = 0, 3 do lit[k] = (ctl.seqTrack == k + 1) and WHITE or DIM end
-            lit[4] = OFF
-            lit[5] = seq.mute[ctl.seqTrack] and RED or DIM
-            lit[6] = OFF
-            lit[7] = PURPLE
-            lit[10] = WHITE
-        else
-            lit[0] = DIM
-            lit[1] = DIM
-            lit[2] = DIM
-            for k = 3, 6 do lit[k] = OFF end
-            lit[7] = PURPLE
-            lit[10] = DIM
-        end
+        for k = 0, 3 do lit[k] = (ctl.seqTrack == k + 1) and WHITE or DIM end
+        lit[4] = OFF
+        lit[5] = seq.mute[ctl.seqTrack] and RED or DIM
+        lit[6] = OFF
+        lit[7] = PURPLE
+        lit[10] = DIM
         lit[9] = DIM
         lit[11] = napLed(tr, b)
         lit[12] = DIM

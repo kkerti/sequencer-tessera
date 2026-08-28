@@ -1,22 +1,38 @@
 -- tools/build.lua — build the deployable Grid module bundles + the grid-wasm
--- preview screen. Run:  lua tools/build.lua
+-- preview screen. Run:  /opt/homebrew/opt/lua@5.4/bin/lua5.4 tools/build.lua
 --
--- Two bundles (seq-1's proven split — one big bundle reboots the module's
--- watchdog on load, two thin ones don't):
---   dist/seq2.lua     Core + midi_rx. Required at the module's setup event.
---                     Pure playback (clock in -> notes out) runs on this alone.
---   dist/seq2_ui.lua  Screen draw. Lazy-loaded on the first draw event.
+-- MUST run under Lua 5.4 (bytecode version matches the Grid module if
+-- --bytecode is used). Keg-only path on this machine:
+--   /opt/homebrew/opt/lua@5.4/bin/lua5.4 tools/build.lua
 --
--- Load on device / in tests:  local SEQ = (loadfile"dist/seq2.lua")()
--- The UI bundle's require-shim falls back to the host require("seq2") so its
--- require("pattern") resolves through the Core bundle's flat aliases.
+-- LEAN LAYOUT (seq-1's proven load discipline; see docs/DEPLOY.md):
+-- PLAIN TEXT source bundles, each <= ~10 KB — bigger single loads trip the
+-- module watchdog — loaded sequentially, UI bundles lazy on first input/draw:
+--   dist/seq2.lua      Core data model: event, scales, fx, rack, pattern,
+--                      track. Required at setup. (~10 KB, the proven max.)
+--   dist/seq2b.lua     Core runtime: sequence, engine, midi_rx. Required at
+--                      setup right after seq2. (~4 KB)
+--   dist/seq2_ctl.lua  control (staged params, modes). Lazy: first input/draw.
+--   dist/seq2_ui.lua   text-only draw (draw_text) + LED pass. Lazy.
+--   dist/seq2_gen.lua  generator; pulled by seq2_ctl's require("generate").
+-- Device-code rules (violating these rebooted the module before):
+--   NO collectgarbage, NO package.loaded manipulation, NO string.format,
+--   total shipped Lua ~25-28 KB (heap ceiling ~130 KB, ~91 KB boot baseline).
+--
+-- --bytecode emits all bundles as string.dump(f, true) instead of text
+-- (smaller resident chunks, but the Grid editor may reject binary uploads —
+-- text is the proven path).
 --
 -- Also emits screens/seq2_live.lua — a THIN data-only grid-wasm preview whose
 -- notes are baked by running the generator here at build time (the engine must
 -- NOT be embedded in a screen script; see docs/ARCHITECTURE.md §10).
 
+assert(_VERSION == "Lua 5.4",
+    "build.lua must run under Lua 5.4 (bytecode version matches the Grid module). " ..
+    "Use: /opt/homebrew/opt/lua@5.4/bin/lua5.4 tools/build.lua")
+
 -- ---- bundle definitions -----------------------------------------------
-local CORE = {
+local CORE_A = {                    -- dist/seq2.lua — self-contained data model
     { key = "event",   path = "src/core/event.lua"   },
     { key = "scales",  path = "src/core/scales.lua"  },
     { key = "range",   path = "src/fx/range.lua"     },
@@ -25,41 +41,52 @@ local CORE = {
     { key = "rack",    path = "src/core/rack.lua"    },
     { key = "pattern", path = "src/core/pattern.lua" },
     { key = "track",   path = "src/core/track.lua"   },
-    { key = "sequence",path = "src/core/sequence.lua"},
-    { key = "engine",  path = "src/core/engine.lua"  },
-    { key = "midirx",  path = "src/core/midi_rx.lua" },
 }
--- generate runs only at edit time (control.bind's regen), never on the
--- playback path, so it lives in the UI bundle. Its require("scales") resolves
--- through the UI shim's fall-through to the Core bundle.
-local UI = {
-    { key = "generate", path = "src/core/generate.lua" },
-    { key = "control",  path = "src/app/control.lua"  },
-    { key = "draw",     path = "src/hal/draw_vsn1.lua" },
-    { key = "leds",     path = "src/hal/leds.lua"     },
+local CORE_B = {                    -- dist/seq2b.lua — runtime (needs seq2)
+    { key = "sequence", path = "src/core/sequence.lua" },
+    { key = "engine",   path = "src/core/engine.lua"   },
+    { key = "midirx",   path = "src/core/midi_rx.lua"  },
 }
+local CTL = { { key = "control", path = "src/app/control.lua" } }
+local UI  = {                      -- dist/seq2_ui.lua — lazy screen + LEDs
+    { key = "draw", path = "src/hal/draw_text.lua" },
+    { key = "leds", path = "src/hal/leds.lua"     },
+}
+local GEN = { { key = "generate", path = "src/core/generate.lua" } }
 
-local CORE_NS = [[
+local NS_A = [[
 return {
-    engine=R.engine, track=R.track, pattern=R.pattern, rack=R.rack,
-    event=R.event, scales=R.scales, midirx=R.midirx,
-    range=R.range, random=R.random, scalefx=R.scale, sequence=R.sequence,
+    track=R.track, pattern=R.pattern, rack=R.rack,
+    event=R.event, scales=R.scales,
+    range=R.range, random=R.random, scalefx=R.scale,
 }
 ]]
-local UI_NS = "return { draw=R.draw.draw, control=R.control, leds=R.leds.update }\n"
+local NS_B = "return { engine=R.engine, midirx=R.midirx, sequence=R.sequence }\n"
+local NS_CTL = "return { control=R.control }\n"
+local NS_UI = "return { draw=R.draw.draw, leds=R.leds.update }\n"
+local NS_GEN = "return { generate=R.generate }\n"
 
 local SHIM_CORE = "local R={}\nlocal function require(n) return R[n] end\n"
--- UI shim: local module first, else delegate to the loaded Core bundle.
-local SHIM_UI = [[
-local R={}
-local _host=require
-local _seq
-local function require(n)
-    local r=R[n] if r~=nil then return r end
-    if not _seq then _seq=_host("seq2") end
-    return _seq[n]
+-- Fallback shims: local R first, then a chain of host bundles by alias.
+-- (Shim bodies are plain require lookups — no package.loaded, no GC.)
+local function shimChain(names)
+    local body = { "local R={}", "local _host=require" }
+    for i in ipairs(names) do body[#body + 1] = "local _" .. i end
+    body[#body + 1] = "local function require(n)"
+    body[#body + 1] = " local r=R[n] if r~=nil then return r end"
+    for i, n in ipairs(names) do
+        body[#body + 1] = string.format(
+            " if not _%d then _%d=_host(%q) end local m=_%d[n] if m then return m end",
+            i, i, n, i)
+    end
+    body[#body + 1] = " error('seq2 module not found: '..tostring(n))"
+    body[#body + 1] = "end\n"
+    return table.concat(body, "\n")
 end
-]]
+local SHIM_B   = shimChain{ "seq2" }                    -- engine needs track/pattern
+local SHIM_CTL = shimChain{ "seq2", "seq2b", "seq2_gen" } -- control needs generate + midirx
+local SHIM_UI  = shimChain{ "seq2", "seq2b" }           -- draw_text needs pattern
+local SHIM_GEN = shimChain{ "seq2" }                    -- generate needs event/scales
 
 -- ---- minify (string/bracket-aware; from seq-1) ------------------------
 local function stripComments(src)
@@ -99,7 +126,11 @@ local function collapseWs(src)
 end
 local function read(p) local f = assert(io.open(p, "r")); local s = f:read("*a"); f:close(); return s end
 
-local function buildBundle(files, shim, ns, out, header)
+-- asText: write the (minified) SOURCE instead of stripped bytecode. TEXT is
+-- the default and the proven path (the Grid editor rejects binary uploads;
+-- the device compiles text at load). Resident chunk is ~4x bigger than the
+-- stripped-bytecode form — that's the price of uploadability.
+local function buildBundle(files, shim, ns, out, header, asText)
     local parts, raw = { header, shim }, 0
     for _, m in ipairs(files) do
         local s = read(m.path); raw = raw + #s
@@ -115,19 +146,40 @@ local function buildBundle(files, shim, ns, out, header)
     -- A stripped binary chunk loads without re-compiling (no identifier
     -- interning) and carries no debug info — a ~4x smaller resident chunk.
     local f = assert(load(src, "@" .. out))
-    local bin = string.dump(f, true)
+    local bin
+    if asText then
+        bin = src
+    else
+        bin = string.dump(f, true)
+    end
     local fo = assert(io.open(out, "wb")); fo:write(bin); fo:close()
 
     local ok, err = loadfile(out)
     if not ok then io.stderr:write("VERIFY FAIL " .. out .. ": " .. tostring(err) .. "\n"); os.exit(1) end
-    io.write(string.format("%-16s source %d B  stripped %d B  (%.0f%% of source)  loads OK\n",
-        out, raw, #bin, 100 * #bin / raw))
+    io.write(string.format("%-26s source %d B  %s %d B  (%.0f%% of source)  loads OK\n",
+        out, raw, asText and "text" or "stripped", #bin, 100 * #bin / raw))
     return bin
 end
 
+local TEXT = true
+for _, a in ipairs(arg or {}) do if a == "--bytecode" then TEXT = false end end
+
 os.execute("mkdir -p dist")
-buildBundle(CORE, SHIM_CORE, CORE_NS, "dist/seq2.lua",    "-- dist/seq2.lua (Core + midi_rx; auto-generated)\n")
-buildBundle(UI,   SHIM_UI,   UI_NS,   "dist/seq2_ui.lua", "-- dist/seq2_ui.lua (screen; auto-generated)\n")
+local total = 0
+local function out(bin) total = total + #bin end
+out(buildBundle(CORE_A, SHIM_CORE, NS_A, "dist/seq2.lua",
+    "-- dist/seq2.lua (Core data model; auto-generated)\n", TEXT))
+out(buildBundle(CORE_B, SHIM_B, NS_B, "dist/seq2b.lua",
+    "-- dist/seq2b.lua (Core runtime: engine+midi_rx; auto-generated)\n", TEXT))
+out(buildBundle(CTL, SHIM_CTL, NS_CTL, "dist/seq2_ctl.lua",
+    "-- dist/seq2_ctl.lua (control; lazy on first input/draw; auto-generated)\n", TEXT))
+out(buildBundle(UI, SHIM_UI, NS_UI, "dist/seq2_ui.lua",
+    "-- dist/seq2_ui.lua (text draw + LEDs; lazy; auto-generated)\n", TEXT))
+out(buildBundle(GEN, SHIM_GEN, NS_GEN, "dist/seq2_gen.lua",
+    "-- dist/seq2_gen.lua (generator; pulled by seq2_ctl; auto-generated)\n", TEXT))
+io.write(string.format("lean build: 5 bundles, %s, total %d B%s\n",
+    TEXT and "TEXT" or "BYTECODE", total,
+    TEXT and "" or " (bytecode: editor upload may reject binary)"))
 
 -- ---- emit a THIN, data-only grid-wasm preview screen ------------------
 -- Runs the generator HERE at build time, bakes variants' notes as arrays, and

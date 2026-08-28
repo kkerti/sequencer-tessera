@@ -348,7 +348,7 @@ extensible to 8) · mode structure (PLAY/STEP/SEQ).
 
 ## 10. Bundle, deployment & memory findings
 
-**Build.** `lua tools/build.lua` minifies + concatenates the Core (`src/core`,
+**Build.** `lua5.4 tools/build.lua` minifies + concatenates the Core (`src/core`,
 `src/fx`) into a single loadable **`dist/seq2.lua`** (require-shim + wrapped
 modules + namespace table). Load with `local SEQ = (loadfile"dist/seq2.lua")()`
 and use `SEQ.engine`, `SEQ.event`, `SEQ.pattern`, … The build also emits

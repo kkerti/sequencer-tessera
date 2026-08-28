@@ -82,8 +82,9 @@ src/
   app/
     control.lua   input + pattern param model; PLAY/SETUP modes (UI bundle) [built]
   hal/
-    driver_stdio.lua  terminal → bridge.py (port seq-1)                     [built]
-    draw_vsn1.lua     on-device screen, PLAY split + SETUP full grid        [built]
+    draw_text.lua     LEAN text-only screen view (all modes; device budget)   [built]
+    leds.lua          dedicated LED render pass (slimmed; every 4th frame)    [built]
+    driver_stdio.lua  terminal → bridge.py (port seq-1)                       [built]
     driver_grid.lua   Grid midi.send (later)
     input.lua         decode 4 fn buttons + encoder + 8 buttons (+ handoff)
 screens/
@@ -91,20 +92,25 @@ screens/
   seq2_live.lua     AUTO-GEN: thin data-only preview, baked variants        [built]
   manifest.json     screen list for the grid-wasm page dropdown
 dist/                (all AUTO-GEN; upload to module / load as profile)
-  seq2.lua          Core+midi_rx bundle (require "seq2")                    [built]
-  seq2_ui.lua       screen bundle (require "seq2_ui", lazy)                 [built]
-  Sequencer 2.json  VSN1R profile (event scripts)                          [built]
+  seq2.lua          Core data model (require "seq2"; 10.3 KB text)           [built]
+  seq2b.lua         Core runtime: engine+midi_rx (require "seq2b")           [built]
+  seq2_ctl.lua      control, lazy on first input/draw                        [built]
+  seq2_ui.lua       text draw + LEDs, lazy (require "seq2_ui")               [built]
+  seq2_gen.lua      generator, lazy via seq2_ctl                             [built]
+  Sequencer Magnetar.json  VSN1R profile (event scripts)                     [built]
 proto/
-  term/main.lua   headless harness: stdin clock protocol → stdout notes    [built]
+  term/main.lua   headless harness: stdin clock protocol → stdout notes     [built]
 tools/
-  build.lua          bundle src → dist/seq2.lua + seq2_ui.lua + preview    [built]
-  gen_profile.py     VSN1R profile: clone skeleton, override el255/el13     [built]
-  vsn1r_template.json  proven element skeleton (all 15 elements)            [built]
-  bridge.py          MIDI ⇄ stdio, spawns Lua coprocess (port seq-1)        [built]
+  build.lua          bundle src → 5 lean TEXT bundles + preview (--bytecode
+                    fallback; each bundle ≤ ~10 KB, seq-1 watchdog budget)   [built]
+  gen_profile.py     VSN1R profile: clone skeleton, override el255/el13      [built]
+  vsn1r_template.json  proven element skeleton (all 15 elements)             [built]
+  bridge.py          MIDI ⇄ stdio, spawns Lua coprocess (port seq-1)         [built]
 tests/
-  run.lua  (27 checks: scales, fx, playback, no-alloc, generator)
+  run.lua  (70 checks: scales, fx, playback, no-alloc, generator)
+  dist_smoke.lua  lean-bundle smoke: load order, device-code rules, scrub
 docs/
-  ARCHITECTURE.md, DEPLOY.md, manual/
+  ARCHITECTURE.md, DEPLOY.md, FEATURES.md (feature set + manual), manual/
 ```
 
 ## Glossary (agree names before coding)
@@ -182,12 +188,25 @@ device path (require → init → generate → MIDI clock → notes out → draw
 verified in plain Lua. Upload steps + the Grid config/hook model live in
 `docs/DEPLOY.md`. Confirmed playing on hardware, synced to Ableton.
 
+**LEAN device rework. ✅ BUILT — pending on-device test.** The above 2-bundle
+build (bytecode) + a later lazy per-view experiment both FAILED to boot on a
+device with a ~130 KB heap ceiling (~91 KB boot baseline, seq-1 measurements)
+— single text chunks > ~10 KB trip the watchdog, and `collectgarbage` /
+`package.loaded` in device code are poison (seq-1 ships neither). The build is
+now seq-1's proven discipline: **5 plain-TEXT bundles, each ≤ ~10.3 KB,
+UI/generator lazy on first input/draw** (seq2, seq2b, seq2_ctl, seq2_ui,
+seq2_gen — see `docs/DEPLOY.md`). Cuts: piano-roll GUI → text-only
+(`draw_text.lua`), SONG page UI removed (engine song API kept), LED pass
+slimmed + throttled to every 4th frame, 2 tracks at boot. Device-code rules
+(no collectgarbage / package.loaded / string.format; bundle size ceiling) are
+asserted by `tests/dist_smoke.lua`.
+
 **Controls + SETUP mode. ✅ BUILT.** `src/app/control.lua` (UI bundle): a
 13-param model over the generator/fx, two view modes. **All control on
 keyswitches 0-7 + encoder** — small buttons 9-12 are dead on the hardware.
 PLAY: KS0-5 select HITS/KEY/SCALE/SPREAD/VEL/CHANCE, KS6 track, KS7 → SETUP;
 encoder turn edits live (re-generates), click = REROLL. SETUP: KS0/1 nav,
-KS5 reroll, KS7 exit — full-screen param grid (`draw_vsn1.lua` two modes).
+KS5 reroll, KS7 exit — full-screen param grid (`draw_text.lua` text views).
 Encoder is relative (`epmo(1)`, `epva()-64`). Verified headless. Map in
 `docs/DEPLOY.md`.
 

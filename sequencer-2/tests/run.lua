@@ -304,7 +304,7 @@ do
     local Engine  = require("engine")
     local Event   = require("event")
     local Control = require("control")
-    local Draw    = require("draw_vsn1")
+    local Draw    = require("draw_text")
 
     -- draw mock: records calls, returns nothing
     local calls = 0
@@ -364,15 +364,13 @@ do
     Control.click(true)                           -- cycle field -> LEN
     ok(Control.field == 2, "encoder click cycles edit field")
 
-    -- E) SEQ: enter SONG, append, back
-    Control.key(7, true)                          -- -> SEQ (SLOT page)
-    Control.button(10, true)                      -- ENTER -> SONG
-    ok(Control.seqPage == "SONG", "ENTER enters SONG page from SLOT")
-    Control.key(0, true)                          -- append current seq
-    Control.key(0, true)
-    ok(#Engine.song.steps == 2, "SONG KS0 appends sequences")
-    Control.button(9, true)                       -- BACK -> SLOT
-    ok(Control.seqPage == "SLOT", "BACK returns to SLOT page")
+    -- E) SEQ: track select via KS0-3, mute via KS5
+    Control.key(7, true)                          -- -> SEQ (slot picker)
+    Control.key(2, true)                          -- KS2 = track 3
+    ok(Control.seqTrack == 3, "SEQ KS2 selects track 3")
+    Control.key(5, true)                          -- KS5 = mute toggler
+    ok(Engine.sequences[Engine.currentSeq].mute[3],
+       "SEQ KS5 toggles sequence-local mute")
 
     -- E2) nap is a dedicated button (11), not a chord
     Control.button(11, true)
@@ -384,13 +382,11 @@ do
     for _, mode in ipairs({ "PLAY", "STEP", "SEQ" }) do
         Control.mode = mode
         if mode == "PLAY" then Control.setup = true end
-        if mode == "SEQ" then Control.seqPage = "SLOT" end
         Draw.draw(Mock, Engine, Control)
     end
     Control.mode = "PLAY"; Control.setup = false
-    Control.seqPage = "SONG"
     Draw.draw(Mock, Engine, Control)
-    ok(calls > 100, "draw runs in all modes/views without error (" .. calls .. " calls)")
+    ok(calls > 50, "draw runs in all modes/views without error (" .. calls .. " calls)")
 
     -- G) frame() services auto-reroll due flag
     local tr2 = Engine.tracks[2]
@@ -425,9 +421,9 @@ do
     ok(n[11] == 6, "NAP LED red (6) when armed")
     require("track").disarmNap(Engine.tracks[1])
 
-    Control.mode = "SEQ"; Control.seqPage = "SLOT"; Control.seqTrack = 3
+    Control.mode = "SEQ"; Control.seqTrack = 3
     local s = LEDs.compute(Engine, Control, 10)
-    ok(s[2] == 2 and s[0] == 1, "SEQ SLOT lights the selected track's key (2) vs dim (1)")
+    ok(s[2] == 2 and s[0] == 1, "SEQ lights the selected track's key (2) vs dim (1)")
     ok(s[7] == 9, "SEQ mode key (KS7) LED is purple (9)")
 
     -- H2) LED update() is a no-op without the Grid global (headless safety)

@@ -1,8 +1,9 @@
 -- control.lua — input handling + the staged parameter model (UI bundle).
 --
 -- Modes (ARCHITECTURE §6): PLAY (staged generator params), STEP (per-note
--- editing, live), SEQ (pattern-slot / sequence / song). SETUP is a full-screen
--- detail view WITHIN PLAY, not a separate mode (CONTEXT.md).
+-- editing, live), SEQ (pattern-slot picker). SETUP is a full-screen detail
+-- view WITHIN PLAY, not a separate mode (CONTEXT.md). The SONG builder page
+-- was CUT for the lean device build (engine song API remains, App-level).
 --
 -- Staging rule: only generator params stage — edits mutate a per-track staged
 -- copy; COMMIT applies it and regenerates once. Per-note edits (STEP), reroll,
@@ -12,11 +13,10 @@
 -- Control surface:
 --   keyswitches 0-7   context actions (mode-specific, below)
 --   small buttons 9-12:  9 = BACK   10 = ENTER   11 = NAP   12 = COMMIT
---   encoder           turn = stage / cursor / slot   click = reroll / field / jump
+--   encoder           turn = stage / cursor / slot   click = reroll / field
 --
 -- Hierarchy (ENTER goes deeper, BACK returns):
 --   PLAY  (compact)  --ENTER-->  SETUP (full param grid)
---   SEQ   (SLOT)     --ENTER-->  SONG
 --
 --   GLOBAL          KS7 = MODE  PLAY -> STEP -> SEQ -> PLAY
 --   PLAY            KS0..KS4 = HITS, KEY, SCALE, SPREAD, VEL
@@ -30,12 +30,9 @@
 --                   KS6 = TRACK next   enc turn = step cursor   enc click = field
 --   SEQ (SLOT)      KS0..KS3 = track 1..4   KS5 = MUTE
 --                   enc turn = slot +/-   enc click = next sequence
---                   ENTER = SONG page
---   SEQ (SONG)      KS0 = append seq   KS1 = remove step   KS2 = clear song
---                   enc turn = song cursor   enc click = jump   BACK = SLOT
 --
--- Screen reads: CTL.mode, track, sel, setup, step, field, seqPage, seqTrack,
---               songCur. CTL.params[i] = { label, kind }; CTL.show(i) formats;
+-- Screen reads: CTL.mode, track, sel, setup, step, field, seqTrack.
+--               CTL.params[i] = { label, kind }; CTL.show(i) formats;
 --               CTL.edit(i,d) stages. CTL.frame() services auto-reroll.
 --
 -- Param model is DATA (label + kind), not closures: one edit() dispatcher and
@@ -43,7 +40,7 @@
 -- the real constraint — see docs/ARCHITECTURE.md §10).
 
 local M = { mode = "PLAY", track = 1, sel = 1, setup = false,
-            step = 0, field = 1, seqPage = "SLOT", seqTrack = 1, songCur = 1 }
+            step = 0, field = 1, seqTrack = 1 }
 
 local E, S
 local Generate = require("generate")
@@ -205,25 +202,28 @@ local function nextMode()
         local len = E.tracks[M.track].pattern.length
         if M.step < 0 or M.step >= len then M.step = 0 end
     elseif M.mode == "STEP" then
-        M.mode = "SEQ"; M.seqPage = "SLOT"
+        M.mode = "SEQ"
     else
         M.mode = "PLAY"
     end
 end
 
 local function goBack()
-    if M.mode == "PLAY" and M.setup then M.setup = false
-    elseif M.mode == "SEQ" and M.seqPage == "SONG" then M.seqPage = "SLOT" end
+    if M.mode == "PLAY" and M.setup then M.setup = false end
 end
 
 local function goEnter()
-    if M.mode == "PLAY" and not M.setup then M.setup = true
-    elseif M.mode == "SEQ" and M.seqPage == "SLOT" then M.seqPage = "SONG"; M.songCur = 1 end
+    if M.mode == "PLAY" and not M.setup then M.setup = true end
 end
 
 -- Emit pending engine.out (note-offs from seq/mute switches) via gms if present.
+-- midirx lives in the seq2b bundle on device; resolve it once, lazily.
+local MRX
 local function emitOut()
-    if gms and E.out.n > 0 then S.midirx.emit(E.out, gms) end
+    if gms and E.out.n > 0 then
+        if not MRX then MRX = S.midirx or require("midirx") end
+        MRX.emit(E.out, gms)
+    end
 end
 
 local function toggleNap(t)
@@ -280,14 +280,11 @@ function M.turn(d)
     elseif M.mode == "STEP" then
         local len = E.tracks[M.track].pattern.length
         M.step = clamp(M.step + s, 0, len - 1)
-    elseif M.seqPage == "SLOT" then
+    else -- SEQ: slot
         local seq = E.sequences[E.currentSeq]
         local t = M.seqTrack
         seq.slot[t] = clamp(seq.slot[t] + s, 1, E.tracks[t].nSlots)
         E.setSequence(E.currentSeq); emitOut()
-    else
-        local n = #E.song.steps
-        if n > 0 then M.songCur = ((M.songCur - 1 + s) % n) + 1 end
     end
 end
 
@@ -297,16 +294,9 @@ function M.click(down)
         reroll(M.track)
     elseif M.mode == "STEP" then
         M.field = M.field % 3 + 1
-    elseif M.seqPage == "SLOT" then
+    else -- SEQ: next sequence
         local n = #E.sequences
         E.setSequence((E.currentSeq % n) + 1); emitOut()
-    else
-        local steps = E.song.steps
-        if #steps > 0 then
-            M.songCur = clamp(M.songCur, 1, #steps)
-            E.song.pos = M.songCur
-            E.setSequence(steps[M.songCur]); emitOut()
-        end
     end
 end
 
@@ -336,24 +326,11 @@ function M.key(n, down)
         elseif n == 5 then editAtStep(M.track, M.step, M.field, 1)
         elseif n == 6 then nextTrack(1) end
 
-    else -- SEQ
-        if M.seqPage == "SLOT" then
-            if n >= 0 and n <= 3 then M.seqTrack = n + 1 end
-            if n == 5 then
-                local seq = E.sequences[E.currentSeq]
-                E.setTrackMute(M.seqTrack, not seq.mute[M.seqTrack]); emitOut()
-            end
-        else
-            if n == 0 then E.songAdd(E.currentSeq) end
-            if n == 1 then
-                local nsteps = #E.song.steps
-                if nsteps > 0 then
-                    E.songRemoveAt(M.songCur)
-                    if M.songCur > #E.song.steps then M.songCur = #E.song.steps end
-                    if M.songCur < 1 then M.songCur = 1 end
-                end
-            end
-            if n == 2 then E.songClear(); M.songCur = 1 end
+    else -- SEQ (slot picker)
+        if n >= 0 and n <= 3 then M.seqTrack = n + 1 end
+        if n == 5 then
+            local seq = E.sequences[E.currentSeq]
+            E.setTrackMute(M.seqTrack, not seq.mute[M.seqTrack]); emitOut()
         end
     end
 end

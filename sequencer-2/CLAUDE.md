@@ -57,8 +57,9 @@ One Lua Core, two frontends:
 python3 tools/bridge.py --lua "lua proto/term/main.lua"   # terminal → Ableton (external clock)
 lua proto/term/main.lua --bpm 120                          # internal test clock → stdout
 lua tests/run.lua                                           # Core unit tests
-lua tools/build.lua                                         # → dist/seq2.lua + dist/seq2_ui.lua + preview
-python3 tools/gen_profile.py --install                      # → dist/Sequencer 2.json + grid-userdata (see docs/DEPLOY.md)
+lua5.4 tools/build.lua                                       # → 5 lean TEXT bundles in dist/ + preview
+lua5.4 tests/dist_smoke.lua                                  # dist-bundle smoke (load order + device-code rules)
+python3 tools/gen_profile.py --install                      # → dist/Sequencer Magnetar.json + grid-userdata (see docs/DEPLOY.md)
 
 # screen proto (grid-wasm) — serve from the `sequencer` dir (has grid-wasm/ + screens symlink):
 cd .. && python3 -m http.server 8080

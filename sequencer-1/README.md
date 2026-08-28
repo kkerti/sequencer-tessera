@@ -5,6 +5,20 @@ Grid VSN1 hardware.
 
 See `AGENTS.md` for design rules and project layout.
 
+## Naming scheme
+
+Product line uses a **stellar-clock series** — each generation is named after a
+pulsing celestial source, so they stay differentiable as the line grows:
+
+| Generation | Name | Why |
+|---|---|---|
+| sequencer-1 (this repo) | **Pulsar** | rotating neutron star; the most precise pulse train in nature — the literal step/pulse machine |
+| sequencer-2 | **Magnetar** | dense, high-energy, generative |
+| _future_ | Quasar, Blazar, Cepheid, Tachyon | reserved rungs on the same ladder |
+
+Names are profile/product labels only for now; no files, bundle names, or
+require-paths are renamed.
+
 ## Quick start (macOS)
 
 ```sh

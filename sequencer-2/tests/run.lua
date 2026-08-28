@@ -307,21 +307,15 @@ do
         generate = require("generate"), midirx = require("midi_rx"),
     })
 
-    -- A) staged: turn stages, does not regenerate until COMMIT
+    -- A) staged: turn stages, does not regenerate until COMMIT (button 12)
     local tr1 = Engine.tracks[1]
-    local g0 = tr1.gen.seed
     local n0 = tr1.pattern.events.n
-    Control.turn(1)                              -- edit HITS? no: sel=1 = SCALE
-    ok(not tr1.dirty or tr1.staged ~= nil, "staged table exists")
-    -- select HITS (KS1) and stage it +5
-    Control.key(1, true)
+    Control.key(0, true)                         -- KS0 = HITS (quick param)
     local stagedHits = tr1.staged.hits
     for _ = 1, 5 do Control.turn(1) end
     ok(tr1.staged.hits ~= stagedHits and tr1.dirty, "encoder stages HITS and marks dirty")
     ok(tr1.pattern.events.n == n0, "pattern unchanged until commit")
-    Control.key(0, true)                         -- SHIFT on
-    Control.key(1, true)                         -- COMMIT
-    Control.key(0, true)                         -- SHIFT off
+    Control.button(12, true)                     -- COMMIT (dedicated button)
     ok(not tr1.dirty, "commit clears dirty")
     ok(tr1.pattern.events.n == tr1.gen.hits, "commit regenerates with staged hits")
 
@@ -338,25 +332,39 @@ do
     Control.key(7, true)                          -- SEQ -> PLAY
     ok(Control.mode == "PLAY", "KS7 cycles SEQ -> PLAY")
 
+    -- C2) ENTER/BACK hierarchy
+    Control.button(10, true)                      -- ENTER -> SETUP
+    ok(Control.setup, "ENTER enters SETUP from PLAY")
+    Control.button(9, true)                       -- BACK -> compact
+    ok(not Control.setup, "BACK returns to compact PLAY")
+
     -- D) STEP edit: add note at cursor, nudge pitch
     Control.key(7, true)                          -- -> STEP
-    Control.key(1, true)                          -- add at step 0
+    Control.key(0, true)                          -- add at step 0
     local pat = Engine.tracks[Control.track].pattern
     local i = require("pattern").findEventAtStep(pat, 0, pat.zoom)
-    ok(i ~= nil, "STEP KS1 adds a note at the cursor")
+    ok(i ~= nil, "STEP KS0 adds a note at the cursor")
     local p0 = pat.events.pitch[i]
     Control.key(4, true)                          -- field value -
     ok(pat.events.pitch[i] == p0 - 1, "STEP KS4 nudges pitch down")
     Control.click(true)                           -- cycle field -> LEN
     ok(Control.field == 2, "encoder click cycles edit field")
 
-    -- E) SEQ: append to song, jump
-    Control.key(7, true)                          -- -> SEQ
-    Control.key(5, true)                          -- -> SONG page
-    ok(Control.seqPage == "SONG", "KS5 toggles SEQ SONG page")
-    Control.key(1, true)                          -- append current seq
-    Control.key(1, true)
-    ok(#Engine.song.steps == 2, "SONG KS1 appends sequences")
+    -- E) SEQ: enter SONG, append, back
+    Control.key(7, true)                          -- -> SEQ (SLOT page)
+    Control.button(10, true)                      -- ENTER -> SONG
+    ok(Control.seqPage == "SONG", "ENTER enters SONG page from SLOT")
+    Control.key(0, true)                          -- append current seq
+    Control.key(0, true)
+    ok(#Engine.song.steps == 2, "SONG KS0 appends sequences")
+    Control.button(9, true)                       -- BACK -> SLOT
+    ok(Control.seqPage == "SLOT", "BACK returns to SLOT page")
+
+    -- E2) nap is a dedicated button (11), not a chord
+    Control.button(11, true)
+    ok(Engine.tracks[1].nap.armed, "NAP button arms nap on current track")
+    Control.button(11, true)
+    ok(not Engine.tracks[1].nap.armed, "NAP button disarms")
 
     -- F) draw smoke test in every mode/view
     for _, mode in ipairs({ "PLAY", "STEP", "SEQ" }) do

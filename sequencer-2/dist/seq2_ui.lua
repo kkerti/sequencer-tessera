@@ -9,12 +9,13 @@ local function require(n)
 end
 R["control"]=(function()
 
-local M = { mode = "PLAY", track = 1, sel = 1, shift = false, setup = false,
+local M = { mode = "PLAY", track = 1, sel = 1, setup = false,
  step = 0, field = 1, seqPage = "SLOT", seqTrack = 1, songCur = 1 }
 local E, S
 local NOTE = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 local function clamp(v, lo, hi) if v < lo then return lo elseif v > hi then return hi else return v end end
 local function noteName(m) return NOTE[m % 12 + 1] .. (m // 12 - 1) end
+local BTN_BACK, BTN_ENTER, BTN_NAP, BTN_COMMIT = 9, 10, 11, 12
 local function Tr(t) return E.tracks[t] end
 local function Sg(t) return E.tracks[t].staged end
 local DEFAULTS = {
@@ -124,7 +125,7 @@ add("CHANCE", function() return Tr(M.track).rack.fx[2].chance .. "%" end,
  function(d) local r = Tr(M.track).rack.fx[2]; r.chance = clamp(r.chance + d, 0, 100) end)
 M.params = P
 local COARSE = { [7] = 5, [8] = 2, [12] = 5 }
-local PLAY_SEL = { [1] = 3, [2] = 2, [3] = 1, [4] = 6, [5] = 7 }
+local PLAY_SEL = { [0] = 3, [1] = 2, [2] = 1, [3] = 6, [4] = 7 }
 local function nextTrack(dir)
  local n = #E.tracks
  M.track = ((M.track - 1 + dir) % n) + 1
@@ -136,8 +137,19 @@ local function nextMode()
  M.mode = "STEP"; M.setup = false
  local len = E.tracks[M.track].pattern.length
  if M.step < 0 or M.step >= len then M.step = 0 end
- elseif M.mode == "STEP" then M.mode = "SEQ"
- else M.mode = "PLAY" end
+ elseif M.mode == "STEP" then
+ M.mode = "SEQ"; M.seqPage = "SLOT"
+ else
+ M.mode = "PLAY"
+ end
+end
+local function goBack()
+ if M.mode == "PLAY" and M.setup then M.setup = false
+ elseif M.mode == "SEQ" and M.seqPage == "SONG" then M.seqPage = "SLOT" end
+end
+local function goEnter()
+ if M.mode == "PLAY" and not M.setup then M.setup = true
+ elseif M.mode == "SEQ" and M.seqPage == "SLOT" then M.seqPage = "SONG"; M.songCur = 1 end
 end
 local function emitOut()
  if gms and E.out.n > 0 then S.midirx.emit(E.out, gms) end
@@ -222,53 +234,36 @@ function M.click(down)
 end
 function M.key(n, down)
  if not down or not E then return end
- if n == 0 then M.shift = not M.shift; return end
  if n == 7 then nextMode(); return end
- local sh = M.shift
  if M.mode == "PLAY" then
  if M.setup then
- if sh then
- if n == 1 then commit(M.track)
- elseif n == 4 then M.setup = false end
- else
- if n == 1 then M.sel = (M.sel - 2) % #P + 1
- elseif n == 2 then M.sel = M.sel % #P + 1
+ if n == 0 then M.sel = (M.sel - 2) % #P + 1
+ elseif n == 1 then M.sel = M.sel % #P + 1
+ elseif n == 5 then toggleAuto(M.track)
  elseif n == 6 then nextTrack(1) end
- end
- else
- if sh then
- if n == 1 then commit(M.track)
- elseif n == 2 then toggleNap(M.track)
- elseif n == 3 then toggleAuto(M.track)
- elseif n == 4 then M.setup = true
- elseif n == 6 then nextTrack(-1) end
  else
  if PLAY_SEL[n] then M.sel = PLAY_SEL[n] end
+ if n == 5 then toggleAuto(M.track) end
  if n == 6 then nextTrack(1) end
  end
- end
  elseif M.mode == "STEP" then
- if sh then
- if n == 1 then deleteAtStep(M.track, M.step) end
- else
- if n == 1 then addAtStep(M.track, M.step)
+ if n == 0 then addAtStep(M.track, M.step)
+ elseif n == 1 then deleteAtStep(M.track, M.step)
  elseif n == 2 then octaveAtStep(M.track, M.step, -12)
  elseif n == 3 then octaveAtStep(M.track, M.step, 12)
  elseif n == 4 then editAtStep(M.track, M.step, M.field, -1)
  elseif n == 5 then editAtStep(M.track, M.step, M.field, 1)
  elseif n == 6 then nextTrack(1) end
- end
  else
  if M.seqPage == "SLOT" then
- if n >= 1 and n <= 4 then M.seqTrack = n end
- if n == 5 then M.seqPage = "SONG"; M.songCur = 1 end
- if n == 6 then
+ if n >= 0 and n <= 3 then M.seqTrack = n + 1 end
+ if n == 5 then
  local seq = E.sequences[E.currentSeq]
  E.setTrackMute(M.seqTrack, not seq.mute[M.seqTrack]); emitOut()
  end
  else
- if n == 1 then E.songAdd(E.currentSeq) end
- if n == 2 then
+ if n == 0 then E.songAdd(E.currentSeq) end
+ if n == 1 then
  local nsteps = #E.song.steps
  if nsteps > 0 then
  E.songRemoveAt(M.songCur)
@@ -276,10 +271,16 @@ function M.key(n, down)
  if M.songCur < 1 then M.songCur = 1 end
  end
  end
- if n == 5 then M.seqPage = "SLOT" end
- if n == 6 then E.songClear(); M.songCur = 1 end
+ if n == 2 then E.songClear(); M.songCur = 1 end
  end
  end
+end
+function M.button(b, down)
+ if not down or not E then return end
+ if b == BTN_NAP then toggleNap(M.track); return end
+ if b == BTN_COMMIT then if M.mode == "PLAY" then commit(M.track) end return end
+ if b == BTN_BACK then goBack() end
+ if b == BTN_ENTER then goEnter() end
 end
 return M
 
@@ -355,14 +356,15 @@ local function drawPlay(scr, eng, ctl)
  local flags = ""
  if tr.nap.armed then flags = flags .. (tr.nap.muted and "NAP!" or "nap") .. " " end
  if tr.auto.armed then flags = flags .. "auto " end
- if ctl.shift then flags = flags .. "SHIFT" end
+ if tr.dirty then flags = flags .. "staged " end
  if flags ~= "" then scr:draw_text_fast(flags, 8, 214, 8, GREEN) end
- scr:draw_text_fast("S+1 COMMIT S+2 NAP S+3 AUTO S+4 SETUP KS7 MODE", 6, 228, 8, DIM)
+ scr:draw_text_fast("KS0-4 PARAM KS5 AUTO KS6 TRK KS7 MODE", 6, 224, 8, DIM)
+ scr:draw_text_fast("BTN: BACK ENTER=setup NAP COMMIT", 6, 232, 8, DIM)
  scr:draw_swap()
 end
 local function drawSetup(scr, eng, ctl)
  scr:draw_rectangle_filled(0, 0, 319, 239, BG)
- scr:draw_text_fast("SETUP (S+4 exit)", 8, 6, 16, ORANGE)
+ scr:draw_text_fast("SETUP (BACK exit)", 8, 6, 16, ORANGE)
  scr:draw_text_fast("T" .. ctl.track, 284, 6, 16, WHITE)
  if eng.tracks[ctl.track].dirty then scr:draw_text_fast("*", 196, 6, 16, ORANGE) end
  scr:draw_line(0, 26, 319, 26, DIM)
@@ -379,7 +381,7 @@ local function drawSetup(scr, eng, ctl)
  scr:draw_text_fast(ctl.params[i].show(), x + 82, y, 16, sel and ORANGE or WHITE)
  end
  scr:draw_line(0, 214, 319, 214, DIM)
- scr:draw_text_fast("S+1 COMMIT KS1/2 NAV KS6 TRK KS7 MODE", 6, 224, 8, GREY)
+ scr:draw_text_fast("KS0/1 NAV KS5 AUTO KS6 TRK KS7 MODE COMMIT", 6, 224, 8, GREY)
  scr:draw_swap()
 end
 local FIELD = { "PITCH", "LEN", "VEL" }
@@ -410,13 +412,13 @@ local function drawStep(scr, eng, ctl)
  else val = tostring(vel) end
  end
  scr:draw_text_fast(val, 8, 174, 24, WHITE)
- scr:draw_text_fast("KS1 ADD S+1 DEL KS2/3 OCT KS4/5 EDIT KS6 TRK", 6, 228, 8, DIM)
+ scr:draw_text_fast("KS0 ADD KS1 DEL KS2/3 OCT KS4/5 EDIT KS6 TRK", 6, 224, 8, DIM)
+ scr:draw_text_fast("enc=step click=field BTN: NAP COMMIT", 6, 232, 8, DIM)
  scr:draw_swap()
 end
 local function drawSeqSlot(scr, eng, ctl)
- local t = ctl.track
  scr:draw_rectangle_filled(0, 0, 319, 239, BG)
- roll(scr, eng.tracks[t], eng.gt)
+ roll(scr, eng.tracks[ctl.seqTrack], eng.gt)
  scr:draw_line(0, 120, 319, 120, DIM)
  scr:draw_text_fast("SEQ", 8, 126, 16, ORANGE)
  scr:draw_text_fast("SLOT", 52, 130, 12, GREY)
@@ -428,8 +430,8 @@ local function drawSeqSlot(scr, eng, ctl)
  local label = "T" .. k .. ":P" .. seq.slot[k] .. (seq.mute[k] and "m" or "")
  scr:draw_text_fast(label, x, 156, 16, sel and ORANGE or WHITE)
  end
- scr:draw_text_fast("KS1-4 TRK KS5 SONG KS6 MUTE", 6, 190, 8, DIM)
- scr:draw_text_fast("enc SLOT click NEXT SEQ KS7 MODE", 6, 202, 8, DIM)
+ scr:draw_text_fast("KS0-3 TRK KS5 MUTE enc SLOT click SEQ", 6, 190, 8, DIM)
+ scr:draw_text_fast("BTN: BACK ENTER=song NAP COMMIT", 6, 202, 8, DIM)
  scr:draw_swap()
 end
 local function drawSeqSong(scr, eng, ctl)
@@ -450,8 +452,8 @@ local function drawSeqSong(scr, eng, ctl)
  end
  scr:draw_text_fast(s, 8, 156, 16, WHITE)
  end
- scr:draw_text_fast("KS1 ADD KS2 DEL KS6 CLEAR", 6, 190, 8, DIM)
- scr:draw_text_fast("enc CURSOR click JUMP KS5 SLOT KS7 MODE", 6, 202, 8, DIM)
+ scr:draw_text_fast("KS0 ADD KS1 DEL KS2 CLEAR", 6, 190, 8, DIM)
+ scr:draw_text_fast("enc CURSOR click JUMP BTN: BACK=slots NAP", 6, 202, 8, DIM)
  scr:draw_swap()
 end
 function M.draw(scr, eng, ctl)

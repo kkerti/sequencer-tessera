@@ -84,17 +84,20 @@ the event scripts changed.
   partial profile (missing elements) makes the editor throw
   `Cannot read properties of undefined (reading 'events')` on load — hence the clone.
 - **Controls (wired):** logic is in `src/app/control.lua` (UI bundle); event
-  scripts forward (`loadUI().key(0,self:bst()==127)`). **All control is on
-  keyswitches 0-7 + the encoder** — small buttons 9-12 are DEAD on the hardware,
-  so they're not wired. Map (full table in `src/app/control.lua` header):
-  - **GLOBAL:** KS0 = SHIFT toggle · KS7 = MODE cycle (PLAY → STEP → SEQ).
-  - **PLAY** (staged): KS1-5 select HITS/KEY/SCALE/SPREAD/VEL; encoder turn
-    STAGES the param (no regen), encoder click = REROLL (immediate). SHIFT+KS1 =
-    COMMIT, SHIFT+KS2 = NAP, SHIFT+KS3 = AUTO-REROLL, SHIFT+KS4 = SETUP view.
+  scripts forward (`loadUI().key(0,self:bst()==127)`). Control is on **8
+  keyswitches (0-7) + 4 small buttons (9-12) + the encoder**. Map (full table
+  in `src/app/control.lua` header):
+  - **Small buttons 9-12** (dedicated, no chords): **9 = BACK**, **10 = ENTER**,
+    **11 = NAP** (toggle, current track), **12 = COMMIT** (apply staged).
+  - **GLOBAL:** KS7 = MODE cycle (PLAY → STEP → SEQ).
+  - **PLAY** (staged): KS0-4 select HITS/KEY/SCALE/SPREAD/VEL; KS5 = AUTO-REROLL;
+    KS6 = TRACK. Encoder turn STAGES the param, encoder click = REROLL. ENTER →
+    SETUP (full grid, BACK returns).
   - **STEP** (live): encoder turn = step cursor, click = field (PITCH/LEN/VEL);
-    KS1 add note, SHIFT+KS1 delete, KS2/3 octave, KS4/5 field value ±, KS6 track.
-  - **SEQ:** SLOT page (KS1-4 pick track, encoder = slot, KS6 = mute, click =
-    next seq) · SONG page (KS1 append, KS2 remove, KS6 clear, click = jump).
+    KS0 add note, KS1 delete, KS2/3 octave, KS4/5 field value ±, KS6 track.
+  - **SEQ:** SLOT page (KS0-3 pick track, encoder = slot, KS5 = mute, click =
+    next seq, ENTER → SONG page) · SONG page (KS0 append, KS1 remove, KS2 clear,
+    click = jump, BACK returns).
   - Generation runs in `control.bind` (lazy, on first input/draw), not in setup.
   - `control.frame()` (called from the draw event) services auto-reroll off the
     hot path.
@@ -107,7 +110,8 @@ the event scripts changed.
   relative mode via `--[[@sen]] self:epmo(1)…`; a turn sends 63 (CCW) / 65 (CW),
   so the callback delta is `self:epva()-64` (±1). If it ever behaves like an
   absolute knob, check the endless element's mode in the editor UI.
-- **Small-button events.** Small buttons 9–12 with a `--[[@sbc]] self:bmo(0)…`
-  setup did NOT fire their press event, while the keyswitches (no `bmo`) did.
-  Fix: `gen_profile.py` ships elements 9–12 callback-only (no `bmo`) so they
-  fire like the keyswitches. Button/keyswitch press = `self:bst()==127`.
+- **Small-button events.** Small buttons 9–12 DO fire their press event (they
+  sit under the screen and are wired as BACK/ENTER/NAP/COMMIT). They are shipped
+  **callback-only** (`--[[@cb]]`, no `--[[@sbc]] self:bmo(...)` setup) — the
+  `bmo`'d variant from the template did not fire. Button/keyswitch press =
+  `self:bst()==127`.

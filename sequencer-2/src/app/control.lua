@@ -5,38 +5,47 @@
 -- detail view WITHIN PLAY, not a separate mode (CONTEXT.md).
 --
 -- Staging rule: only generator params stage — edits mutate a per-track staged
--- copy; COMMIT (SHIFT+KS1) applies it and regenerates once. Per-note edits
--- (STEP), reroll, auto-reroll, nap, and mute all apply immediately.
+-- copy; COMMIT applies it and regenerates once. Per-note edits (STEP), reroll,
+-- auto-reroll, nap, and mute all apply immediately. COMMIT and NAP are
+-- DEDICATED small buttons (never a shifted/chorded key).
 --
--- Key map (all control on keyswitches 0-7 + encoder; buttons 9-12 dead):
+-- Control surface:
+--   keyswitches 0-7   context actions (mode-specific, below)
+--   small buttons 9-12:  9 = BACK   10 = ENTER   11 = NAP   12 = COMMIT
+--   encoder           turn = stage / cursor / slot   click = reroll / field / jump
 --
---   GLOBAL          KS0 = SHIFT toggle      KS7 = MODE  PLAY -> STEP -> SEQ
---   PLAY            KS1..KS5 = HITS, KEY, SCALE, SPREAD, VEL
---                   KS6 = TRACK next     enc turn = STAGE   enc click = REROLL
---                   SHIFT+KS1 = COMMIT   SHIFT+KS2 = NAP toggle
---                   SHIFT+KS3 = AUTO-REROLL toggle   SHIFT+KS4 = SETUP view
---                   SHIFT+KS6 = TRACK prev
---   SETUP (PLAY)    KS1/KS2 = prev/next param   KS6 = TRACK next
+-- Hierarchy (ENTER goes deeper, BACK returns):
+--   PLAY  (compact)  --ENTER-->  SETUP (full param grid)
+--   SEQ   (SLOT)     --ENTER-->  SONG
+--
+--   GLOBAL          KS7 = MODE  PLAY -> STEP -> SEQ -> PLAY
+--   PLAY            KS0..KS4 = HITS, KEY, SCALE, SPREAD, VEL
+--                   KS5 = AUTO-REROLL toggle   KS6 = TRACK next
 --                   enc turn = STAGE   enc click = REROLL
---                   SHIFT+KS1 = COMMIT   SHIFT+KS4 = exit SETUP
---   STEP            KS1 = ADD note   SHIFT+KS1 = DELETE note(s)
+--                   ENTER = SETUP   NAP = nap toggle   COMMIT = apply staged
+--   SETUP (PLAY)    KS0/KS1 = prev/next param   KS5 = AUTO-REROLL   KS6 = TRACK
+--                   enc turn = STAGE   enc click = REROLL   BACK = exit
+--   STEP            KS0 = ADD note   KS1 = DELETE note(s)
 --                   KS2/KS3 = octave down/up   KS4/KS5 = field value -/+
 --                   KS6 = TRACK next   enc turn = step cursor   enc click = field
---   SEQ (SLOT)      KS1..KS4 = track 1..4   KS5 = -> SONG   KS6 = MUTE toggle
---                   enc turn = slot +/-     enc click = next sequence
---   SEQ (SONG)      KS1 = append seq   KS2 = remove step   KS5 = -> SLOT
---                   KS6 = clear song   enc turn = song cursor   enc click = jump
+--   SEQ (SLOT)      KS0..KS3 = track 1..4   KS5 = MUTE toggle
+--                   enc turn = slot +/-   enc click = next sequence
+--                   ENTER = SONG page
+--   SEQ (SONG)      KS0 = append seq   KS1 = remove step   KS2 = clear song
+--                   enc turn = song cursor   enc click = jump   BACK = SLOT page
 --
--- Screen reads: CTL.mode, track, sel, params, shift, setup, step, field,
---               seqPage, seqTrack, songCur. CTL.frame() services auto-reroll.
+-- Screen reads: CTL.mode, track, sel, params, setup, step, field, seqPage,
+--               seqTrack, songCur. CTL.frame() services auto-reroll.
 
-local M = { mode = "PLAY", track = 1, sel = 1, shift = false, setup = false,
+local M = { mode = "PLAY", track = 1, sel = 1, setup = false,
             step = 0, field = 1, seqPage = "SLOT", seqTrack = 1, songCur = 1 }
 
 local E, S           -- engine, Core namespace (SEQ)
 local NOTE = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 local function clamp(v, lo, hi) if v < lo then return lo elseif v > hi then return hi else return v end end
 local function noteName(m) return NOTE[m % 12 + 1] .. (m // 12 - 1) end
+
+local BTN_BACK, BTN_ENTER, BTN_NAP, BTN_COMMIT = 9, 10, 11, 12
 
 local function Tr(t) return E.tracks[t] end
 local function Sg(t) return E.tracks[t].staged end
@@ -169,9 +178,9 @@ M.params = P
 
 -- per-param coarse encoder step (faster on the params you sweep most)
 local COARSE = { [7] = 5, [8] = 2, [12] = 5 }         -- VEL / GATE / CHANCE
-local PLAY_SEL = { [1] = 3, [2] = 2, [3] = 1, [4] = 6, [5] = 7 }
+local PLAY_SEL = { [0] = 3, [1] = 2, [2] = 1, [3] = 6, [4] = 7 }
 
--- ---- small helpers ------------------------------------------------------
+-- ---- navigation helpers -------------------------------------------------
 local function nextTrack(dir)
     local n = #E.tracks
     M.track = ((M.track - 1 + dir) % n) + 1
@@ -184,8 +193,21 @@ local function nextMode()
         M.mode = "STEP"; M.setup = false
         local len = E.tracks[M.track].pattern.length
         if M.step < 0 or M.step >= len then M.step = 0 end
-    elseif M.mode == "STEP" then M.mode = "SEQ"
-    else M.mode = "PLAY" end
+    elseif M.mode == "STEP" then
+        M.mode = "SEQ"; M.seqPage = "SLOT"
+    else
+        M.mode = "PLAY"
+    end
+end
+
+local function goBack()
+    if M.mode == "PLAY" and M.setup then M.setup = false
+    elseif M.mode == "SEQ" and M.seqPage == "SONG" then M.seqPage = "SLOT" end
+end
+
+local function goEnter()
+    if M.mode == "PLAY" and not M.setup then M.setup = true
+    elseif M.mode == "SEQ" and M.seqPage == "SLOT" then M.seqPage = "SONG"; M.songCur = 1 end
 end
 
 -- Emit any pending engine.out (note-offs from seq/mute switches) via Grid's
@@ -278,58 +300,42 @@ function M.click(down)
     end
 end
 
+-- Keyswitches 0-7 (mode-specific direct actions; no SHIFT layer).
 function M.key(n, down)
     if not down or not E then return end
-    if n == 0 then M.shift = not M.shift; return end
     if n == 7 then nextMode(); return end
-    local sh = M.shift
 
     if M.mode == "PLAY" then
         if M.setup then
-            if sh then
-                if n == 1 then commit(M.track)
-                elseif n == 4 then M.setup = false end
-            else
-                if n == 1 then M.sel = (M.sel - 2) % #P + 1
-                elseif n == 2 then M.sel = M.sel % #P + 1
-                elseif n == 6 then nextTrack(1) end
-            end
+            if n == 0 then M.sel = (M.sel - 2) % #P + 1
+            elseif n == 1 then M.sel = M.sel % #P + 1
+            elseif n == 5 then toggleAuto(M.track)
+            elseif n == 6 then nextTrack(1) end
         else
-            if sh then
-                if n == 1 then commit(M.track)
-                elseif n == 2 then toggleNap(M.track)
-                elseif n == 3 then toggleAuto(M.track)
-                elseif n == 4 then M.setup = true
-                elseif n == 6 then nextTrack(-1) end
-            else
-                if PLAY_SEL[n] then M.sel = PLAY_SEL[n] end
-                if n == 6 then nextTrack(1) end
-            end
+            if PLAY_SEL[n] then M.sel = PLAY_SEL[n] end
+            if n == 5 then toggleAuto(M.track) end
+            if n == 6 then nextTrack(1) end
         end
 
     elseif M.mode == "STEP" then
-        if sh then
-            if n == 1 then deleteAtStep(M.track, M.step) end
-        else
-            if n == 1 then addAtStep(M.track, M.step)
-            elseif n == 2 then octaveAtStep(M.track, M.step, -12)
-            elseif n == 3 then octaveAtStep(M.track, M.step, 12)
-            elseif n == 4 then editAtStep(M.track, M.step, M.field, -1)
-            elseif n == 5 then editAtStep(M.track, M.step, M.field, 1)
-            elseif n == 6 then nextTrack(1) end
-        end
+        if n == 0 then addAtStep(M.track, M.step)
+        elseif n == 1 then deleteAtStep(M.track, M.step)
+        elseif n == 2 then octaveAtStep(M.track, M.step, -12)
+        elseif n == 3 then octaveAtStep(M.track, M.step, 12)
+        elseif n == 4 then editAtStep(M.track, M.step, M.field, -1)
+        elseif n == 5 then editAtStep(M.track, M.step, M.field, 1)
+        elseif n == 6 then nextTrack(1) end
 
     else -- SEQ
         if M.seqPage == "SLOT" then
-            if n >= 1 and n <= 4 then M.seqTrack = n end
-            if n == 5 then M.seqPage = "SONG"; M.songCur = 1 end
-            if n == 6 then
+            if n >= 0 and n <= 3 then M.seqTrack = n + 1 end
+            if n == 5 then
                 local seq = E.sequences[E.currentSeq]
                 E.setTrackMute(M.seqTrack, not seq.mute[M.seqTrack]); emitOut()
             end
         else
-            if n == 1 then E.songAdd(E.currentSeq) end
-            if n == 2 then
+            if n == 0 then E.songAdd(E.currentSeq) end
+            if n == 1 then
                 local nsteps = #E.song.steps
                 if nsteps > 0 then
                     E.songRemoveAt(M.songCur)
@@ -337,10 +343,18 @@ function M.key(n, down)
                     if M.songCur < 1 then M.songCur = 1 end
                 end
             end
-            if n == 5 then M.seqPage = "SLOT" end
-            if n == 6 then E.songClear(); M.songCur = 1 end
+            if n == 2 then E.songClear(); M.songCur = 1 end
         end
     end
+end
+
+-- Small buttons 9-12: BACK / ENTER / NAP / COMMIT (dedicated, no chord).
+function M.button(b, down)
+    if not down or not E then return end
+    if b == BTN_NAP then toggleNap(M.track); return end
+    if b == BTN_COMMIT then if M.mode == "PLAY" then commit(M.track) end return end
+    if b == BTN_BACK then goBack() end
+    if b == BTN_ENTER then goEnter() end
 end
 
 return M

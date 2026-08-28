@@ -12,7 +12,8 @@ Control map (see docs/DEPLOY.md):
   el 255 ev0  system setup: require Core, init 4 tracks, arm MIDI rx, lazy UI
   el 13  ev8  screen draw (PLAY / STEP / SEQ)
   el 8   ev7/ev3  encoder turn (stage/slot/cursor) / click (reroll/field/jump)
-  el 0-7 ev3  keyswitches: 0 = SHIFT, 1-6 = mode actions, 7 = MODE cycle
+  el 0-7 ev3  keyswitches: mode-specific direct actions, 7 = MODE cycle
+  el 9-12 ev3 small buttons: 9 = BACK, 10 = ENTER, 11 = NAP, 12 = COMMIT
 
 Module Lua bundles (dist/seq2.lua, dist/seq2_ui.lua) upload SEPARATELY as
 `seq2` / `seq2_ui`. Run:  python3 tools/gen_profile.py [--install]
@@ -41,11 +42,13 @@ SETUP = (
 CB = {
     (13, 8): "loadUI() DRAW(self,ENGINE,CTL)",                        # screen draw
     (8, 7):  "local d=self:epva()-64 if d~=0 then loadUI().turn(d)end",  # encoder turn
-    (8, 3):  "loadUI().click(self:bst()==127)",                       # encoder click = reroll
+    (8, 3):  "loadUI().click(self:bst()==127)",                       # encoder click
 }
 for _k in range(8):                                                   # keyswitches 0-7
     CB[(_k, 3)] = f"loadUI().key({_k},self:bst()==127)"
-CB_FULL = {}
+# small buttons 9-12 (under the screen): BACK / ENTER / NAP / COMMIT.
+# Callback-only (no --[[@sbc]] bmo setup): the bmo'd buttons never fired.
+CB_FULL = { (_b, 3): f"loadUI().button({_b},self:bst()==127)" for _b in range(9, 13) }
 
 assert len(SETUP) <= 900, f"setup event {len(SETUP)} > 900 chars"
 for k, v in {**CB, **CB_FULL}.items():

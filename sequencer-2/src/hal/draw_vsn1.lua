@@ -87,17 +87,18 @@ local function drawPlay(scr, eng, ctl)
     local flags = ""
     if tr.nap.armed then flags = flags .. (tr.nap.muted and "NAP!" or "nap") .. " " end
     if tr.auto.armed then flags = flags .. "auto " end
-    if ctl.shift then flags = flags .. "SHIFT" end
+    if tr.dirty then flags = flags .. "staged " end
     if flags ~= "" then scr:draw_text_fast(flags, 8, 214, 8, GREEN) end
 
-    scr:draw_text_fast("S+1 COMMIT  S+2 NAP  S+3 AUTO  S+4 SETUP  KS7 MODE", 6, 228, 8, DIM)
+    scr:draw_text_fast("KS0-4 PARAM  KS5 AUTO  KS6 TRK  KS7 MODE", 6, 224, 8, DIM)
+    scr:draw_text_fast("BTN: BACK  ENTER=setup  NAP  COMMIT", 6, 232, 8, DIM)
     scr:draw_swap()
 end
 
 -- ---- PLAY (SETUP = full param grid) ------------------------------------
 local function drawSetup(scr, eng, ctl)
     scr:draw_rectangle_filled(0, 0, 319, 239, BG)
-    scr:draw_text_fast("SETUP (S+4 exit)", 8, 6, 16, ORANGE)
+    scr:draw_text_fast("SETUP (BACK exit)", 8, 6, 16, ORANGE)
     scr:draw_text_fast("T" .. ctl.track, 284, 6, 16, WHITE)
     if eng.tracks[ctl.track].dirty then scr:draw_text_fast("*", 196, 6, 16, ORANGE) end
     scr:draw_line(0, 26, 319, 26, DIM)
@@ -116,7 +117,7 @@ local function drawSetup(scr, eng, ctl)
     end
 
     scr:draw_line(0, 214, 319, 214, DIM)
-    scr:draw_text_fast("S+1 COMMIT  KS1/2 NAV  KS6 TRK  KS7 MODE", 6, 224, 8, GREY)
+    scr:draw_text_fast("KS0/1 NAV  KS5 AUTO  KS6 TRK  KS7 MODE  COMMIT", 6, 224, 8, GREY)
     scr:draw_swap()
 end
 
@@ -153,15 +154,15 @@ local function drawStep(scr, eng, ctl)
     end
     scr:draw_text_fast(val, 8, 174, 24, WHITE)
 
-    scr:draw_text_fast("KS1 ADD  S+1 DEL  KS2/3 OCT  KS4/5 EDIT  KS6 TRK", 6, 228, 8, DIM)
+    scr:draw_text_fast("KS0 ADD  KS1 DEL  KS2/3 OCT  KS4/5 EDIT  KS6 TRK", 6, 224, 8, DIM)
+    scr:draw_text_fast("enc=step  click=field  BTN: NAP COMMIT", 6, 232, 8, DIM)
     scr:draw_swap()
 end
 
 -- ---- SEQ -----------------------------------------------------------------
 local function drawSeqSlot(scr, eng, ctl)
-    local t = ctl.track
     scr:draw_rectangle_filled(0, 0, 319, 239, BG)
-    roll(scr, eng.tracks[t], eng.gt)
+    roll(scr, eng.tracks[ctl.seqTrack], eng.gt)
     scr:draw_line(0, 120, 319, 120, DIM)
 
     scr:draw_text_fast("SEQ", 8, 126, 16, ORANGE)
@@ -176,8 +177,8 @@ local function drawSeqSlot(scr, eng, ctl)
         scr:draw_text_fast(label, x, 156, 16, sel and ORANGE or WHITE)
     end
 
-    scr:draw_text_fast("KS1-4 TRK  KS5 SONG  KS6 MUTE", 6, 190, 8, DIM)
-    scr:draw_text_fast("enc SLOT  click NEXT SEQ  KS7 MODE", 6, 202, 8, DIM)
+    scr:draw_text_fast("KS0-3 TRK  KS5 MUTE  enc SLOT  click SEQ", 6, 190, 8, DIM)
+    scr:draw_text_fast("BTN: BACK  ENTER=song  NAP  COMMIT", 6, 202, 8, DIM)
     scr:draw_swap()
 end
 
@@ -202,8 +203,8 @@ local function drawSeqSong(scr, eng, ctl)
         scr:draw_text_fast(s, 8, 156, 16, WHITE)
     end
 
-    scr:draw_text_fast("KS1 ADD  KS2 DEL  KS6 CLEAR", 6, 190, 8, DIM)
-    scr:draw_text_fast("enc CURSOR  click JUMP  KS5 SLOT  KS7 MODE", 6, 202, 8, DIM)
+    scr:draw_text_fast("KS0 ADD  KS1 DEL  KS2 CLEAR", 6, 190, 8, DIM)
+    scr:draw_text_fast("enc CURSOR  click JUMP  BTN: BACK=slots  NAP", 6, 202, 8, DIM)
     scr:draw_swap()
 end
 

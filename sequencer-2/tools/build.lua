@@ -25,6 +25,7 @@ local CORE = {
     { key = "rack",    path = "src/core/rack.lua"    },
     { key = "pattern", path = "src/core/pattern.lua" },
     { key = "track",   path = "src/core/track.lua"   },
+    { key = "sequence",path = "src/core/sequence.lua"},
     { key = "engine",  path = "src/core/engine.lua"  },
     { key = "generate",path = "src/core/generate.lua"},
     { key = "midirx",  path = "src/core/midi_rx.lua" },
@@ -38,7 +39,7 @@ local CORE_NS = [[
 return {
     engine=R.engine, track=R.track, pattern=R.pattern, rack=R.rack,
     event=R.event, scales=R.scales, generate=R.generate, midirx=R.midirx,
-    range=R.range, random=R.random, scalefx=R.scale,
+    range=R.range, random=R.random, scalefx=R.scale, sequence=R.sequence,
 }
 ]]
 local UI_NS = "return { draw=R.draw.draw, control=R.control }\n"

@@ -1,11 +1,26 @@
--- track.lua — one musical voice-group: pattern + rack + channel + playhead +
--- a fixed voice ring. This is the per-track slice of the pulse hot path;
--- advance() allocates nothing.
+-- track.lua — one musical voice-group: pattern slots + rack + channel +
+-- playhead + a fixed voice ring. This is the per-track slice of the pulse hot
+-- path; advance() allocates nothing.
+--
+-- Pattern slots: a track has up to SLOTS addressable patterns (Hermod's
+-- P1..P16 scaled down). Only the ACTIVE slot's Pattern is resident on the hot
+-- path (`tr.pattern`); the others may be nil until authored (file-swap fills
+-- them in the persistence layer). Selecting a slot is an off-hot-path action.
 --
 -- Voice ring (cap 4): each slot holds a sounding note's pitch + its global
 -- off-tick. A 5th simultaneous note steals the slot with the earliest off-tick
 -- (oldest-off), emitting that note's OFF first. Off-ticks use the engine's
 -- monotonic global tick so loop wrap never confuses note-off timing.
+--
+-- Nap (transient, not saved): mute this track for `napLoops` of its OWN loops,
+-- then wake for `wakeLoops`, alternating. The rack/generator keep running
+-- underneath — only note-ON emission is suppressed — so a track wakes into an
+-- evolved state (PPW Loop Nap/Loop Wake). The counter flip is alloc-free and
+-- runs in the wrap bookkeeping below.
+--
+-- Auto-reroll (transient): set `due` on every `everyLoops` of the track's own
+-- loops. The regenerate itself is NOT alloc-free, so only the flag is set on
+-- the hot path; the App services `due` off the hot path (see engine/control).
 
 local Pattern = require("pattern")
 local Rack    = require("rack")
@@ -16,6 +31,7 @@ local Scale   = require("scale")
 local M = {}
 
 local VOICES = 4
+local SLOTS  = 4
 
 -- Push one output event into the engine's preallocated emit buffer.
 -- typ: 1 = note-on, 0 = note-off.
@@ -31,16 +47,32 @@ function M.new(opts)
     Rack.add(rack, Range.new(opts.range))    -- default order:
     Rack.add(rack, Random.new(opts.random))  --   RANGE -> RANDOM -> SCALE
     Rack.add(rack, Scale.new(opts.scale))
+    local nSlots = opts.slots or SLOTS
+    local slots = {}
+    if opts.patterns then
+        for s = 1, nSlots do slots[s] = opts.patterns[s] end
+    end
+    local active = opts.activeSlot or 1
+    if not slots[active] then
+        slots[active] = opts.pattern or Pattern.new()
+    end
     local tr = {
-        pattern  = opts.pattern or Pattern.new(),
-        rack     = rack,
-        chan     = opts.chan or 1,
-        evCursor = 1,
-        prevLocal = -1,
+        slots      = slots,
+        nSlots     = nSlots,
+        activeSlot = active,
+        pattern    = slots[active],
+        rack       = rack,
+        chan       = opts.chan or 1,
+        evCursor   = 1,
+        prevLocal  = -1,
+        seqMute    = false,           -- sequence-local mute (set by engine)
         -- voice ring
-        vp = { 0, 0, 0, 0 },  -- pitch
-        vo = { 0, 0, 0, 0 },  -- global off-tick
-        va = { 0, 0, 0, 0 },  -- active flag
+        vp = { 0, 0, 0, 0 },          -- pitch
+        vo = { 0, 0, 0, 0 },          -- global off-tick
+        va = { 0, 0, 0, 0 },          -- active flag
+        -- transient performance state (not saved; see header)
+        nap  = { armed = false, napLoops = 4, wakeLoops = 4, counter = 0, muted = false },
+        auto = { armed = false, everyLoops = 4, counter = 0, due = false },
     }
     return tr
 end
@@ -50,6 +82,47 @@ function M.reset(tr)
     tr.evCursor = 1
     tr.prevLocal = -1
     for i = 1, VOICES do tr.va[i] = 0 end
+end
+
+-- Select a pattern slot, authoring a fresh pattern if never authored.
+-- Off the hot path. Resets the playhead/voices (RESTART semantics; the engine
+-- flushes sounding voices before this on a mid-play switch).
+function M.setActiveSlot(tr, slot)
+    if slot < 1 or slot > tr.nSlots then return false end
+    if not tr.slots[slot] then
+        tr.slots[slot] = Pattern.new()  -- author fresh; persistence layer loads instead
+    end
+    tr.activeSlot = slot
+    tr.pattern = tr.slots[slot]
+    M.reset(tr)
+    return true
+end
+
+-- ---- nap / auto-reroll arming (App actions, off the hot path) ----------
+function M.armNap(tr, napLoops, wakeLoops)
+    tr.nap.armed = true
+    tr.nap.napLoops = napLoops or 4
+    tr.nap.wakeLoops = wakeLoops or 4
+    tr.nap.counter = tr.nap.wakeLoops   -- start awake
+    tr.nap.muted = false
+end
+
+function M.disarmNap(tr)
+    tr.nap.armed = false
+    tr.nap.counter = 0
+    tr.nap.muted = false
+end
+
+function M.armAuto(tr, everyLoops)
+    tr.auto.armed = true
+    tr.auto.everyLoops = everyLoops or 4
+    tr.auto.counter = tr.auto.everyLoops
+    tr.auto.due = false
+end
+
+function M.disarmAuto(tr)
+    tr.auto.armed = false
+    tr.auto.due = false
 end
 
 -- Allocate a voice slot for a new note. Steals oldest-off if full, emitting
@@ -72,9 +145,31 @@ end
 -- `scratch` note buffer for the rack, appending events to `out`.
 function M.advance(tr, gt, scratch, out)
     local pat = tr.pattern
-    local loop = Pattern.loopTicks(pat)
-    local localTick = gt % loop
-    if localTick < tr.prevLocal then tr.evCursor = 1 end  -- loop wrapped
+    local s0, loopLen = Pattern.loopWindow(pat)
+    local localTick
+    if gt >= s0 then localTick = s0 + (gt - s0) % loopLen
+    else localTick = gt end            -- before the loop region's first start
+
+    if localTick < tr.prevLocal then
+        -- Loop wrapped: rewind cursor + alloc-free nap/auto-reroll bookkeeping.
+        tr.evCursor = 1
+        local nap = tr.nap
+        if nap.armed then
+            nap.counter = nap.counter - 1
+            if nap.counter <= 0 then
+                nap.muted = not nap.muted
+                nap.counter = nap.muted and nap.napLoops or nap.wakeLoops
+            end
+        end
+        local auto = tr.auto
+        if auto.armed then
+            auto.counter = auto.counter - 1
+            if auto.counter <= 0 then
+                auto.due = true
+                auto.counter = auto.everyLoops
+            end
+        end
+    end
     tr.prevLocal = localTick
 
     -- 1) Emit note-offs whose off-tick has arrived.
@@ -107,7 +202,9 @@ function M.advance(tr, gt, scratch, out)
     -- 3) Transform through the rack (may drop/alter notes).
     Rack.run(tr.rack, scratch)
 
-    -- 4) Emit note-ons and schedule their offs.
+    -- 4) Emit note-ons and schedule their offs. A napped or sequence-muted
+    --    track suppresses only the note-ON here; the rack still ran above.
+    if tr.nap.muted or tr.seqMute then return end
     for i = 1, scratch.n do
         local slot = allocVoice(tr, out)
         local pitch = scratch.pitch[i]

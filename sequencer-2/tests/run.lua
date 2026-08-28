@@ -3,6 +3,7 @@ package.path = "src/core/?.lua;src/fx/?.lua;src/hal/?.lua;" .. package.path
 
 local Engine  = require("engine")
 local Event   = require("event")
+local Track   = require("track")
 local Scales  = require("scales")
 local Range   = require("range")
 local Random  = require("random")
@@ -170,6 +171,116 @@ do
     local f = Pattern.new{ length = 8, zoom = 6 }
     Generate.run(f, { hits = 8, seed = 1 })
     ok(f.events.n == 8, "hits==length fills all 8 steps")
+end
+
+-- 9) Loop region: only the sub-range plays ------------------------------
+do
+    Engine.init{ trackCount = 1 }
+    local pat = Engine.tracks[1].pattern
+    pat.length = 2
+    pat.zoom = 6
+    pat.loopStart = 0
+    pat.loopEnd = 1                       -- only step 0 (ticks 0..5) loops
+    Event.add(pat.events, 60, 0, 3, 100)  -- step 0 (inside region)
+    Event.add(pat.events, 72, 6, 3, 100)  -- step 1 (outside region)
+
+    local ons = {}                        -- pitches seen firing
+    Engine.onStart()
+    for t = 0, 11 do
+        local o = Engine.onPulse()
+        for i = 1, o.n do if o.typ[i] == 1 then ons[#ons + 1] = o.pitch[i] end end
+    end
+    ok(#ons == 2, "loop region plays only step 0 (2 ons in 12 ticks), got " .. #ons)
+    local all60 = true
+    for _, p in ipairs(ons) do if p ~= 60 then all60 = false end end
+    ok(all60, "note outside loop region (72) never fires")
+end
+
+-- 10) Nap: mute N loops, wake N loops, all on the track's own loops -------
+do
+    Engine.init{ trackCount = 1 }
+    local tr = Engine.tracks[1]
+    tr.pattern.length = 1; tr.pattern.zoom = 6
+    Event.add(tr.pattern.events, 60, 0, 3, 100)
+    Track.armNap(tr, 1, 1)                -- awake 1 loop, napped 1 loop
+    local function countOns(t0, t1)
+        local c = 0
+        for t = t0, t1 do
+            local o = Engine.onPulse()
+            for i = 1, o.n do if o.typ[i] == 1 then c = c + 1 end end
+        end
+        return c
+    end
+    Engine.onStart()
+    local a = countOns(0, 5)              -- loop 1: awake
+    local b = countOns(6, 11)             -- loop 2: napped
+    local c = countOns(12, 17)            -- loop 3: awake again
+    ok(a == 1 and b == 0 and c == 1,
+       string.format("nap awake/napped/awake = %d/%d/%d", a, b, c))
+end
+
+-- 11) Auto-reroll: due flag set on loop wrap (regenerate is deferred) -----
+do
+    Engine.init{ trackCount = 1 }
+    local tr = Engine.tracks[1]
+    tr.pattern.length = 1; tr.pattern.zoom = 6
+    Event.add(tr.pattern.events, 60, 0, 3, 100)
+    Track.armAuto(tr, 1)                  -- reroll every 1 loop
+    Engine.onStart()
+    local before = tr.auto.due
+    for _ = 1, 7 do Engine.onPulse() end  -- gt -1 -> 6, wraps once (at tick 6)
+    ok(not before and tr.auto.due, "auto-reroll sets due flag on the track's loop wrap")
+end
+
+-- 12) Per-note (STEP) editing -------------------------------------------
+do
+    local Pattern = require("pattern")
+    local p = Pattern.new{ length = 16, zoom = 6 }
+    Event.add(p.events, 60, 6, 6, 100)    -- one note at step 1
+    local i = Pattern.findEventAtStep(p, 1, 6)
+    ok(i ~= nil and p.events.start[i] == 6, "findEventAtStep finds the note at step 1")
+    p.events.pitch[i] = 72                -- nudge in place (live, no growth)
+    ok(p.events.pitch[i] == 72, "per-note edit mutates pitch in place")
+    ok(Pattern.findEventAtStep(p, 0, 6) == nil, "empty step finds no note")
+end
+
+-- 13) Sequence switching + sequence-local mute ---------------------------
+do
+    Engine.init{ trackCount = 4 }
+    local tr1 = Engine.tracks[1]
+    -- author slot 2 with a distinctive note, then return to slot 1
+    Track.setActiveSlot(tr1, 2)
+    Event.add(tr1.pattern.events, 64, 0, 6, 100)
+    Track.setActiveSlot(tr1, 1)
+    Event.add(tr1.pattern.events, 60, 0, 6, 100)
+
+    Engine.setSequence(2)                 -- SEQ2 = slot 2 on every track
+    ok(tr1.activeSlot == 2 and tr1.pattern.events.pitch[1] == 64,
+       "setSequence(2) swaps track 1 to slot 2")
+
+    Engine.setSequence(1)                 -- back to slot 1 (pitch 60)
+    Engine.setTrackMute(1, true)          -- mute track 1 in SEQ1 only
+    Engine.onStart()
+    local o = Engine.onPulse()            -- tick 0
+    local onT1 = 0
+    for i = 1, o.n do if o.typ[i] == 1 and o.ch[i] == 1 then onT1 = onT1 + 1 end end
+    ok(onT1 == 0, "sequence-local mute suppresses track 1 note-ons")
+    Engine.setTrackMute(1, false)
+    Engine.onStart()
+    local o2 = Engine.onPulse()
+    local onT1b = 0
+    for i = 1, o2.n do if o2.typ[i] == 1 and o2.ch[i] == 1 then onT1b = onT1b + 1 end end
+    ok(onT1b == 1, "unmuting restores track 1 playback")
+end
+
+-- 14) 4 tracks + 4 sequences by default ----------------------------------
+do
+    Engine.init{}
+    ok(#Engine.tracks == 4, "engine defaults to 4 tracks")
+    ok(#Engine.sequences == 4, "engine builds 4 sequences (SEQ1..4)")
+    ok(Engine.song.steps[1] == nil and Engine.song.pos == 1, "song starts empty")
+    Engine.songAdd(2); Engine.songAdd(1)
+    ok(#Engine.song.steps == 2, "songAdd chains sequence ids")
 end
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))

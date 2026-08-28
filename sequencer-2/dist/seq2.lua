@@ -226,15 +226,36 @@ M.ZOOM = { { name = "/2", tps = 12 }, { name = "x1", tps = 6 },
  { name = "2/3", tps = 4 }, { name = "x2", tps = 3 } }
 function M.new(opts)
  opts = opts or {}
+ local length = opts.length or 16
  return {
  events = Event.new(opts.cap or 256),
- length = opts.length or 16,
+ length = length,
  zoom = opts.zoom or 6,
+ loopStart = opts.loopStart or 0,
+ loopEnd = opts.loopEnd or length,
  fxValues = nil,
  }
 end
 function M.loopTicks(p)
  return p.length * p.zoom
+end
+function M.loopWindow(p)
+ local le = p.loopEnd or p.length
+ if le < p.length then
+ local ls = p.loopStart or 0
+ local len = (le - ls) * p.zoom
+ if len < 1 then len = 1 end
+ return ls * p.zoom, len
+ end
+ return 0, p.length * p.zoom
+end
+function M.findEventAtStep(p, step, zoom)
+ local tick = step * zoom
+ local ev = p.events
+ for i = 1, ev.n do
+ if ev.start[i] == tick then return i end
+ end
+ return nil
 end
 return M
 
@@ -248,6 +269,7 @@ local Random = require("random")
 local Scale = require("scale")
 local M = {}
 local VOICES = 4
+local SLOTS = 4
 local function emit(out, typ, pitch, vel, ch)
  local n = out.n + 1
  out.n = n
@@ -259,15 +281,30 @@ function M.new(opts)
  Rack.add(rack, Range.new(opts.range))
  Rack.add(rack, Random.new(opts.random))
  Rack.add(rack, Scale.new(opts.scale))
+ local nSlots = opts.slots or SLOTS
+ local slots = {}
+ if opts.patterns then
+ for s = 1, nSlots do slots[s] = opts.patterns[s] end
+ end
+ local active = opts.activeSlot or 1
+ if not slots[active] then
+ slots[active] = opts.pattern or Pattern.new()
+ end
  local tr = {
- pattern = opts.pattern or Pattern.new(),
+ slots = slots,
+ nSlots = nSlots,
+ activeSlot = active,
+ pattern = slots[active],
  rack = rack,
  chan = opts.chan or 1,
  evCursor = 1,
  prevLocal = -1,
+ seqMute = false,
  vp = { 0, 0, 0, 0 },
  vo = { 0, 0, 0, 0 },
  va = { 0, 0, 0, 0 },
+ nap = { armed = false, napLoops = 4, wakeLoops = 4, counter = 0, muted = false },
+ auto = { armed = false, everyLoops = 4, counter = 0, due = false },
  }
  return tr
 end
@@ -275,6 +312,38 @@ function M.reset(tr)
  tr.evCursor = 1
  tr.prevLocal = -1
  for i = 1, VOICES do tr.va[i] = 0 end
+end
+function M.setActiveSlot(tr, slot)
+ if slot < 1 or slot > tr.nSlots then return false end
+ if not tr.slots[slot] then
+ tr.slots[slot] = Pattern.new()
+ end
+ tr.activeSlot = slot
+ tr.pattern = tr.slots[slot]
+ M.reset(tr)
+ return true
+end
+function M.armNap(tr, napLoops, wakeLoops)
+ tr.nap.armed = true
+ tr.nap.napLoops = napLoops or 4
+ tr.nap.wakeLoops = wakeLoops or 4
+ tr.nap.counter = tr.nap.wakeLoops
+ tr.nap.muted = false
+end
+function M.disarmNap(tr)
+ tr.nap.armed = false
+ tr.nap.counter = 0
+ tr.nap.muted = false
+end
+function M.armAuto(tr, everyLoops)
+ tr.auto.armed = true
+ tr.auto.everyLoops = everyLoops or 4
+ tr.auto.counter = tr.auto.everyLoops
+ tr.auto.due = false
+end
+function M.disarmAuto(tr)
+ tr.auto.armed = false
+ tr.auto.due = false
 end
 local function allocVoice(tr, out)
  local va, vo = tr.va, tr.vo
@@ -290,9 +359,29 @@ local function allocVoice(tr, out)
 end
 function M.advance(tr, gt, scratch, out)
  local pat = tr.pattern
- local loop = Pattern.loopTicks(pat)
- local localTick = gt % loop
- if localTick < tr.prevLocal then tr.evCursor = 1 end
+ local s0, loopLen = Pattern.loopWindow(pat)
+ local localTick
+ if gt >= s0 then localTick = s0 + (gt - s0) % loopLen
+ else localTick = gt end
+ if localTick < tr.prevLocal then
+ tr.evCursor = 1
+ local nap = tr.nap
+ if nap.armed then
+ nap.counter = nap.counter - 1
+ if nap.counter <= 0 then
+ nap.muted = not nap.muted
+ nap.counter = nap.muted and nap.napLoops or nap.wakeLoops
+ end
+ end
+ local auto = tr.auto
+ if auto.armed then
+ auto.counter = auto.counter - 1
+ if auto.counter <= 0 then
+ auto.due = true
+ auto.counter = auto.everyLoops
+ end
+ end
+ end
  tr.prevLocal = localTick
  local va, vo, vp = tr.va, tr.vo, tr.vp
  for i = 1, VOICES do
@@ -317,6 +406,7 @@ function M.advance(tr, gt, scratch, out)
  tr.evCursor = cur
  if scratch.n == 0 then return end
  Rack.run(tr.rack, scratch)
+ if tr.nap.muted or tr.seqMute then return end
  for i = 1, scratch.n do
  local slot = allocVoice(tr, out)
  local pitch = scratch.pitch[i]
@@ -337,10 +427,31 @@ end
 return M
 
 end)()
+R["sequence"]=(function()
+
+local M = {}
+function M.new(trackCount, slot)
+ trackCount = trackCount or 4
+ slot = slot or 1
+ local s = { slot = {}, mute = {} }
+ for t = 1, trackCount do
+ s.slot[t] = slot
+ s.mute[t] = false
+ end
+ return s
+end
+function M.newSong()
+ return { steps = {}, syncBars = 1, pos = 1 }
+end
+return M
+
+end)()
 R["engine"]=(function()
 
 local Track = require("track")
-local M = { tracks = {}, gt = -1, playing = false }
+local Sequence = require("sequence")
+local M = { tracks = {}, gt = -1, playing = false,
+ sequences = {}, currentSeq = 1, song = { steps = {}, syncBars = 1, pos = 1 } }
 local OUT_CAP = 64
 local SCRATCH_CAP = 64
 local function newOut(cap)
@@ -355,7 +466,7 @@ local function newScratch(cap)
 end
 function M.init(opts)
  opts = opts or {}
- local n = opts.trackCount or 2
+ local n = opts.trackCount or 4
  M.tracks = {}
  for t = 1, n do
  local o = opts.tracks and opts.tracks[t] or {}
@@ -366,6 +477,14 @@ function M.init(opts)
  M.playing = false
  M.out = newOut(OUT_CAP)
  M.scratch = newScratch(SCRATCH_CAP)
+ local nSeq = opts.sequences or 4
+ M.sequences = {}
+ for k = 1, nSeq do
+ M.sequences[k] = Sequence.new(n, k)
+ end
+ M.currentSeq = 1
+ M.song = Sequence.newSong()
+ for t = 1, n do M.tracks[t].seqMute = M.sequences[1].mute[t] end
  return M
 end
 function M.onStart()
@@ -395,6 +514,52 @@ function M.panic()
  M.out.n = 0
  for t = 1, #M.tracks do Track.flush(M.tracks[t], M.out) end
  return M.out
+end
+function M.setSequence(id)
+ local seq = M.sequences[id]
+ if not seq then return M.out end
+ M.out.n = 0
+ for t = 1, #M.tracks do
+ local tr = M.tracks[t]
+ local slot = seq.slot[t]
+ local mute = seq.mute[t]
+ if slot ~= tr.activeSlot or mute ~= tr.seqMute then
+ Track.flush(tr, M.out)
+ if slot ~= tr.activeSlot then
+ Track.setActiveSlot(tr, slot)
+ end
+ tr.seqMute = mute
+ end
+ end
+ M.currentSeq = id
+ return M.out
+end
+function M.setTrackMute(track, muted)
+ local seq = M.sequences[M.currentSeq]
+ if not seq or track < 1 or track > #M.tracks then
+ return M.out
+ end
+ seq.mute[track] = muted and true or false
+ M.tracks[track].seqMute = seq.mute[track]
+ if seq.mute[track] then
+ M.out.n = 0
+ Track.flush(M.tracks[track], M.out)
+ end
+ return M.out
+end
+function M.songAdd(seqId)
+ M.song.steps[#M.song.steps + 1] = seqId
+end
+function M.songClear()
+ M.song.steps = {}
+ M.song.pos = 1
+end
+function M.songAdvance()
+ local steps = M.song.steps
+ if #steps == 0 then return M.out end
+ M.song.pos = M.song.pos + 1
+ if M.song.pos > #steps then M.song.pos = 1 end
+ return M.setSequence(steps[M.song.pos])
 end
 return M
 
@@ -477,5 +642,5 @@ end)()
 return {
     engine=R.engine, track=R.track, pattern=R.pattern, rack=R.rack,
     event=R.event, scales=R.scales, generate=R.generate, midirx=R.midirx,
-    range=R.range, random=R.random, scalefx=R.scale,
+    range=R.range, random=R.random, scalefx=R.scale, sequence=R.sequence,
 }

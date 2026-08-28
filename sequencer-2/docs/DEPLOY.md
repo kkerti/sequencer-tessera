@@ -86,13 +86,18 @@ the event scripts changed.
 - **Controls (wired):** logic is in `src/app/control.lua` (UI bundle); event
   scripts forward (`loadUI().key(0,self:bst()==127)`). **All control is on
   keyswitches 0-7 + the encoder** — small buttons 9-12 are DEAD on the hardware,
-  so they're not wired. Map:
-  - **PLAY:** KS0-5 select HITS/KEY/SCALE/SPREAD/VEL/CHANCE; KS6 = TRACK toggle;
-    KS7 = enter SETUP; encoder turn edits the selected param (live re-generate,
-    per-param step); encoder click = REROLL.
-  - **SETUP** (full-screen grid): KS0/KS1 = prev/next param; KS5 = reroll;
-    KS6 = TRACK; KS7 = exit; encoder edits the highlighted param.
+  so they're not wired. Map (full table in `src/app/control.lua` header):
+  - **GLOBAL:** KS0 = SHIFT toggle · KS7 = MODE cycle (PLAY → STEP → SEQ).
+  - **PLAY** (staged): KS1-5 select HITS/KEY/SCALE/SPREAD/VEL; encoder turn
+    STAGES the param (no regen), encoder click = REROLL (immediate). SHIFT+KS1 =
+    COMMIT, SHIFT+KS2 = NAP, SHIFT+KS3 = AUTO-REROLL, SHIFT+KS4 = SETUP view.
+  - **STEP** (live): encoder turn = step cursor, click = field (PITCH/LEN/VEL);
+    KS1 add note, SHIFT+KS1 delete, KS2/3 octave, KS4/5 field value ±, KS6 track.
+  - **SEQ:** SLOT page (KS1-4 pick track, encoder = slot, KS6 = mute, click =
+    next seq) · SONG page (KS1 append, KS2 remove, KS6 clear, click = jump).
   - Generation runs in `control.bind` (lazy, on first input/draw), not in setup.
+  - `control.frame()` (called from the draw event) services auto-reroll off the
+    hot path.
 - Verify the exact `grxm(2,3)` args and MIDI routing on device — copied verbatim
   from the proven profile.
 

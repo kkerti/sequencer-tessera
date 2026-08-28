@@ -1,5 +1,5 @@
--- tests/run.lua — Core unit tests. Run from repo root:  lua tests/run.lua
-package.path = "src/core/?.lua;src/fx/?.lua;src/hal/?.lua;" .. package.path
+-- tests/run.lua — Core + App unit tests. Run from repo root:  lua tests/run.lua
+package.path = "src/core/?.lua;src/fx/?.lua;src/hal/?.lua;src/app/?.lua;" .. package.path
 
 local Engine  = require("engine")
 local Event   = require("event")
@@ -281,6 +281,105 @@ do
     ok(Engine.song.steps[1] == nil and Engine.song.pos == 1, "song starts empty")
     Engine.songAdd(2); Engine.songAdd(1)
     ok(#Engine.song.steps == 2, "songAdd chains sequence ids")
+end
+
+-- =========================================================================
+-- APP layer: staged commit, 3 modes, draw smoke test
+-- =========================================================================
+do
+    local Engine  = require("engine")
+    local Event   = require("event")
+    local Control = require("control")
+    local Draw    = require("draw_vsn1")
+
+    -- draw mock: records calls, returns nothing
+    local calls = 0
+    local Mock = {}
+    function Mock:draw_rectangle_filled() calls = calls + 1 end
+    function Mock:draw_line() calls = calls + 1 end
+    function Mock:draw_text_fast() calls = calls + 1 end
+    function Mock:draw_swap() calls = calls + 1 end
+
+    Engine.init{ trackCount = 4 }
+    Control.bind(Engine, {
+        engine = Engine, track = require("track"), pattern = require("pattern"),
+        event = require("event"), scales = require("scales"),
+        generate = require("generate"), midirx = require("midi_rx"),
+    })
+
+    -- A) staged: turn stages, does not regenerate until COMMIT
+    local tr1 = Engine.tracks[1]
+    local g0 = tr1.gen.seed
+    local n0 = tr1.pattern.events.n
+    Control.turn(1)                              -- edit HITS? no: sel=1 = SCALE
+    ok(not tr1.dirty or tr1.staged ~= nil, "staged table exists")
+    -- select HITS (KS1) and stage it +5
+    Control.key(1, true)
+    local stagedHits = tr1.staged.hits
+    for _ = 1, 5 do Control.turn(1) end
+    ok(tr1.staged.hits ~= stagedHits and tr1.dirty, "encoder stages HITS and marks dirty")
+    ok(tr1.pattern.events.n == n0, "pattern unchanged until commit")
+    Control.key(0, true)                         -- SHIFT on
+    Control.key(1, true)                         -- COMMIT
+    Control.key(0, true)                         -- SHIFT off
+    ok(not tr1.dirty, "commit clears dirty")
+    ok(tr1.pattern.events.n == tr1.gen.hits, "commit regenerates with staged hits")
+
+    -- B) reroll is immediate (seed++)
+    local seedBefore = tr1.gen.seed
+    Control.click(true)
+    ok(tr1.gen.seed == seedBefore + 1, "encoder click rerolls immediately (seed++)")
+
+    -- C) mode cycling
+    Control.key(7, true)                          -- PLAY -> STEP
+    ok(Control.mode == "STEP", "KS7 cycles PLAY -> STEP")
+    Control.key(7, true)                          -- STEP -> SEQ
+    ok(Control.mode == "SEQ", "KS7 cycles STEP -> SEQ")
+    Control.key(7, true)                          -- SEQ -> PLAY
+    ok(Control.mode == "PLAY", "KS7 cycles SEQ -> PLAY")
+
+    -- D) STEP edit: add note at cursor, nudge pitch
+    Control.key(7, true)                          -- -> STEP
+    Control.key(1, true)                          -- add at step 0
+    local pat = Engine.tracks[Control.track].pattern
+    local i = require("pattern").findEventAtStep(pat, 0, pat.zoom)
+    ok(i ~= nil, "STEP KS1 adds a note at the cursor")
+    local p0 = pat.events.pitch[i]
+    Control.key(4, true)                          -- field value -
+    ok(pat.events.pitch[i] == p0 - 1, "STEP KS4 nudges pitch down")
+    Control.click(true)                           -- cycle field -> LEN
+    ok(Control.field == 2, "encoder click cycles edit field")
+
+    -- E) SEQ: append to song, jump
+    Control.key(7, true)                          -- -> SEQ
+    Control.key(5, true)                          -- -> SONG page
+    ok(Control.seqPage == "SONG", "KS5 toggles SEQ SONG page")
+    Control.key(1, true)                          -- append current seq
+    Control.key(1, true)
+    ok(#Engine.song.steps == 2, "SONG KS1 appends sequences")
+
+    -- F) draw smoke test in every mode/view
+    for _, mode in ipairs({ "PLAY", "STEP", "SEQ" }) do
+        Control.mode = mode
+        if mode == "PLAY" then Control.setup = true end
+        if mode == "SEQ" then Control.seqPage = "SLOT" end
+        Draw.draw(Mock, Engine, Control)
+    end
+    Control.mode = "PLAY"; Control.setup = false
+    Control.seqPage = "SONG"
+    Draw.draw(Mock, Engine, Control)
+    ok(calls > 100, "draw runs in all modes/views without error (" .. calls .. " calls)")
+
+    -- G) frame() services auto-reroll due flag
+    local tr2 = Engine.tracks[2]
+    tr2.pattern.length = 1                       -- 1-step loop -> wraps every 6 ticks
+    local sd = tr2.gen.seed
+    require("track").armAuto(tr2, 1)
+    Engine.onStart()
+    for _ = 1, 7 do Engine.onPulse() end        -- wraps once -> due
+    ok(tr2.auto.due, "auto-reroll due set")
+    Control.frame()
+    ok(not tr2.auto.due and tr2.gen.seed == sd + 1, "frame() services auto-reroll off hot path")
 end
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))

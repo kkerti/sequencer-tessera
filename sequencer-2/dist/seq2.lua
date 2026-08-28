@@ -554,6 +554,13 @@ function M.songClear()
  M.song.steps = {}
  M.song.pos = 1
 end
+function M.songRemoveAt(pos)
+ local steps = M.song.steps
+ if pos < 1 or pos > #steps then return end
+ table.remove(steps, pos)
+ if M.song.pos > #steps then M.song.pos = #steps end
+ if M.song.pos < 1 then M.song.pos = 1 end
+end
 function M.songAdvance()
  local steps = M.song.steps
  if #steps == 0 then return M.out end
@@ -616,13 +623,16 @@ R["midirx"]=(function()
 
 local Engine = require("engine")
 local M = {}
+function M.emit(out, send)
+ for i = 1, out.n do
+ if out.typ[i] == 1 then send(out.ch[i], 0x90, out.pitch[i], out.vel[i])
+ else send(out.ch[i], 0x80, out.pitch[i], 0) end
+ end
+end
 function M.handle(t, send)
  if t == 0xF8 then
  local o = Engine.onPulse()
- for i = 1, o.n do
- if o.typ[i] == 1 then send(o.ch[i], 0x90, o.pitch[i], o.vel[i])
- else send(o.ch[i], 0x80, o.pitch[i], 0) end
- end
+ M.emit(o, send)
  return "tick"
  elseif t == 0xFA then
  Engine.onStart()

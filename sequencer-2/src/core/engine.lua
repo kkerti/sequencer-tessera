@@ -159,6 +159,15 @@ function M.songClear()
     M.song.pos = 1
 end
 
+-- Remove the song step at `pos` (1..n).
+function M.songRemoveAt(pos)
+    local steps = M.song.steps
+    if pos < 1 or pos > #steps then return end
+    table.remove(steps, pos)
+    if M.song.pos > #steps then M.song.pos = #steps end
+    if M.song.pos < 1 then M.song.pos = 1 end
+end
+
 -- Advance to the next song step (wrapping) and switch to its sequence.
 -- Caller emits the returned out. Advances are otherwise triggered by the App
 -- counting bars (syncBars) off the hot path — this just does the switch.

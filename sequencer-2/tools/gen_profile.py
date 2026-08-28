@@ -9,11 +9,10 @@ setup prefix (the --[[@s..]] markers) and swaps just the --[[@cb]] callback, so
 LED/encoder config still applies.
 
 Control map (see docs/DEPLOY.md):
-  el 255 ev0  system setup: require Core, init, arm MIDI rx, lazy-load UI
-  el 13  ev8  screen draw (PLAY / SETUP)
-  el 8   ev7/ev3  encoder turn (edit) / click (reroll)
-  el 9-12 ev3 small buttons (select param / setup nav)
-  el 0   ev3  keyswitch 0 = SHIFT ;  el 1 ev3 = toggle SETUP
+  el 255 ev0  system setup: require Core, init 4 tracks, arm MIDI rx, lazy UI
+  el 13  ev8  screen draw (PLAY / STEP / SEQ)
+  el 8   ev7/ev3  encoder turn (stage/slot/cursor) / click (reroll/field/jump)
+  el 0-7 ev3  keyswitches: 0 = SHIFT, 1-6 = mode actions, 7 = MODE cycle
 
 Module Lua bundles (dist/seq2.lua, dist/seq2_ui.lua) upload SEPARATELY as
 `seq2` / `seq2_ui`. Run:  python3 tools/gen_profile.py [--install]
@@ -31,7 +30,7 @@ SETUP = (
     'NOOP=setmetatable({},{__index=function()return function()end end})'
     'function loadAPP()return NOOP end function vsn1_p()end function vsn1_t()end function paint()end '
     'function loadUI()if not CTL then local U=require("seq2_ui")CTL=U.control DRAW=U.draw CTL.bind(ENGINE,SEQ)end return CTL end '
-    'ENGINE.init({trackCount=2,tracks={{chan=1,scale={scaleIndex=3,root=9}},{chan=2,scale={scaleIndex=8,root=9}}}})'
+    'ENGINE.init({trackCount=4})'
     'grxm(2,3)self.rtmrx_cb=function(self,h,t)MIDIRX.handle(t,gms)end'
 )
 
@@ -86,7 +85,7 @@ def main():
     prof.update({
         "id": str(uuid.uuid4()),
         "name": "Sequencer 2",
-        "description": "seq-2: 2 tracks, generative euclid, live controls",
+        "description": "seq-2: 4 tracks, staged generative euclid + sequence/song",
         "fileName": "Sequencer 2.json",
         "createdAt": now, "modifiedAt": now,
         "isEditable": True, "syncStatus": "local",

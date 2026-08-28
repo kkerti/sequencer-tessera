@@ -20,35 +20,95 @@
 --
 --   GLOBAL          KS7 = MODE  PLAY -> STEP -> SEQ -> PLAY
 --   PLAY            KS0..KS4 = HITS, KEY, SCALE, SPREAD, VEL
---                   KS5 = AUTO-REROLL toggle   KS6 = TRACK next
+--                   KS5 = AUTO-REROLL   KS6 = TRACK next
 --                   enc turn = STAGE   enc click = REROLL
---                   ENTER = SETUP   NAP = nap toggle   COMMIT = apply staged
+--                   ENTER = SETUP   NAP = nap   COMMIT = apply staged
 --   SETUP (PLAY)    KS0/KS1 = prev/next param   KS5 = AUTO-REROLL   KS6 = TRACK
 --                   enc turn = STAGE   enc click = REROLL   BACK = exit
 --   STEP            KS0 = ADD note   KS1 = DELETE note(s)
 --                   KS2/KS3 = octave down/up   KS4/KS5 = field value -/+
 --                   KS6 = TRACK next   enc turn = step cursor   enc click = field
---   SEQ (SLOT)      KS0..KS3 = track 1..4   KS5 = MUTE toggle
+--   SEQ (SLOT)      KS0..KS3 = track 1..4   KS5 = MUTE
 --                   enc turn = slot +/-   enc click = next sequence
 --                   ENTER = SONG page
 --   SEQ (SONG)      KS0 = append seq   KS1 = remove step   KS2 = clear song
---                   enc turn = song cursor   enc click = jump   BACK = SLOT page
+--                   enc turn = song cursor   enc click = jump   BACK = SLOT
 --
--- Screen reads: CTL.mode, track, sel, params, setup, step, field, seqPage,
---               seqTrack, songCur. CTL.frame() services auto-reroll.
+-- Screen reads: CTL.mode, track, sel, setup, step, field, seqPage, seqTrack,
+--               songCur. CTL.params[i] = { label, kind }; CTL.show(i) formats;
+--               CTL.edit(i,d) stages. CTL.frame() services auto-reroll.
+--
+-- Param model is DATA (label + kind), not closures: one edit() dispatcher and
+-- one show() formatter keep the compiled footprint small (the device heap is
+-- the real constraint — see docs/ARCHITECTURE.md §10).
 
 local M = { mode = "PLAY", track = 1, sel = 1, setup = false,
             step = 0, field = 1, seqPage = "SLOT", seqTrack = 1, songCur = 1 }
 
-local E, S           -- engine, Core namespace (SEQ)
+local E, S
+local Generate = require("generate")
 local NOTE = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 local function clamp(v, lo, hi) if v < lo then return lo elseif v > hi then return hi else return v end end
 local function noteName(m) return NOTE[m % 12 + 1] .. (m // 12 - 1) end
 
-local BTN_BACK, BTN_ENTER, BTN_NAP, BTN_COMMIT = 9, 10, 11, 12
-
-local function Tr(t) return E.tracks[t] end
 local function Sg(t) return E.tracks[t].staged end
+
+-- ---- param kinds (P[i] = { label, kind }) -------------------------------
+local P = {
+    { "SCALE", 1 },  { "KEY", 2 },    { "HITS", 3 },   { "ROTATE", 4 },
+    { "PITCH", 5 },  { "SPREAD", 6 }, { "VEL", 7 },    { "GATE", 8 },
+    { "SEED", 9 },   { "LENGTH", 10 },{ "ZOOM", 11 },  { "CHANCE", 12 },
+}
+M.params = P
+
+-- per-param coarse encoder step (1-based param index)
+local COARSE = { [7] = 5, [8] = 2, [12] = 5 }
+local PLAY_SEL = { [0] = 3, [1] = 2, [2] = 1, [3] = 6, [4] = 7 }
+
+-- Stage a param edit (kind-specific). Live param (CHANCE) applies at once.
+function M.edit(i, d)
+    local t = M.track
+    if i == 12 then
+        local r = E.tracks[t].rack.fx[2]
+        r.chance = clamp(r.chance + d, 0, 100)
+        return
+    end
+    local s = Sg(t)
+    if     i == 1  then s.scaleIndex = clamp(s.scaleIndex + d, 1, #S.scales.SCALES)
+    elseif i == 2  then s.root = (s.root + d) % 12
+    elseif i == 3  then s.hits = clamp(s.hits + d, 1, s.length)
+    elseif i == 4  then s.rotate = (s.rotate + d) % s.length
+    elseif i == 5  then s.pitchRoot = clamp(s.pitchRoot + d, 24, 96)
+    elseif i == 6  then s.pitchSpread = clamp(s.pitchSpread + d, 0, 12)
+    elseif i == 7  then s.velRoot = clamp(s.velRoot + d, 1, 127)
+    elseif i == 8  then s.gateRoot = clamp(s.gateRoot + d, 1, 48)
+    elseif i == 9  then s.seed = math.max(1, s.seed + d)
+    elseif i == 10 then s.length = clamp(s.length + d, 1, 64); s.hits = clamp(s.hits, 1, s.length)
+    else
+        local z = S.pattern.ZOOM; local j = 1
+        for k, v in ipairs(z) do if v.tps == s.zoom then j = k end end
+        s.zoom = z[clamp(j + d, 1, #z)].tps
+    end
+    E.tracks[t].dirty = true
+end
+
+-- Format a param value for the screen.
+function M.show(i)
+    local t = M.track
+    if i == 12 then return E.tracks[t].rack.fx[2].chance .. "%" end
+    local s = Sg(t)
+    if     i == 1  then return S.scales.SCALES[s.scaleIndex].name
+    elseif i == 2  then return NOTE[s.root + 1]
+    elseif i == 3  then return s.hits .. " / " .. s.length
+    elseif i == 4  then return tostring(s.rotate)
+    elseif i == 5  then return noteName(s.pitchRoot)
+    elseif i == 6  then return s.pitchSpread .. " deg"
+    elseif i == 7  then return tostring(s.velRoot)
+    elseif i == 8  then return s.gateRoot .. "t"
+    elseif i == 9  then return tostring(s.seed)
+    elseif i == 10 then return s.length .. " st"
+    else return "z" .. s.zoom end
+end
 
 -- ---- generator defaults + staging --------------------------------------
 local DEFAULTS = {
@@ -61,7 +121,7 @@ local function defaults(t)
     local d = DEFAULTS[((t - 1) % 2) + 1]
     local c = {}
     for k, v in pairs(d) do c[k] = v end
-    c.seed = t                     -- distinct seed per track
+    c.seed = t
     return c
 end
 
@@ -81,7 +141,7 @@ local function regen(t)
     local g = tr.gen
     local sc = tr.rack.fx[3]
     sc:setScale(g.scaleIndex); sc:setRoot(g.root)
-    S.generate.run(tr.pattern, g)
+    Generate.run(tr.pattern, g)
 end
 
 -- Apply staged edits: copy staged -> gen + pattern length/zoom, regen once.
@@ -100,8 +160,7 @@ local function commit(t)
 end
 M.commit = commit
 
--- Reroll: seed++ and regenerate NOW (never staged). staged.seed follows so the
--- display stays honest when there are no other pending edits.
+-- Reroll: seed++ and regenerate NOW (never staged).
 local function reroll(t)
     local g = E.tracks[t].gen
     g.seed = g.seed + 1
@@ -120,8 +179,7 @@ function M.bind(engine, seq)
     end
 end
 
--- Auto-reroll servicing: called once per draw frame (off the hot path). The
--- generator runs here, never inside onPulse.
+-- Auto-reroll servicing: called once per draw frame (off the hot path).
 function M.frame()
     if not E then return end
     for t = 1, #E.tracks do
@@ -132,53 +190,6 @@ function M.frame()
         end
     end
 end
-
--- ---- parameter model ----------------------------------------------------
--- Each: { label, show() -> string, edit(d) }. edit() of a generator param
--- mutates the staged copy + sets dirty; live params apply immediately.
-local P = {}
-local function add(label, show, edit) P[#P + 1] = { label = label, show = show, edit = edit } end
-local function dirty(t) E.tracks[t].dirty = true end
-
-local function sNum(key, lo, hi)
-    return function(d)
-        local s = Sg(M.track)
-        s[key] = clamp(s[key] + d, lo, hi)
-        dirty(M.track)
-    end
-end
-
-add("SCALE",  function() return S.scales.SCALES[Sg(M.track).scaleIndex].name end,
-              function(d) local s = Sg(M.track); s.scaleIndex = clamp(s.scaleIndex + d, 1, #S.scales.SCALES); dirty(M.track) end)
-add("KEY",    function() return noteName(Sg(M.track).root):gsub("%-?%d", "") end,
-              function(d) local s = Sg(M.track); s.root = (s.root + d) % 12; dirty(M.track) end)
-add("HITS",   function() local s = Sg(M.track); return s.hits .. " / " .. s.length end,
-              function(d) local s = Sg(M.track); s.hits = clamp(s.hits + d, 1, s.length); dirty(M.track) end)
-add("ROTATE", function() return tostring(Sg(M.track).rotate) end,
-              function(d) local s = Sg(M.track); s.rotate = (s.rotate + d) % s.length; dirty(M.track) end)
-add("PITCH",  function() return noteName(Sg(M.track).pitchRoot) end,
-              sNum("pitchRoot", 24, 96))
-add("SPREAD", function() return Sg(M.track).pitchSpread .. " deg" end,
-              sNum("pitchSpread", 0, 12))
-add("VEL",    function() return tostring(Sg(M.track).velRoot) end,
-              sNum("velRoot", 1, 127))
-add("GATE",   function() return Sg(M.track).gateRoot .. "t" end,
-              sNum("gateRoot", 1, 48))
-add("SEED",   function() return tostring(Sg(M.track).seed) end,
-              function(d) local s = Sg(M.track); s.seed = math.max(1, s.seed + d); dirty(M.track) end)
-add("LENGTH", function() return Sg(M.track).length .. " st" end,
-              function(d) local s = Sg(M.track); s.length = clamp(s.length + d, 1, 64); s.hits = clamp(s.hits, 1, s.length); dirty(M.track) end)
-add("ZOOM",   function() return "z" .. Sg(M.track).zoom end,
-              function(d) local z = S.pattern.ZOOM; local s = Sg(M.track); local i = 1
-                  for k, v in ipairs(z) do if v.tps == s.zoom then i = k end end
-                  s.zoom = z[clamp(i + d, 1, #z)].tps; dirty(M.track) end)
-add("CHANCE", function() return Tr(M.track).rack.fx[2].chance .. "%" end,
-              function(d) local r = Tr(M.track).rack.fx[2]; r.chance = clamp(r.chance + d, 0, 100) end)
-M.params = P
-
--- per-param coarse encoder step (faster on the params you sweep most)
-local COARSE = { [7] = 5, [8] = 2, [12] = 5 }         -- VEL / GATE / CHANCE
-local PLAY_SEL = { [0] = 3, [1] = 2, [2] = 1, [3] = 6, [4] = 7 }
 
 -- ---- navigation helpers -------------------------------------------------
 local function nextTrack(dir)
@@ -210,8 +221,7 @@ local function goEnter()
     elseif M.mode == "SEQ" and M.seqPage == "SLOT" then M.seqPage = "SONG"; M.songCur = 1 end
 end
 
--- Emit any pending engine.out (note-offs from seq/mute switches) via Grid's
--- `gms` if present. Tests / headless have no gms -> no-op.
+-- Emit pending engine.out (note-offs from seq/mute switches) via gms if present.
 local function emitOut()
     if gms and E.out.n > 0 then S.midirx.emit(E.out, gms) end
 end
@@ -266,8 +276,7 @@ function M.turn(d)
     if not E then return end
     local s = (d > 0 and 1 or -1)
     if M.mode == "PLAY" then
-        local p = P[M.sel]; if not p then return end
-        p.edit(s * (COARSE[M.sel] or 1))
+        M.edit(M.sel, s * (COARSE[M.sel] or 1))
     elseif M.mode == "STEP" then
         local len = E.tracks[M.track].pattern.length
         M.step = clamp(M.step + s, 0, len - 1)
@@ -352,10 +361,10 @@ end
 -- Small buttons 9-12: BACK / ENTER / NAP / COMMIT (dedicated, no chord).
 function M.button(b, down)
     if not down or not E then return end
-    if b == BTN_NAP then toggleNap(M.track); return end
-    if b == BTN_COMMIT then if M.mode == "PLAY" then commit(M.track) end return end
-    if b == BTN_BACK then goBack() end
-    if b == BTN_ENTER then goEnter() end
+    if b == 11 then toggleNap(M.track); return end
+    if b == 12 then if M.mode == "PLAY" then commit(M.track) end return end
+    if b == 9 then goBack() end
+    if b == 10 then goEnter() end
 end
 
 return M

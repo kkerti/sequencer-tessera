@@ -27,19 +27,22 @@ local CORE = {
     { key = "track",   path = "src/core/track.lua"   },
     { key = "sequence",path = "src/core/sequence.lua"},
     { key = "engine",  path = "src/core/engine.lua"  },
-    { key = "generate",path = "src/core/generate.lua"},
     { key = "midirx",  path = "src/core/midi_rx.lua" },
 }
+-- generate runs only at edit time (control.bind's regen), never on the
+-- playback path, so it lives in the UI bundle. Its require("scales") resolves
+-- through the UI shim's fall-through to the Core bundle.
 local UI = {
-    { key = "control", path = "src/app/control.lua"  },
-    { key = "draw",    path = "src/hal/draw_vsn1.lua" },
-    { key = "leds",    path = "src/hal/leds.lua"     },
+    { key = "generate", path = "src/core/generate.lua" },
+    { key = "control",  path = "src/app/control.lua"  },
+    { key = "draw",     path = "src/hal/draw_vsn1.lua" },
+    { key = "leds",     path = "src/hal/leds.lua"     },
 }
 
 local CORE_NS = [[
 return {
     engine=R.engine, track=R.track, pattern=R.pattern, rack=R.rack,
-    event=R.event, scales=R.scales, generate=R.generate, midirx=R.midirx,
+    event=R.event, scales=R.scales, midirx=R.midirx,
     range=R.range, random=R.random, scalefx=R.scale, sequence=R.sequence,
 }
 ]]
@@ -104,12 +107,22 @@ local function buildBundle(files, shim, ns, out, header)
             m.key, collapseWs(stripAsserts(stripComments(s))))
     end
     parts[#parts+1] = ns
-    local b = table.concat(parts)
-    local f = assert(io.open(out, "w")); f:write(b); f:close()
+    local src = table.concat(parts)
+
+    -- Compile the source bundle, then re-dump WITHOUT debug info. The device
+    -- heap is dominated by debug info: load() interned every local-variable
+    -- name and kept per-instruction line tables (~70% of the compiled chunk).
+    -- A stripped binary chunk loads without re-compiling (no identifier
+    -- interning) and carries no debug info — a ~4x smaller resident chunk.
+    local f = assert(load(src, "@" .. out))
+    local bin = string.dump(f, true)
+    local fo = assert(io.open(out, "wb")); fo:write(bin); fo:close()
+
     local ok, err = loadfile(out)
     if not ok then io.stderr:write("VERIFY FAIL " .. out .. ": " .. tostring(err) .. "\n"); os.exit(1) end
-    io.write(string.format("%-16s source %d B  bundle %d B  (%.0f%%)  parses OK\n", out, raw, #b, 100 * #b / raw))
-    return b
+    io.write(string.format("%-16s source %d B  stripped %d B  (%.0f%% of source)  loads OK\n",
+        out, raw, #bin, 100 * #bin / raw))
+    return bin
 end
 
 os.execute("mkdir -p dist")

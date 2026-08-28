@@ -1,6 +1,6 @@
--- draw_vsn1.lua — the on-device VSN1 screen (UI bundle). Three M4 modes:
+-- draw_vsn1.lua — on-device VSN1 screen (UI bundle). Three M4 modes:
 --   PLAY  — piano roll + playhead (top); staged param + status (bottom).
---           SETUP (ENTER button) = full-screen param grid within PLAY.
+--           SETUP (ENTER) = full-screen param grid within PLAY.
 --   STEP  — piano roll + playhead + step cursor (top); note editor (bottom).
 --   SEQ   — piano roll + playhead (top); sequence/song builder (bottom).
 -- Real Grid draw API is scr:draw_*; ends with scr:draw_swap(). Called as
@@ -23,7 +23,6 @@ local PLO, PHI = 40, 84
 local NOTE = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" }
 local function noteName(m) return NOTE[m % 12 + 1] .. (m // 12 - 1) end
 
--- Playhead position within the (possibly loop-regioned) window.
 local function localTickOf(pat, gt)
     if gt < 0 then return 0 end
     local s0, loopLen = Pattern.loopWindow(pat)
@@ -31,8 +30,9 @@ local function localTickOf(pat, gt)
     return s0 + (gt - s0) % loopLen
 end
 
--- Piano roll + playhead; loop-region markers if active; step cursor in STEP.
-local function roll(scr, tr, gt, cursorStep)
+-- Top half shared by every view: piano roll + playhead + region markers +
+-- optional step cursor, then the mid-screen divider.
+local function top(scr, tr, gt, cursor)
     local pat = tr.pattern
     local ev  = pat.events
     local full = Pattern.loopTicks(pat)
@@ -51,16 +51,20 @@ local function roll(scr, tr, gt, cursorStep)
     scr:draw_line(px, 0, px, 119, CYAN)
     local le = pat.loopEnd or pat.length
     if le < pat.length then
-        local xa = 2 + (pat.loopStart or 0) * pat.zoom / full * 316
-        local xb = 2 + le * pat.zoom / full * 316
-        scr:draw_line(xa, 0, xa, 119, GREY)
-        scr:draw_line(xb, 0, xb, 119, GREY)
+        scr:draw_line(2 + (pat.loopStart or 0) * pat.zoom / full * 316, 0,
+                      2 + (pat.loopStart or 0) * pat.zoom / full * 316, 119, GREY)
+        scr:draw_line(2 + le * pat.zoom / full * 316, 0, 2 + le * pat.zoom / full * 316, 119, GREY)
     end
-    if cursorStep then
-        local cx = 2 + cursorStep / pat.length * 316
-        scr:draw_line(cx, 0, cx, 119, WHITE)
+    if cursor then
+        scr:draw_line(2 + cursor / pat.length * 316, 0, 2 + cursor / pat.length * 316, 119, WHITE)
     end
+    scr:draw_line(0, 120, 319, 120, DIM)
     return lt
+end
+
+local function head(scr, mode, t)
+    scr:draw_text_fast(mode, 8, 126, 16, ORANGE)
+    scr:draw_text_fast("T" .. t, 62, 126, 16, WHITE)
 end
 
 -- ---- PLAY (compact) ----------------------------------------------------
@@ -68,21 +72,16 @@ local function drawPlay(scr, eng, ctl)
     local t = ctl.track
     local tr = eng.tracks[t]
     scr:draw_rectangle_filled(0, 0, 319, 239, BG)
-    roll(scr, tr, eng.gt)
-    scr:draw_line(0, 120, 319, 120, DIM)
-
-    scr:draw_text_fast("PLAY", 8, 126, 16, ORANGE)
-    scr:draw_text_fast("T" .. t, 62, 126, 16, WHITE)
+    top(scr, tr, eng.gt)
+    head(scr, "PLAY", t)
     scr:draw_text_fast("SEQ" .. eng.currentSeq .. "/" .. #eng.sequences, 98, 130, 12, GREY)
     scr:draw_text_fast(eng.playing and "RUN" or "STOP", 260, 126, 16, eng.playing and ORANGE or DIM)
 
-    local p = ctl.params[ctl.sel]
-    if p then
-        local val = p.show()
-        if tr.dirty then val = val .. " *" end
-        scr:draw_text_fast(p.label, 8, 150, 16, GREY)
-        scr:draw_text_fast(val, 8, 174, 24, tr.dirty and ORANGE or WHITE)
-    end
+    local i = ctl.sel
+    local val = ctl.show(i)
+    if tr.dirty then val = val .. " *" end
+    scr:draw_text_fast(ctl.params[i][1], 8, 150, 16, GREY)
+    scr:draw_text_fast(val, 8, 174, 24, tr.dirty and ORANGE or WHITE)
 
     local flags = ""
     if tr.nap.armed then flags = flags .. (tr.nap.muted and "NAP!" or "nap") .. " " end
@@ -90,8 +89,8 @@ local function drawPlay(scr, eng, ctl)
     if tr.dirty then flags = flags .. "staged " end
     if flags ~= "" then scr:draw_text_fast(flags, 8, 214, 8, GREEN) end
 
-    scr:draw_text_fast("KS0-4 PARAM  KS5 AUTO  KS6 TRK  KS7 MODE", 6, 224, 8, DIM)
-    scr:draw_text_fast("BTN: BACK  ENTER=setup  NAP  COMMIT", 6, 232, 8, DIM)
+    scr:draw_text_fast("0-4 PAR  5 AUTO  6 TRK  7 MODE", 6, 224, 8, DIM)
+    scr:draw_text_fast("9 BACK  10 SETUP  11 NAP  12 OK", 6, 232, 8, DIM)
     scr:draw_swap()
 end
 
@@ -104,7 +103,7 @@ local function drawSetup(scr, eng, ctl)
     scr:draw_line(0, 26, 319, 26, DIM)
 
     local rows = #ctl.params
-    local leftN = math.ceil(rows / 2)
+    local leftN = (rows + 1) // 2
     for i = 1, rows do
         local left = (i <= leftN)
         local x = left and 16 or 172
@@ -112,12 +111,12 @@ local function drawSetup(scr, eng, ctl)
         local y = 32 + row * 26
         local sel = (i == ctl.sel)
         if sel then scr:draw_text_fast(">", x - 12, y, 16, WHITE) end
-        scr:draw_text_fast(ctl.params[i].label, x, y, 16, sel and WHITE or GREY)
-        scr:draw_text_fast(ctl.params[i].show(), x + 82, y, 16, sel and ORANGE or WHITE)
+        scr:draw_text_fast(ctl.params[i][1], x, y, 16, sel and WHITE or GREY)
+        scr:draw_text_fast(ctl.show(i), x + 82, y, 16, sel and ORANGE or WHITE)
     end
 
     scr:draw_line(0, 214, 319, 214, DIM)
-    scr:draw_text_fast("KS0/1 NAV  KS5 AUTO  KS6 TRK  KS7 MODE  COMMIT", 6, 224, 8, GREY)
+    scr:draw_text_fast("0/1 NAV  5 AUTO  6 TRK  7 MODE  12 OK", 6, 224, 8, GREY)
     scr:draw_swap()
 end
 
@@ -127,11 +126,8 @@ local function drawStep(scr, eng, ctl)
     local t = ctl.track
     local tr = eng.tracks[t]
     scr:draw_rectangle_filled(0, 0, 319, 239, BG)
-    roll(scr, tr, eng.gt, ctl.step)
-    scr:draw_line(0, 120, 319, 120, DIM)
-
-    scr:draw_text_fast("STEP", 8, 126, 16, ORANGE)
-    scr:draw_text_fast("T" .. t, 60, 126, 16, WHITE)
+    top(scr, tr, eng.gt, ctl.step)
+    head(scr, "STEP", t)
     scr:draw_text_fast("st " .. (ctl.step + 1), 98, 130, 12, GREY)
 
     local pat = tr.pattern
@@ -154,17 +150,15 @@ local function drawStep(scr, eng, ctl)
     end
     scr:draw_text_fast(val, 8, 174, 24, WHITE)
 
-    scr:draw_text_fast("KS0 ADD  KS1 DEL  KS2/3 OCT  KS4/5 EDIT  KS6 TRK", 6, 224, 8, DIM)
-    scr:draw_text_fast("enc=step  click=field  BTN: NAP COMMIT", 6, 232, 8, DIM)
+    scr:draw_text_fast("0 ADD  1 DEL  2/3 OCT  4/5 EDIT  6 TRK", 6, 224, 8, DIM)
+    scr:draw_text_fast("enc STEP  click FIELD  11 NAP  12 OK", 6, 232, 8, DIM)
     scr:draw_swap()
 end
 
 -- ---- SEQ -----------------------------------------------------------------
 local function drawSeqSlot(scr, eng, ctl)
     scr:draw_rectangle_filled(0, 0, 319, 239, BG)
-    roll(scr, eng.tracks[ctl.seqTrack], eng.gt)
-    scr:draw_line(0, 120, 319, 120, DIM)
-
+    top(scr, eng.tracks[ctl.seqTrack], eng.gt)
     scr:draw_text_fast("SEQ", 8, 126, 16, ORANGE)
     scr:draw_text_fast("SLOT", 52, 130, 12, GREY)
     scr:draw_text_fast(eng.currentSeq .. "/" .. #eng.sequences, 100, 126, 16, WHITE)
@@ -177,17 +171,14 @@ local function drawSeqSlot(scr, eng, ctl)
         scr:draw_text_fast(label, x, 156, 16, sel and ORANGE or WHITE)
     end
 
-    scr:draw_text_fast("KS0-3 TRK  KS5 MUTE  enc SLOT  click SEQ", 6, 190, 8, DIM)
-    scr:draw_text_fast("BTN: BACK  ENTER=song  NAP  COMMIT", 6, 202, 8, DIM)
+    scr:draw_text_fast("0-3 TRK  5 MUTE  enc SLOT  click SEQ", 6, 190, 8, DIM)
+    scr:draw_text_fast("9 BACK  10 SONG  11 NAP  12 OK", 6, 202, 8, DIM)
     scr:draw_swap()
 end
 
 local function drawSeqSong(scr, eng, ctl)
-    local t = ctl.track
     scr:draw_rectangle_filled(0, 0, 319, 239, BG)
-    roll(scr, eng.tracks[t], eng.gt)
-    scr:draw_line(0, 120, 319, 120, DIM)
-
+    top(scr, eng.tracks[ctl.track], eng.gt)
     scr:draw_text_fast("SEQ", 8, 126, 16, ORANGE)
     scr:draw_text_fast("SONG", 52, 130, 12, GREY)
     scr:draw_text_fast("sync " .. eng.song.syncBars .. " bar", 102, 130, 12, GREY)
@@ -203,15 +194,15 @@ local function drawSeqSong(scr, eng, ctl)
         scr:draw_text_fast(s, 8, 156, 16, WHITE)
     end
 
-    scr:draw_text_fast("KS0 ADD  KS1 DEL  KS2 CLEAR", 6, 190, 8, DIM)
-    scr:draw_text_fast("enc CURSOR  click JUMP  BTN: BACK=slots  NAP", 6, 202, 8, DIM)
+    scr:draw_text_fast("0 ADD  1 DEL  2 CLEAR", 6, 190, 8, DIM)
+    scr:draw_text_fast("enc CURSOR  click JUMP  9 BACK  11 NAP", 6, 202, 8, DIM)
     scr:draw_swap()
 end
 
 -- ---- entry ----------------------------------------------------------------
 function M.draw(scr, eng, ctl)
     if not ctl then return end
-    if ctl.frame then ctl.frame() end      -- service auto-reroll (off hot path)
+    if ctl.frame then ctl.frame() end
     if ctl.mode == "PLAY" then
         if ctl.setup then drawSetup(scr, eng, ctl) else drawPlay(scr, eng, ctl) end
     elseif ctl.mode == "STEP" then

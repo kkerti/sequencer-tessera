@@ -404,29 +404,31 @@ do
     ok(not tr2.auto.due and tr2.gen.seed == sd + 1, "frame() services auto-reroll off hot path")
 
     -- H) LED pass is pure and derived entirely from CTL/engine state
+    -- palette indices: 0 off, 1 dim, 2 white, 3 orange, 4 orange-dim,
+    --                  5 green, 6 red, 7 red-dim, 8 cyan, 9 purple
     local LEDs = require("leds")
     Control.mode = "PLAY"; Control.setup = false; Control.track = 1
 
     local on  = LEDs.compute(Engine, Control, 10)   -- blink phase ON
-    ok(on[7][1] == 249 and on[7][2] == 150, "PLAY mode key (KS7) LED is orange")
+    ok(on[7] == 3, "PLAY mode key (KS7) LED is orange (idx 3)")
 
     Engine.tracks[1].dirty = true
     local c1 = LEDs.compute(Engine, Control, 10)
     local c2 = LEDs.compute(Engine, Control, 30)
-    ok(c1[12][1] == 249 and c2[12][1] == 120,
-       "COMMIT LED blinks orange vs half-dim while dirty")
+    ok(c1[12] == 3 and c2[12] == 4,
+       "COMMIT LED blinks orange (3) vs half-dim (4) while dirty")
     Engine.tracks[1].dirty = false
-    ok(LEDs.compute(Engine, Control, 10)[12][1] == 36, "COMMIT LED dim when not dirty")
+    ok(LEDs.compute(Engine, Control, 10)[12] == 1, "COMMIT LED dim (1) when not dirty")
 
     require("track").armNap(Engine.tracks[1], 2, 2)
     local n = LEDs.compute(Engine, Control, 10)
-    ok(n[11][1] == 220 and n[11][2] == 60, "NAP LED red when armed")
+    ok(n[11] == 6, "NAP LED red (6) when armed")
     require("track").disarmNap(Engine.tracks[1])
 
     Control.mode = "SEQ"; Control.seqPage = "SLOT"; Control.seqTrack = 3
     local s = LEDs.compute(Engine, Control, 10)
-    ok(s[2][1] == 235 and s[0][1] == 36, "SEQ SLOT lights the selected track's key")
-    ok(s[7][1] == 160, "SEQ mode key (KS7) LED is purple")
+    ok(s[2] == 2 and s[0] == 1, "SEQ SLOT lights the selected track's key (2) vs dim (1)")
+    ok(s[7] == 9, "SEQ mode key (KS7) LED is purple (9)")
 
     -- H2) LED update() is a no-op without the Grid global (headless safety)
     LEDs.update(Engine, Control)                 -- led_color is nil here -> must not error

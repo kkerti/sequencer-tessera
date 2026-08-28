@@ -12,7 +12,9 @@ Settled in the requirements interview. Change only by explicit decision.
 | Parameter | Value | Notes |
 |-----------|-------|-------|
 | Tick resolution | **24 PPQN** | `onPulse` fires once per incoming MIDI clock, no interpolation. 1/16 = 6 pulses, 1/16-triplet = 4, 1/8 = 12, 1/4 = 24. |
-| Max events / pattern | **256** | Array `cap`; 2 active patterns in RAM at M1. |
+| Max events / pattern | **256** | Array `cap`; 4 active patterns in RAM at M4 (one per track). |
+| Track count | **4** | Up from M1's 2. Re-measure RAM on a real build before going further (see §10). |
+| Pattern slots / track | **4**, extensible to **8** | Hermod's P1..P16, scaled down. Only the *active* slot per track is resident; others are filenames until authored (§4). |
 | Loop length model | **steps + zoom** | Length in steps; zoom maps steps→ticks. Enables polymetry (per-track lengths drift in sync). |
 | Voice cap / track | **4** | Ring of 4 pending note-offs per track; 5th note steals the oldest voice. Keeps OFF scheduling alloc-free. |
 | RANGE out-of-bounds | **clamp** | Pin to nearest boundary. Predictable performance sweeps. |
@@ -21,7 +23,7 @@ Settled in the requirements interview. Change only by explicit decision.
 | Proto clock | **external + optional internal** | Desktop harness can run a `--bpm` test clock; device build is external-only. |
 | Zoom ladder (M1) | **/2, ×1, 2/3, ×2** | ticks/step = 12, 6, 4, 3. `loopTicks = length × ticksPerStep`. Per-pattern. |
 | Scales (M1) | **8 masks** | off, major, minor, harm-min, dorian, phrygian, mixolydian, min-pent. Per-track root (0–11), snap nearest, tie→down. |
-| RANGE params | **min+max per field**, root fixed | pitchMin/Max, velMin/Max, lenMin/Max. All pattern-overridable (M4). |
+| RANGE params | **min+max per field**, root fixed | pitchMin/Max, velMin/Max, lenMin/Max. Pattern-overridable in principle, but the override plumbing itself is still open — see §9. |
 | RANDOM | **free-running**, 4 params | chance / pitchJit / velJit / octJit. Per-instance LCG (seedable). |
 | Voice-steal | **oldest-off** | 5th note steals the slot with earliest off-tick, emits its OFF first. |
 | Transport | PLAY→reset all to 0 · STOP→OFFs + reset · CONTINUE→resume | Independent per-track wrap (polymetry). |
@@ -143,14 +145,25 @@ Grid modules have very little RAM, and we chose the memory-hungrier polyphonic
 model — so swapping is mandatory, not optional.
 
 - **In RAM:** the *active sequence* only — one selected pattern per track, plus
-  each track's rack and channel. That's 2 patterns' event arrays at M1.
-- **On FS:** every other pattern, saved as a Lua chunk (`return{n=..,pitch={..},
-  ...}`) like seq-1's `persist.lua`. Loaded with `load()` — zero parser code.
-- **Swap trigger:** selecting a different pattern/sequence. Save-current then
+  each track's rack and channel. That's 4 patterns' event arrays at M4 (one
+  per track). **Sequences themselves** (which pattern-slot + mute-state per
+  track) are cheap metadata — small-int arrays, no note data — and can all
+  stay resident regardless of how many exist.
+- **On FS:** every other pattern slot, saved as a Lua chunk (`return{n=..,
+  pitch={..}, ...}`) like seq-1's `persist.lua`. Loaded with `load()` — zero
+  parser code. Unauthored slots simply don't have a file yet.
+- **Swap trigger:** selecting a different **Sequence** (which changes 0 or more
+  tracks' active pattern-slot). Per changed track: save-current then
   load-next, both **off the hot path**, ideally during a bar boundary so audio is
   seamless (Hermod's synchronized swap). Playback of the *currently sounding*
-  pattern continues from its in-RAM copy until the swap point.
+  pattern continues from its in-RAM copy until the swap point. Tracks whose
+  slot didn't change in the new Sequence don't swap.
 - **Never** touch the FS inside `onPulse`. Persist is an explicit App action.
+- **Re-measure at 4 tracks.** §10's numbers (9.6 KB engine RAM) were measured
+  at 2 tracks. Bumping to 4 tracks, plus Sequence/Song metadata, loop-region
+  ints, nap/auto-reroll counters, and the new STEP/SEQ control code, needs a
+  fresh measurement on a real build before assuming headroom — don't assume
+  linear scaling holds.
 
 Budget check to keep honest: pick a target max events/pattern (e.g. 256), size
 `cap` accordingly, and add a `test_persist` round-trip + a `test_no_alloc`
@@ -185,11 +198,40 @@ on the real Grid renderer via grid-wasm. See §8 for the screen dialect + render
 
 ## 6. Menu system & control surface
 
-Hardware: **4 function buttons (F1..F4) + 1 large push encoder + 8 buttons
-(B1..B8)**. Design the menu as a small explicit state machine (not nested
-closures — cheap to reason about, cheap in RAM).
+**Superseded.** The original plan below assumed 4 function buttons + 8 small
+buttons (B1..B8) as a working context row. On real hardware the small buttons
+turned out to be dead; only **8 keyswitches + 1 push encoder** are usable.
+Everything now goes through those. Design the menu as a small explicit state
+machine (not nested closures — cheap to reason about, cheap in RAM). GUI/exact
+screen layout is a separate pass — this section is data-model/control-flow
+only.
 
-Starting proposal (revise with use):
+**Modes.** Three, cycled by tapping a dedicated keyswitch (today KS7):
+- **PLAY** — generator params (staged; see below). Compact bottom-bar view and
+  the full-screen SETUP grid are two zoom levels of this *same* mode, not
+  separate top-level modes.
+- **STEP** — per-note editing, live (not staged). Select the note under the
+  cursor/playhead; encoder click cycles which field is being edited (pitch →
+  length → velocity); turn adjusts it directly — same flow as Hermod's STEP
+  mode.
+- **SEQ** — pattern-slot picking, Sequence building (pattern-slot + mute per
+  track), Song chaining (ordered list of sequence-ids), launch/jump.
+
+**Staging rule.** Only generator-param edits (PLAY mode: root, scale, spread,
+hits, ...) stage — each would otherwise *regenerate the whole pattern*, a
+destructive action worth protecting behind an explicit commit. A dedicated
+keyswitch commits (applies staged values, calls the generator once). Every
+other action — per-note edits (STEP), reroll, auto-reroll, mute, nap — applies
+**immediately**, never staged.
+
+**Fitting more onto 8 keys.** Secondary actions (commit, mute-toggle,
+nap-arm, auto-reroll-arm) use **hold-vs-tap** on existing keys rather than
+consuming new ones — the same "chord" idea the original F-button plan used,
+adapted to keyswitches since that's all that survived the hardware. Exact
+key-by-key bindings are an implementation detail decided while building, not
+a design fork — see `src/app/control.lua` for the current map.
+
+**Original plan (kept for history, not current):**
 
 | Control | Role |
 |---------|------|
@@ -288,12 +330,19 @@ exact tick-wrap comparison across loop boundaries.
 **Resolved at M1 build:** zoom ladder = /2·×1·2/3·×2 · RANGE root fixed ·
 voice-steal = oldest-off · transport reset semantics (see §0).
 
+**Resolved at M4 grill (2026-08-26), see §11:** Sequence/Song data shape and
+chaining · loop region · nap/wake · commit staging scope · per-note (STEP
+mode) editing · auto-reroll · track count (2→4) · pattern slots/track (4,
+extensible to 8) · mode structure (PLAY/STEP/SEQ).
+
 **Still open:**
-- Sequence/song chaining UI (Hermod §5). **Gate: M4.**
 - Whether RANGE should also re-clamp *velocity/length* after RANDOM (currently
   only pitch is guaranteed in-key, via SCALE running last). **Revisit when
   performing.**
-- Pattern-value override plumbing (only bites with >1 pattern/track). **Gate: M4.**
+- Pattern-value override plumbing (per-pattern fx-param overrides — e.g. can
+  P2's RANGE differ from P1's). Its precondition (>1 pattern/track) is now
+  true, but the feature itself wasn't part of this grill — genuinely still
+  open, not just gated on a precondition anymore.
 
 ---
 
@@ -339,3 +388,120 @@ engine, encoder-scrubbed — see below).
 **Net:** the sequencer runs in the real Grid VM. Compute and per-pulse cost are
 non-issues; **RAM is the whole game**, exactly as the architecture assumed. Keep
 patterns sparse, keep the screen script thin, load the engine once.
+
+---
+
+## 11. M4 — Composition, Sequence/Song, per-note editing
+
+Output of the 2026-08-26 grill (`docs/research/composition-and-song-mode.md`
+has the cross-device research this is grounded in). Data model and behavior
+only — screen/GUI layout is a deliberately separate pass.
+
+### 11.1 Sequence & Song {#seq-song}
+
+A **Sequence** is cheap metadata, not note data — safe to keep all of them
+resident:
+
+```lua
+sequence = {
+  slot = { 1, 1, 1, 1 },        -- pattern-slot index per track (1..8)
+  mute = { false, false, false, false },  -- per-track mute, local to this sequence
+}
+```
+
+A **Song** is the Hermod-simple shape: a chain step is just a sequence-id, not
+a row of fields. The gap between steps is one global setting, not per-step
+state:
+
+```lua
+song = {
+  steps   = { 1, 2, 1, 3 },     -- ordered sequence-ids, may repeat
+  syncBars = 1,                 -- bars between step advances (applies to all)
+  pos      = 1,                 -- index into steps currently playing
+}
+```
+
+**Switching a Sequence** = for each track whose `slot[track]` differs from the
+current one: swap that track's active pattern (§4's file-swap, off the hot
+path, ideally at a bar boundary). Tracks whose slot didn't change don't
+touch the FS. This is the concrete trigger for the swap mechanism §4 already
+specified.
+
+### 11.2 Pattern additions
+
+**Loop region** — a saved sub-range, defaults to the whole pattern:
+
+```lua
+pattern.loopStart = 0             -- steps
+pattern.loopEnd   = pattern.length -- steps; loopEnd == length ⇒ inactive (full pattern)
+```
+
+`track.advance` wraps against `[loopStart*zoom, loopEnd*zoom)` instead of
+`[0, loopTicks)` when `loopEnd < length`. Small, local change — no new event
+storage.
+
+**Pattern slots** — a track has up to 8 addressable slots (Hermod's P1..P16,
+scaled down; 4 active for the first build). Only the *currently selected*
+slot's `Pattern` object is resident per track (§4); the rest are filenames
+(`p<n>.lua`) that may not exist yet if never authored.
+
+### 11.3 Nap & auto-reroll — transient per-track performance state
+
+Neither persists to FS; both reset on track/pattern change. Both are driven
+by the track's **own** loop count (its own pattern's wraps), not a shared
+clock.
+
+```lua
+-- per track, engine-resident, not saved:
+tr.nap = { armed=false, napLoops=4, wakeLoops=4, counter=0, muted=false }
+-- PPW's 3rd param, Loop Shift (phase-offset nap/wake start), deliberately
+-- deferred — v1 is Nap+Wake only; add a `shift` field later if it earns it.
+tr.auto = { armed=false, everyLoops=4, counter=0, due=false }
+```
+
+**Hot-path split (important):** `track.advance` detects loop-wrap already
+(§2's cursor reset). On wrap:
+- **Nap's mute flip** is alloc-free (just a boolean) — safe to do directly in
+  `onPulse`/`track.advance`: decrement `counter`; at 0, flip `muted` and reset
+  `counter` to the other phase's length (`napLoops`/`wakeLoops`).
+- **Auto-reroll's regenerate is NOT alloc-free** — `generate.run` clears and
+  re-adds events, which can grow arrays. It must **not** run inside `onPulse`.
+  On wrap, `track.advance` only sets `tr.auto.due = true` (alloc-free). A
+  per-frame App-level check (already exists for screen redraw) reads
+  `due` flags across tracks and calls the generator **off the hot path**,
+  then clears the flag. Same rule as persistence: never touch the expensive
+  path from inside a pulse.
+
+**Napped-but-still-generating:** a napped track's rack/generator keep
+running; only the *emitted* note-on is suppressed (checked at the same point
+`emit()` is called in `track.advance`). This is what lets a track wake into
+an evolved state rather than silence.
+
+**Reroll and auto-reroll both apply immediately** (never staged) — see
+§6's staging rule.
+
+### 11.4 Per-note (STEP mode) editing
+
+No new storage — `pitch[]/len[]/vel[]` already exist per-event (§2). What's
+missing is *selection*: converting a UI step-position to an event index.
+
+```lua
+-- off the hot path; pattern.events kept sorted by start (§2), so linear scan is fine
+local function findEventAtStep(pattern, step, zoom)
+    local tick = step * zoom
+    local ev = pattern.events
+    for i = 1, ev.n do
+        if ev.start[i] == tick then return i end
+    end
+    return nil
+end
+```
+
+Editing found event `i`: mutate `ev.pitch[i]`/`ev.len[i]`/`ev.vel[i]` directly
+in place — no array growth, applies live (no staging, per §6).
+
+### 11.5 Track count
+
+2 → 4 (locked param, §0). Sequence/Song structures scale with track count as
+plain small-int arrays, so this doesn't complicate §11.1–11.4 — but see §4's
+"re-measure at 4 tracks" note before assuming it fits.

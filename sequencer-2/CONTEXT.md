@@ -22,13 +22,20 @@ the code disagree, one of them is wrong; fix it.
 
 ## Structure
 
-- **Project** — the whole saved state: all tracks and their patterns.
-- **Track** — one musical voice-group: its patterns, one effect **rack**, one
-  MIDI channel, one playhead, one record buffer. Start with 2 tracks.
+- **Project** — the whole saved state: all tracks, their patterns, sequences,
+  and song.
+- **Track** — one musical voice-group: its pattern slots, one effect **rack**,
+  one MIDI channel, one playhead, one record buffer. 4 tracks.
 - **Pattern** — a polyphonic, grid-free collection of **notes** plus a loop
-  length and its per-pattern effect values. Hermod's P1..P16 per track.
-- **Sequence** — one selected pattern per track, played together. (Hermod §5.)
-- **Song** — sequences chained in order. (Later milestone.)
+  length, its per-pattern effect values, and a **loop region**. Hermod's
+  P1..P16 per track; we keep 4 slots/track (extensible to 8).
+- **Loop region** — a sub-range of a pattern's steps that plays in a tight
+  loop when active, instead of the pattern's full length. Saved per-pattern.
+- **Sequence** — one selected pattern slot per track, played together, plus
+  each track's **mute** state for this sequence only. (Hermod §5.)
+- **Song** — sequences chained in order. A chain step is just a sequence-id
+  (Hermod's simplest shape); the gap between steps is one global SYNC
+  setting, not stored per-step.
 
 ## Notes
 
@@ -64,11 +71,27 @@ the code disagree, one of them is wrong; fix it.
 - **Spread** — the generator's ± amount around a **root** for a field (pitch in
   scale degrees, velocity, gate). The *authoring* counterpart to RANGE's
   play-time clamp — same shape, opposite verb (create vs limit).
-- **Reroll** — regenerate with the next **seed**. Same seed ⇒ same pattern, so a
-  variant you like is recallable.
+- **Reroll** — regenerate with the next **seed**, applied immediately (never
+  staged — its whole point is to show a new variant now). Same seed ⇒ same
+  pattern, so a variant you like is recallable.
 
 ## Control
 
 - **Overdub** — record new notes layered on top of existing ones (non-destructive).
 - **Handoff** — delegating control of the sequencer to another connected Grid
   controller (e.g. a 16-button module as a step keyboard).
+- **Mode** — the top-level control-surface context: **PLAY** (generator params,
+  staged), **STEP** (per-note editing, live), **SEQ** (pattern-slot/sequence/
+  song browsing). SETUP is a full-screen detail view of PLAY, not a separate
+  mode.
+- **Staged / pending** — a generator-param edit that's been dialed but not yet
+  applied. Only generator params stage (they *regenerate*, i.e. overwrite, the
+  whole pattern); note edits, reroll, and auto-reroll always apply live.
+- **Commit** — the explicit action (dedicated key) that applies staged
+  generator-param edits, calling the generator once.
+- **Auto-reroll** — reroll fired automatically every N of the track's own
+  pattern loops, instead of only on a manual key. Applies immediately, like a
+  manual reroll.
+- **Nap** — temporarily mute a track for N loops, then auto-resume ("Wake").
+  The track's generator/effects keep running underneath while napped, so it
+  can wake into an evolved state. (PPW's Loop Nap/Loop Wake.)

@@ -26,8 +26,8 @@ seq3.start()
 seq3.stop()
 seq3.reset()                 -- reset all lanes to step 1
 seq3.onPulse()               -- one external MIDI clock pulse (0xF8)
-seq3.tick()                  -- one internal timer pulse
-seq3.setBPM(n)               -- internal timer rate
+seq3.tick()                  -- one pulse from the host's internal timer
+-- The host timer owns BPM; the engine has no BPM (ADR-0004).
 ```
 
 ## Lane configuration
@@ -88,14 +88,15 @@ seq3.generate(lane, opts)            -- generator (Euclidean now, Gamut later)
 ## Presets / introspection
 
 ```lua
-seq3.save(slot)                      -- slot 1..24
-seq3.load(slot)
-seq3.listSlots()
+seq3.loadPreset(data)                -- apply a preset table in place
 seq3.get(lane, field)
 seq3.state(lane)                     -- read-only snapshot for a GUI
 seq3.dump()                          -- full engine snapshot
 seq3.set(lane, field, v)             -- generic escape hatch
 ```
+
+Slot files are read and written by the `persist` module
+(`persist.load(path)` / `persist.save(path)`), keeping IO out of the Core.
 
 ## Addressing (value sources)
 

@@ -165,6 +165,8 @@ M2 added X/Y advance and address, shift/rotate, same-pulse lane→lane, the
 - `docs/PARAM_DEPENDENCIES.md` — which settings apply under which `dims` or
   lane type. The GUI will hide inapplicable controls from this.
 - `docs/adr/` — the hard-to-reverse decisions and their rationale.
+- `tools/bridge.py` — MIDI ⇄ stdio; `tools/send.py` — send notes/CC/clock to the
+  bridge's virtual input from a second terminal (no DAW needed).
 
 ## When in doubt
 

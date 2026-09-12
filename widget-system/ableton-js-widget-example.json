@@ -1,0 +1,278 @@
+{
+    "id": "c5217230-427d-4b88-8e46-db3a13067e08",
+    "modifiedAt": "2026-09-12T19:02:44.510Z",
+    "createdAt": "2026-02-17T13:36:15.789Z",
+    "name": "AbletonJS selected track control v1.3 (clip included)",
+    "description": "This profile extends the screen widgets with the active clip name + color on the selected track.",
+    "type": "VSN1L",
+    "version": {
+        "major": "1",
+        "minor": "6",
+        "patch": "5"
+    },
+    "configType": "profile",
+    "configs": [
+        {
+            "controlElementNumber": 0,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Volume\")--[[@cb]] function radio(indx)for i=0,3,1 do if indx==i then ele[i]:glp(1,255)else ele[i]:glp(1,0)end ele[7]:glp(1,0)end end"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_set_active_property\",\"volume\")radio(self:ind())--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": ""
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 1,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Pan\")"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_set_active_property\",\"panning\")radio(self:ind())--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": ""
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 2,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Send A\")--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_set_active_property\",\"send:0\")radio(self:ind())--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 3,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Send B\")--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_set_active_property\",\"send:1\")radio(self:ind())--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 4,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Mute\")"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_toggle_mute\",0)--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{225,255,0,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": ""
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 5,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Solo\")"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_toggle_solo\",0)--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{0,8,255,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": ""
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 6,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Arm\")"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_toggle_arm\",0)--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{255,17,0,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": ""
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 7,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Last touch\")--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_set_active_property\",\"selected_parameter\")for i=0,3,1 do ele[i]:glp(1,0)self:glp(1,255)end--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 8,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Endless Knob\")--[[@sen]] self:epmo(1)self:epv0(50)self:epmi(0)self:epma(127)self:epse(50)--[[@cb]] function setJogLed(val)for i=5,9,1 do local intensity,lednum=gsc(i - 5,val,0,127),i glp(lednum,2,intensity)end end"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_reset_active_property\",0)--[[@bprel]] else--[[@bpre]] end--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)"
+                },
+                {
+                    "event": 7,
+                    "config": "--[[@cb]] gps(\"package-ableton-js\",\"ring_adjust_active_property_value\",0,self:epva()- 64)--[[@sglc]] self:glc(-1,{{255,55,10,0.3}})"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 9,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Play/Stop\")--[[@cb]] TOGGLE_UI={new=function(self,name,clr,animate)local instance=setmetatable({},{__index=self})instance.val=0 instance.name=name instance.state=false instance.clr=clr instance.animate=animate or false instance.defclr={50,50,50}return instance end,render=function(self)local c=self.val==1 and self.clr or self.defclr if self.animate==true and self.val==1 then self.state=not self.state c[1]=self.state and 255 or 0 end self.parent.lcd:ldaf(self.x,self.y,self.x + self.w,self.y + self.h,c)self.parent.lcd:ldft(self.val,self.x + 4,self.y + 4,16,{255,255,255})self.parent.lcd:ldft(self.name,self.x + 4,self.y + self.h - 20,16,{255,255,255})self.change=false end,set=function(self,par)self.change=true self.val=par and 1 or 0 end,}function requestState()gps(\"package-ableton-js\",\"request_full_state\")end"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"play_or_stop\")--[[@bprel]] else--[[@bpre]] end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 10,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Record\")--[[@cb]] RANGE_UI={new=function(self,n,clr,fs)local inst=setmetatable({},{__index=self})inst.val=0 inst.n=n inst.clr=clr inst.defclr={50,50,50}inst.nv=0 inst.fs=fs ~=nil and fs or 16 return inst end,render=function(self)self.parent.lcd:ldaf(self.x,self.y,self.x + self.w,self.y + self.h,self.defclr)if self.h > self.w then local fh=math.floor(self.nv * self.h)self.parent.lcd:ldaf(self.x,self.y + self.h - fh,self.x + self.w,self.y + self.h,self.clr)else local fw=math.floor(self.nv * self.w)self.parent.lcd:ldaf(self.x,self.y,self.x + fw,self.y + self.h,self.clr)end self.parent.lcd:ldft(self.val,self.x + 4,self.y + 4,self.fs,gW)self.parent.lcd:ldft(self.n,self.x + 4,self.y + self.h - 20,16,gW)self.change=false end,set=function(self,params)self.nv=params.nv self.val=(params.nv * 100)// 1 self.change=true if params.name ~=nil then self.n=params.name end end,}"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"record\")--[[@bprel]] else--[[@bpre]] end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 11,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Left\")--[[@cb]] TRACK_UI={new=function(self)local instance=setmetatable({},{__index=self})instance.name=\"\" instance.color={50,50,50}instance.val=0 return instance end,render=function(self)self.parent.lcd:ldaf(self.x,self.y,self.x + self.w,self.y + self.h,self.color)self.parent.lcd:ldft(self.name,self.x + 4,self.y + 4,16,{255,255,255})self.change=false end,set=function(self,params)self.name=params.name self.color=params.color self.val=params.val self.change=true end,}"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_navigate\",\"left\")--[[@bprel]] else--[[@bpre]] end"
+                },
+                {
+                    "event": 6,
+                    "config": ""
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 12,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Right\")--[[@cb]] function ableton_js_callback(p)local evt=p[\"evt\"]if evt==\"RT_TRANSPORT\" then recWg:set(p.recording)elseif evt==\"RT_MUTE\" then local v=not p.v muteWg:set(v)ele[4]:glp(1,v and 255 or 0)elseif evt==\"RT_SOLO\" then soloWg:set(p.v)ele[5]:glp(1,p.v and 255 or 0)elseif evt==\"RT_ARM\" then armWg:set(p.v)ele[6]:glp(1,p.v and 255 or 0)elseif evt==\"RT_INFO\" then if p.isMidi==true then volWg:set({nv=0})panWg:set({nv=0})end trackWg:set(p)elseif evt==\"RT_VOL\" then volWg:set(p)setJogLed(p.nv * 127)elseif evt==\"RT_PLAYING_CLIP\" then clipWg:set(p)elseif evt==\"RT_PAN\" then panWg:set(p)elseif evt==\"RT_PARAM\" then paramWg:set(p)elseif evt==\"RT_SEND\" then if p.si==0 then sendaWg:set(p)elseif p.si==1 then sendbWg:set(p)end end end"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@bpr]] if self:bst()> 0 then--[[@cb]] gps(\"package-ableton-js\",\"ring_navigate\",\"right\")--[[@bprel]] else--[[@bpre]] end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 13,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sn]] self:gen(\"Widgets\")--[[@cb]] glsb(255)gW={255,255,255}cnv1=Layout:new()cnv2=Layout:new()cnv3=Layout:new()cnv1:initialize(self,2,1,0,0,320,24)cnv2:initialize(self,2,3,0,24,320,168)cnv3:initialize(self,8,1,0,192,320,48)trackWg=cnv1:addWidget(0,0,TRACK_UI:new())clipWg=cnv1:addWidget(1,0,TRACK_UI:new())muteWg=cnv2:addWidget(0,0,TOGGLE_UI:new(\"MUTE\",{255,255,0}))soloWg=cnv2:addWidget(0,1,TOGGLE_UI:new(\"SOLO\",{0,0,255}))armWg=cnv2:addWidget(0,2,TOGGLE_UI:new(\"ARM\",{255,0,0}))volWg=cnv2:addWidget(1,0,RANGE_UI:new(\"VOLUME\",{255,255,0}))panWg=cnv2:addWidget(1,1,RANGE_UI:new(\"PAN\",{0,155,255}))paramWg=cnv2:addWidget(1,2,RANGE_UI:new(\"PARAM\",{255,10,10}))sendaWg=cnv3:addWidget(0,0,RANGE_UI:new(\"\",{0,50,200},8))sendbWg=cnv3:addWidget(1,0,RANGE_UI:new(\"\",{0,50,200},8))recWg=cnv3:addWidget(7,0,TOGGLE_UI:new(\"rc\",{255,0,0},true))cnv1:render()cnv2:render()cnv3:render()requestState()"
+                },
+                {
+                    "event": 8,
+                    "config": "--[[@cb]] cnv1:render()cnv2:render()cnv3:render()"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 255,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] Layout={new=function(self)local instance=setmetatable({},{__index=self})return instance end,addWidget=function(self,cx,cy,wg)wg.w=self.width / self.r // 1 wg.h=self.height / self.c // 1 wg.x=self.x + cx * wg.w // 1 wg.y=self.y + cy * wg.h // 1 wg.parent=self local ci=cy * self.r + cx self.cells[ci]=wg return wg end,initialize=function(self,lcd,hcc,vcc,x,y,w,h)self.lcd=lcd self.r=hcc self.c=vcc self.width=w self.height=h self.x=x self.y=y self.cells={}for i=0,hcc * vcc - 1 do self.cells[i]={}end end,render=function(self)for i=0,self.r * self.c - 1 do local cell=self.cells[i]if type(cell.render)==\"function\" and cell.change==true then cell:render()end end self.lcd:ldsw()end,}"
+                },
+                {
+                    "event": 4,
+                    "config": "--[[@cb]] gpl(gpn())"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        }
+    ],
+    "owner": "eePyy59w5KXLy0wkvqsv1iPmLUh1",
+    "virtualPath": "AbletonJS",
+    "cloudId": "FR4mD0UWMhli5FPpUfw3",
+    "fileName": "AbletonJS selected track control v1.3 (clip included) 2.json",
+    "isEditable": true,
+    "syncStatus": "synced",
+    "public": true
+}

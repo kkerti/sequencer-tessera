@@ -7,12 +7,14 @@
 --   lua proto/term/main.lua --bpm 120
 --
 -- Stdin protocol (one per line, from bridge.py):
---   CLK | START | STOP | QUIT | LOAD <slot> | SAVE <slot>
+--   CLK | START | STOP | QUIT | LOAD <slot>
+--   NOTE <note> <vel> <ch> | CC <cc> <val> <ch>   (mapped by io/midi_in)
 
 package.path = "src/core/?.lua;src/?.lua;" .. package.path
 
-local Engine = require("engine")
-local Stdio  = require("io.stdio")
+local Engine  = require("engine")
+local Stdio   = require("io.stdio")
+local MidiIn  = require("io.midi_in")
 local Persist = require("persist")
 
 local bpm = nil
@@ -61,6 +63,8 @@ else
             Stdio.emit(Engine.onStop())
         elseif line:match("^LOAD ") then
             Persist.load(Persist.slotPath(tonumber(line:match("%d+"))))
+        elseif line:sub(1, 5) == "NOTE " or line:sub(1, 3) == "CC " then
+            MidiIn.handle(line)
         elseif line == "QUIT" then
             break
         end

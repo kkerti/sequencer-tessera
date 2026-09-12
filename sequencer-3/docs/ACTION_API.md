@@ -113,6 +113,16 @@ navigate the sequence with an external signal.
 reads lane `N`'s current value. The enum is wired from the start; behaviour
 lands after the 4-lane core.
 
+## External MIDI mapping (host convention)
+
+The Mac adapter (`src/io/midi_in.lua`) maps incoming MIDI to external sources:
+
+- note `36 + n` -> `external.n` trigger (n = 0..7)
+- CC `20 + n` -> `external.n` value   (n = 0..7)
+
+The Core only ever sees `external.N`; the mapping is an adapter concern, so the
+Grid adapter can choose its own.
+
 ## Deliberately not here yet
 
 - **Parameter modulation** — a value source driving division / length / scale /

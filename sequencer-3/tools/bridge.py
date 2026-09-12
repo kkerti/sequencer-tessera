@@ -44,6 +44,10 @@ def midi_in_to_proc(proc, port_name):
             line = "STOP"
         elif msg.type == 'continue':
             line = "START"
+        elif msg.type == 'note_on':
+            line = f"NOTE {msg.note} {msg.velocity} {msg.channel + 1}"
+        elif msg.type == 'control_change':
+            line = f"CC {msg.control} {msg.value} {msg.channel + 1}"
         if line:
             try:
                 proc.stdin.write(line + "\n")

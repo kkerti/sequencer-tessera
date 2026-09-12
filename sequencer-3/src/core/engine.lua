@@ -46,7 +46,7 @@ function M.init(opts)
     end
     for i = 1, Sources.EXTERNAL_COUNT do
         M.externalTrigger[i] = false
-        M.externalValue[i] = 0
+        M.externalValue[i] = nil   -- unset until a CC arrives, so it never pins
     end
     for i = 1, Sources.LANE_COUNT do M.laneFired[i] = false end
     M.transport = Transport.new()
@@ -110,6 +110,7 @@ local function applyAdvance(lane, kind)
     elseif kind == "y" then Lane.advanceY(lane)
     elseif kind == "back" then Lane.advanceBackward(lane)
     else Lane.advanceForward(lane) end
+    lane.stepFire = true
 end
 
 local function applyAddress(lane, src)
@@ -122,6 +123,7 @@ local function applyAddress(lane, src)
     if pos ~= lane.position then
         lane.position = pos
         lane.emit = true
+        lane.stepFire = true
     end
 end
 
@@ -132,8 +134,12 @@ local function applyXAddress(lane, src)
     if x >= lane.width then x = lane.width - 1 end
     if x < 0 then x = 0 end
     local y = (lane.position - 1) // lane.width
-    lane.position = y * lane.width + x + 1
-    lane.emit = true
+    local pos = y * lane.width + x + 1
+    if pos ~= lane.position then
+        lane.position = pos
+        lane.emit = true
+        lane.stepFire = true
+    end
 end
 
 local function applyYAddress(lane, src)
@@ -143,8 +149,12 @@ local function applyYAddress(lane, src)
     if y >= lane.height then y = lane.height - 1 end
     if y < 0 then y = 0 end
     local x = (lane.position - 1) % lane.width
-    lane.position = y * lane.width + x + 1
-    lane.emit = true
+    local pos = y * lane.width + x + 1
+    if pos ~= lane.position then
+        lane.position = pos
+        lane.emit = true
+        lane.stepFire = true
+    end
 end
 
 local function clamp(v, lo, hi)
@@ -212,10 +222,15 @@ function M.onPulse()
 
     Transport.tick(M.transport)
 
+    -- Lanes are processed in order. A lane's fire flag is cleared at the start
+    -- of its own turn, so lane.k drives lane.j (j>k) on the SAME pulse; a
+    -- higher-index -> lower-index route lands one pulse later. Deterministic
+    -- either way.
     for i = 1, n do
         local l = lanes[i]
+        l.stepFire = false
         if sourceFired(l.resetSource) then l.pendingReset = true end
-        if sourceFired(l.randomSource) then Lane.randomizePosition(l) end
+        if sourceFired(l.randomSource) then Lane.randomizePosition(l); l.stepFire = true end
         if sourceFired(l.shiftSource) then Lane.rotate(l, l.shiftAmount) end
         if sourceFired(l.previousSource) then applyAdvance(l, "back") end
         if sourceFired(l.advanceSource) then applyAdvance(l, "linear") end
@@ -224,16 +239,8 @@ function M.onPulse()
         if l.addressSource ~= Sources.OFF then applyAddress(l, l.addressSource) end
         if l.xAddressSource ~= Sources.OFF then applyXAddress(l, l.xAddressSource) end
         if l.yAddressSource ~= Sources.OFF then applyYAddress(l, l.yAddressSource) end
-    end
-
-    for i = 1, Sources.LANE_COUNT do M.laneFired[i] = false end
-
-    for i = 1, n do
-        local l = lanes[i]
-        if l.emit then
-            emitStep(l)
-            if i <= Sources.LANE_COUNT then M.laneFired[i] = true end
-        end
+        if l.emit then emitStep(l) end
+        if i <= Sources.LANE_COUNT then M.laneFired[i] = l.stepFire end
     end
 
     for i = 1, Sources.EXTERNAL_COUNT do M.externalTrigger[i] = false end
@@ -577,6 +584,17 @@ function M.loadPreset(data)
             if p.midiNote then M.setMidiNote(i, p.midiNote) end
             if p.scaleMask then M.setScale(i, p.scaleMask, p.root or 0) end
             if p.advanceSource then M.setAdvanceSource(i, p.advanceSource) end
+            if p.xAdvanceSource then M.setXAdvanceSource(i, p.xAdvanceSource) end
+            if p.yAdvanceSource then M.setYAdvanceSource(i, p.yAdvanceSource) end
+            if p.resetSource then M.setResetSource(i, p.resetSource) end
+            if p.randomSource then M.setRandomSource(i, p.randomSource) end
+            if p.previousSource then M.setPreviousSource(i, p.previousSource) end
+            if p.shiftSource then M.setShiftSource(i, p.shiftSource) end
+            if p.shiftAmount then M.setShiftAmount(i, p.shiftAmount) end
+            if p.addressSource then M.setAddressSource(i, p.addressSource) end
+            if p.xAddressSource then M.setXAddressSource(i, p.xAddressSource) end
+            if p.yAddressSource then M.setYAddressSource(i, p.yAddressSource) end
+            if p.minNote or p.maxNote then M.setRange(i, p.minNote or 0, p.maxNote or 127) end
             if p.pitch then for k = 1, #p.pitch do l.pitch[k] = p.pitch[k] end end
             if p.velocity then for k = 1, #p.velocity do l.velocity[k] = p.velocity[k] end end
             if p.stepLength then for k = 1, #p.stepLength do l.stepLength[k] = p.stepLength[k] end end

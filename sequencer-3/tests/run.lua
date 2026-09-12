@@ -11,6 +11,7 @@ local Lane      = require("lane")
 local Transport = require("transport")
 local Sources   = require("sources")
 local Persist   = require("persist")
+local MidiIn    = require("io.midi_in")
 
 local pass, fail = 0, 0
 local function ok(cond, msg)
@@ -236,6 +237,106 @@ do
     ok(Engine.get(1, "pitch")[1] == 60, "preset 01 sets pitch 1")
     ok(Engine.get(1, "advanceSource") == Sources.TRANSPORT_SIXTEENTH,
        "preset 01 sets the advance source")
+end
+
+-- ------------------------------------------------------- engine: M2 nav ---
+
+do
+    Engine.init{ lanes = 4 }
+    for i = 2, 4 do Engine.setType(i, "trig") end
+    Engine.setType(1, "note")
+    Engine.setDimensions(1, "4x4")
+    Engine.setAdvanceSource(1, "off")
+    Engine.setXAdvanceSource(1, "external.0")
+    Engine.setYAdvanceSource(1, "external.1")
+    Engine.onStart(); Engine.onPulse()
+    Engine.setPosition(1, 1)
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(1).position == 2, "X advance moves along the row")
+    Engine.triggerExternal(2); Engine.onPulse()
+    ok(Engine.state(1).position == 6, "Y advance moves down the column")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    for i = 2, 4 do Engine.setType(i, "trig") end
+    Engine.setType(1, "note")
+    Engine.setDimensions(1, "4x4")
+    Engine.setAdvanceSource(1, "off")
+    Engine.setXAddressSource(1, "external.0")
+    Engine.setYAddressSource(1, "external.1")
+    Engine.onStart(); Engine.onPulse()
+    Engine.setExternalValue(1, 127)
+    Engine.setExternalValue(2, 0)
+    Engine.onPulse()
+    ok(Engine.state(1).position == 4, "X address 127 -> x = 3")
+    Engine.setExternalValue(2, 127)
+    Engine.onPulse()
+    ok(Engine.state(1).position == 16, "Y address 127 -> y = 3")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    for i = 2, 4 do Engine.setType(i, "trig") end
+    Engine.setType(1, "note")
+    for i = 1, 16 do Engine.setPitch(1, i, i) end
+    Engine.setAdvanceSource(1, "off")
+    Engine.setShiftSource(1, "external.0")
+    Engine.setShiftAmount(1, 1)
+    Engine.onStart(); Engine.onPulse()
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.get(1, "pitch")[1] == 16 and Engine.get(1, "pitch")[2] == 1,
+       "shift source rotates the step values")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "note"); Engine.setChannel(1, 1)
+    Engine.setType(2, "note"); Engine.setChannel(2, 2)
+    Engine.setType(3, "trig"); Engine.setType(4, "trig")
+    Engine.setAdvanceSource(1, "external.0")
+    Engine.setAdvanceSource(2, "lane.1")
+    Engine.setPitch(1, 2, 72); Engine.setPitch(2, 2, 48)
+    Engine.onStart(); Engine.onPulse()
+    ok(Engine.state(2).position == 1, "start does not cascade lane.1 into lane 2")
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(1).position == 2, "lane 1 advanced by external")
+    ok(Engine.state(2).position == 2, "lane 2 advanced by lane.1 on the same pulse")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    for i = 2, 4 do Engine.setType(i, "trig") end
+    Engine.setType(1, "note")
+    Engine.setAdvanceSource(1, "external.0")
+    Engine.onStart(); Engine.onPulse()
+    MidiIn.noteOn(36, 100)
+    Engine.onPulse()
+    ok(Engine.state(1).position == 2, "MIDI note 36 maps to external.0 (advance)")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    for i = 2, 4 do Engine.setType(i, "trig") end
+    Engine.setType(1, "note")
+    Engine.setAdvanceSource(1, "off")
+    Engine.setAddressSource(1, "external.0")
+    Engine.onStart(); Engine.onPulse()
+    MidiIn.controlChange(20, 127)
+    Engine.onPulse()
+    ok(Engine.state(1).position == 16, "MIDI CC 20 maps to an address value")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.loadPreset{ lanes = { {
+        type = "note", dims = "4x4",
+        xAdvanceSource = "transport.sixteenth",
+        yAdvanceSource = "transport.quarter",
+    } } }
+    ok(Engine.get(1, "xAdvanceSource") == Sources.TRANSPORT_SIXTEENTH
+       and Engine.get(1, "yAdvanceSource") == Sources.TRANSPORT_QUARTER,
+       "preset applies X/Y advance sources")
 end
 
 -- --------------------------------------------------------- no-alloc ---

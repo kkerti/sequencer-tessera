@@ -1,7 +1,8 @@
 # AGENTS.md — sequencer-3
 
-Status: **foundations settled** (design grilling complete). M1 is not yet built.
-Settled decisions are locked; deferred work is listed at the end.
+Status: **building.** M1 (Mac loop) and M2 (matrix nav + external MIDI in) are
+built and tested; M3 is next. Settled decisions are locked; deferred work is
+listed at the end.
 
 ## Project in one sentence
 
@@ -128,12 +129,14 @@ sequencer-3/
 
 ## Milestones
 
-- **M1 — Mac loop.** 1 Note lane, external MIDI clock in from Ableton, notes
-  out, action API, one preset, no-alloc test. *(definition of done agreed)*
-- **M2 — Four lanes + matrix nav.** X/Y advance sources, step addressing
-  (value sources), live rotate/shift, dims layouts, per-step velocity/length,
-  lane→lane advance.
-- **M3 — Lane types.** Mod (CC), Trig, Gate; wire `external` value sources.
+- **M1 — Mac loop. ✅ BUILT.** 1 Note lane, external MIDI clock from Ableton,
+  notes out, action API, no-alloc test. `presets/01.lua`.
+- **M2 — Four lanes + matrix nav. ✅ BUILT.** `dims` layouts, X/Y advance,
+  X/Y address value sources, shift/rotate, per-step velocity/length,
+  same-pulse lane→lane, external MIDI mapping. `presets/02.lua` (matrix),
+  `presets/03.lua` (MIDI-reactive). Tests: 57 checks, no-alloc green.
+- **M3 — Lane-type polish.** Mod/Trig/Gate exist in the Core; next is making all
+  four lanes playable together and presets that use them.
 - **M4 — Gamut lane + generator**, presets polish.
 - **Later — Grid VSN1 control interface** (widget system, buttons, minimal
   screen) against the action API.
@@ -148,19 +151,12 @@ sequencer-3/
 - **Grid VSN1 control interface** — buttons + minimal screen, built against the
   action API.
 
-## M1 task list (not started)
+## Build log (M1, M2 done)
 
-1. Scaffold the layout: `src/core/{scales,lane,transport,engine}.lua`,
-   `src/midi/out.lua`, `src/io/stdio.lua`, `proto/term/main.lua`,
-   `tests/run.lua`, `tools/bridge.py`, `presets/01.lua`.
-2. Write tests **from our spec first** (scales, lane storage, transport
-   advance/div/reset, x/y index, quantize-at-output). seq-2 is a reference, not
-   ground truth — verify before porting anything.
-3. Implement in order: `scales` -> `lane` -> `transport` -> `engine` ->
-   `midi/out`.
-4. Add the no-alloc pulse test (20k pulses, <1 KB growth).
-5. Port `bridge.py`; wire Ableton clock in / notes out; verify by ear.
-6. Implement the full action API (`docs/ACTION_API.md`) and one default preset.
+The Task list for M1 is complete (scaffold, spec tests, `scales` -> `lane` ->
+`transport` -> `engine` -> `midi/out`, no-alloc test, `bridge.py`, preset).
+M2 added X/Y advance and address, shift/rotate, same-pulse lane→lane, the
+`io/midi_in` external mapping, and presets 02/03.
 
 ## Cross-cutting references
 

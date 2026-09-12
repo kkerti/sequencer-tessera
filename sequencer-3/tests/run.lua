@@ -339,6 +339,75 @@ do
        "preset applies X/Y advance sources")
 end
 
+-- ------------------------------------------------- engine: lane types ---
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "trig"); Engine.setMidiNote(1, 36)
+    Engine.setType(2, "note"); Engine.setChannel(2, 2)
+    Engine.setType(3, "trig"); Engine.setType(4, "trig")
+    Engine.setGate(1, 1, 1); Engine.setGate(1, 2, 0); Engine.setGate(1, 3, 1)
+    Engine.setAdvanceSource(1, "external.0")
+    Engine.setAdvanceSource(2, "lane.1")
+    Engine.onStart(); Engine.onPulse()
+    ok(Engine.state(2).position == 1, "lane.1 does not cascade at start")
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(2).position == 1, "trig lane with gate off does not fire lane.1")
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(2).position == 2, "trig lane fires lane.1 on an active step")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "mod"); Engine.setType(2, "note"); Engine.setChannel(2, 2)
+    Engine.setType(3, "trig"); Engine.setType(4, "trig")
+    Engine.setValue(1, 1, 100); Engine.setValue(1, 2, 10); Engine.setValue(1, 3, 100)
+    Engine.setAdvanceSource(1, "external.0")
+    Engine.setAdvanceSource(2, "lane.1")
+    Engine.onStart(); Engine.onPulse()
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(2).position == 1, "mod lane below threshold does not fire")
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(2).position == 2, "mod lane above threshold fires")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "gate"); Engine.setMidiNote(1, 40)
+    Engine.setType(2, "note"); Engine.setChannel(2, 2)
+    Engine.setType(3, "trig"); Engine.setType(4, "trig")
+    Engine.setGate(1, 1, 1); Engine.setGate(1, 2, 1)
+    Engine.setGate(1, 3, 0); Engine.setGate(1, 4, 1)
+    Engine.setAdvanceSource(1, "external.0")
+    Engine.setAdvanceSource(2, "lane.1")
+    Engine.onStart(); Engine.onPulse()
+    Engine.triggerExternal(1); Engine.onPulse()
+    ok(Engine.state(2).position == 1, "held gate does not re-fire on the next step")
+    Engine.triggerExternal(1); Engine.onPulse()   -- gate low
+    Engine.triggerExternal(1); Engine.onPulse()   -- gate high again
+    ok(Engine.state(2).position == 2, "gate fires lane.1 on a rising edge")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "note"); Engine.setChannel(1, 1)
+    Engine.setType(2, "trig"); Engine.setMidiNote(2, 38); Engine.setChannel(2, 2)
+    Engine.setType(3, "mod"); Engine.setController(3, 74); Engine.setChannel(3, 3)
+    Engine.setType(4, "trig")
+    Engine.setGate(2, 1, 1)
+    Engine.setValue(3, 1, 90)
+    for i = 1, 4 do Engine.setAdvanceSource(i, "off") end
+    Engine.onStart(); Engine.onPulse()
+    local sawNote, sawTrig, sawCC = false, false, false
+    for i = 1, Engine.out.n do
+        local t, ch = Engine.out.typ[i], Engine.out.channel[i]
+        if t == 1 and ch == 1 then sawNote = true end
+        if t == 1 and ch == 2 then sawTrig = true end
+        if t == 2 and ch == 3 then sawCC = true end
+    end
+    ok(sawNote and sawTrig and sawCC, "four lanes emit together (note + trig + CC)")
+end
+
 -- --------------------------------------------------------- no-alloc ---
 
 do

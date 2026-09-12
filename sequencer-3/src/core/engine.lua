@@ -17,6 +17,10 @@ local M = {}
 
 local OUT_CAP = 64
 
+-- A Mod lane counts as "firing" at or above this value, so it can drive
+-- another lane's trigger source (MD2's Out-threshold behaviour).
+local MOD_FIRE_THRESHOLD = 64
+
 M.lanes = {}
 M.out = { n = 0, typ = {}, pitch = {}, velocity = {}, channel = {} }
 M.transport = Transport.new()
@@ -24,6 +28,7 @@ M.externalTrigger = {}
 M.externalValue = {}
 M.laneFired = {}
 M.running = false
+M.suppressFire = false
 
 -- ---------------------------------------------------------------- init ---
 
@@ -51,6 +56,7 @@ function M.init(opts)
     for i = 1, Sources.LANE_COUNT do M.laneFired[i] = false end
     M.transport = Transport.new()
     M.running = false
+    M.suppressFire = false
     return M
 end
 
@@ -110,7 +116,6 @@ local function applyAdvance(lane, kind)
     elseif kind == "y" then Lane.advanceY(lane)
     elseif kind == "back" then Lane.advanceBackward(lane)
     else Lane.advanceForward(lane) end
-    lane.stepFire = true
 end
 
 local function applyAddress(lane, src)
@@ -123,7 +128,6 @@ local function applyAddress(lane, src)
     if pos ~= lane.position then
         lane.position = pos
         lane.emit = true
-        lane.stepFire = true
     end
 end
 
@@ -138,7 +142,6 @@ local function applyXAddress(lane, src)
     if pos ~= lane.position then
         lane.position = pos
         lane.emit = true
-        lane.stepFire = true
     end
 end
 
@@ -153,7 +156,6 @@ local function applyYAddress(lane, src)
     if pos ~= lane.position then
         lane.position = pos
         lane.emit = true
-        lane.stepFire = true
     end
 end
 
@@ -163,6 +165,7 @@ end
 
 local function emitStep(lane)
     local pos = lane.position
+    lane.fired = false
     if lane.type == "note" then
         if lane.activeNote then
             addEvent(0, lane.activeNote, 0, lane.channel)
@@ -174,14 +177,18 @@ local function emitStep(lane)
         lane.activeNote = p
         lane.noteOffIn = lane.stepLength[pos]
         lane.sustain = false
+        lane.fired = true
     elseif lane.type == "mod" then
-        addEvent(2, lane.controller or 0, clamp(lane.value[pos], lane.minValue, lane.maxValue), lane.channel)
+        local v = clamp(lane.value[pos], lane.minValue, lane.maxValue)
+        addEvent(2, lane.controller or 0, v, lane.channel)
+        lane.fired = v >= MOD_FIRE_THRESHOLD
     elseif lane.type == "trig" then
         if lane.gate[pos] == 1 then
             addEvent(1, lane.midiNote, 100, lane.channel)
             lane.activeNote = lane.midiNote
             lane.noteOffIn = 1
             lane.sustain = false
+            lane.fired = true
         end
     elseif lane.type == "gate" then
         if lane.gate[pos] == 1 then
@@ -189,6 +196,7 @@ local function emitStep(lane)
                 addEvent(1, lane.midiNote, 100, lane.channel)
                 lane.activeNote = lane.midiNote
                 lane.sustain = true
+                lane.fired = true
             end
         elseif lane.activeNote then
             addEvent(0, lane.activeNote, 0, lane.channel)
@@ -228,9 +236,8 @@ function M.onPulse()
     -- either way.
     for i = 1, n do
         local l = lanes[i]
-        l.stepFire = false
         if sourceFired(l.resetSource) then l.pendingReset = true end
-        if sourceFired(l.randomSource) then Lane.randomizePosition(l); l.stepFire = true end
+        if sourceFired(l.randomSource) then Lane.randomizePosition(l) end
         if sourceFired(l.shiftSource) then Lane.rotate(l, l.shiftAmount) end
         if sourceFired(l.previousSource) then applyAdvance(l, "back") end
         if sourceFired(l.advanceSource) then applyAdvance(l, "linear") end
@@ -240,8 +247,11 @@ function M.onPulse()
         if l.xAddressSource ~= Sources.OFF then applyXAddress(l, l.xAddressSource) end
         if l.yAddressSource ~= Sources.OFF then applyYAddress(l, l.yAddressSource) end
         if l.emit then emitStep(l) end
-        if i <= Sources.LANE_COUNT then M.laneFired[i] = l.stepFire end
+        if i <= Sources.LANE_COUNT then
+            M.laneFired[i] = (not M.suppressFire) and l.fired or false
+        end
     end
+    M.suppressFire = false
 
     for i = 1, Sources.EXTERNAL_COUNT do M.externalTrigger[i] = false end
 
@@ -260,6 +270,7 @@ function M.onStart()
         l.emit = true
     end
     for i = 1, Sources.LANE_COUNT do M.laneFired[i] = false end
+    M.suppressFire = true
     return M.out
 end
 

@@ -1,8 +1,7 @@
 # AGENTS.md — sequencer-3
 
-Status: **building.** M1 (Mac loop) and M2 (matrix nav + external MIDI in) are
-built and tested; M3 is next. Settled decisions are locked; deferred work is
-listed at the end.
+Status: **building.** M1–M3 are built and tested; M4 (Gamut generator) is next.
+Settled decisions are locked; deferred work is listed at the end.
 
 ## Project in one sentence
 
@@ -135,8 +134,10 @@ sequencer-3/
   X/Y address value sources, shift/rotate, per-step velocity/length,
   same-pulse lane→lane, external MIDI mapping. `presets/02.lua` (matrix),
   `presets/03.lua` (MIDI-reactive). Tests: 57 checks, no-alloc green.
-- **M3 — Lane-type polish.** Mod/Trig/Gate exist in the Core; next is making all
-  four lanes playable together and presets that use them.
+- **M3 — Lane types + four-lane performance. ✅ BUILT.** Lane `fire` now reflects
+  output (Trig = active step, Gate = rising edge, Mod = at/above threshold);
+  start no longer cascades. `presets/04.lua` (Voice: trig drives note + 2×mod)
+  and `presets/05.lua` (4-lane polyrhythm) exercise all types. Tests: 65 checks.
 - **M4 — Gamut lane + generator**, presets polish.
 - **Later — Grid VSN1 control interface** (widget system, buttons, minimal
   screen) against the action API.

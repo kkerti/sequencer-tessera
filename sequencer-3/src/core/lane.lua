@@ -26,7 +26,7 @@ function M.new(kind)
         type = kind or "note",
         dims = "16x1", width = 16, height = 1,
         length = 16, division = 1, divCount = 0,
-        position = 1, emit = false, pendingReset = false, stepFire = false,
+        position = 1, emit = false, pendingReset = false, fired = false,
         channel = 1, controller = 1, midiNote = 60,
         scaleMask = 0xAB5, rawScaleMask = 0xAB5, root = 0,
         minNote = 0, maxNote = 127,

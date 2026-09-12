@@ -1,7 +1,8 @@
 # AGENTS.md — sequencer-3
 
-Status: **building.** M1–M3 are built and tested; M4 (Gamut generator) is next.
-Settled decisions are locked; deferred work is listed at the end.
+Status: **building.** M1–M4 are built and tested. Next is the Grid VSN1 control
+interface (out of scope until then). Settled decisions are locked; deferred work
+is listed at the end.
 
 ## Project in one sentence
 
@@ -138,7 +139,11 @@ sequencer-3/
   output (Trig = active step, Gate = rising edge, Mod = at/above threshold);
   start no longer cascades. `presets/04.lua` (Voice: trig drives note + 2×mod)
   and `presets/05.lua` (4-lane polyrhythm) exercise all types. Tests: 65 checks.
-- **M4 — Gamut lane + generator**, presets polish.
+- **M4 — Gamut generator. ✅ BUILT.** `src/core/generate.lua`: seeded, alloc-free
+  Gamut (root/base, spread, downUp, velocity/gate spread) with one-shot fill and
+  `live` playhead regeneration, plus a Euclidean rhythm fill for Trig/Gate
+  lanes. `presets/06.lua` (live gamut + euclid). Tests: 73 checks, no-alloc
+  green with a live generator on the pulse path.
 - **Later — Grid VSN1 control interface** (widget system, buttons, minimal
   screen) against the action API.
 
@@ -146,18 +151,20 @@ sequencer-3/
 
 - **Parameter modulation** — a value source driving division/length/scale/root/
   range. Deliberately deferred; not in the v1 API.
-- **Gamut generator** parameters + UI mapping.
+- **Gamut UI mapping** — parameters exist in the Core; the control surface is
+  part of the later Grid work.
 - **Polyphony via MPE** — FH-2 + FHX expanders; member-channel path only.
 - **14-bit CC** — Mod lane stays 7-bit for now.
 - **Grid VSN1 control interface** — buttons + minimal screen, built against the
   action API.
 
-## Build log (M1, M2 done)
+## Build log (M1–M4 done)
 
-The Task list for M1 is complete (scaffold, spec tests, `scales` -> `lane` ->
-`transport` -> `engine` -> `midi/out`, no-alloc test, `bridge.py`, preset).
-M2 added X/Y advance and address, shift/rotate, same-pulse lane→lane, the
-`io/midi_in` external mapping, and presets 02/03.
+M1: full Core (`scales` -> `lane` -> `transport` -> `engine` -> `midi/out`),
+no-alloc test, `bridge.py`, preset. M2: X/Y advance and address, shift/rotate,
+same-pulse lane→lane, `io/midi_in` external mapping, presets 02/03. M3: lane
+fire semantics per type, four-lane presets 04/05. M4: `generate.lua` Gamut +
+Euclid, live generation, preset 06. Tests: 73 checks.
 
 ## Cross-cutting references
 

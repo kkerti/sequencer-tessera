@@ -12,6 +12,7 @@ local Sources   = require("sources")
 local Scales    = require("scales")
 local Lane      = require("lane")
 local Transport = require("transport")
+local Generate  = require("generate")
 
 local M = {}
 
@@ -246,7 +247,10 @@ function M.onPulse()
         if l.addressSource ~= Sources.OFF then applyAddress(l, l.addressSource) end
         if l.xAddressSource ~= Sources.OFF then applyXAddress(l, l.xAddressSource) end
         if l.yAddressSource ~= Sources.OFF then applyYAddress(l, l.yAddressSource) end
-        if l.emit then emitStep(l) end
+        if l.emit then
+            if l.generator == 1 then Generate.step(l) end
+            emitStep(l)
+        end
         if i <= Sources.LANE_COUNT then
             M.laneFired[i] = (not M.suppressFire) and l.fired or false
         end
@@ -575,7 +579,16 @@ function M.copy(from, to)
 end
 
 function M.generate(lane, opts)
-    return false   -- Euclidean/Gamut generators land in M4
+    local l = lanep(lane); if not l then return false end
+    opts = opts or {}
+    local kind = opts.kind or "gamut"
+    if kind == "euclid" or kind == "rhythm" then
+        return Generate.euclidean(l, opts)
+    end
+    Generate.configure(l, opts)
+    if opts.fill ~= false then Generate.fill(l) end
+    l.generator = opts.live and 1 or 0
+    return true
 end
 
 -- ------------------------------------------------------------ presets ---
@@ -611,6 +624,7 @@ function M.loadPreset(data)
             if p.stepLength then for k = 1, #p.stepLength do l.stepLength[k] = p.stepLength[k] end end
             if p.value then for k = 1, #p.value do l.value[k] = p.value[k] end end
             if p.gate then for k = 1, #p.gate do l.gate[k] = p.gate[k] end end
+            if p.generate then M.generate(i, p.generate) end
         end
     end
     return true

@@ -42,6 +42,9 @@ function M.new(kind)
         xAddressSource = Sources.OFF,
         yAddressSource = Sources.OFF,
         activeNote = nil, noteOffIn = 0, sustain = false,
+        generator = 0,
+        genBase = 60, genSpread = 12, genDownUp = 64,
+        genVelSpread = 0, genGateSpread = 0, rng = 1,
         pitch = {}, velocity = {}, stepLength = {}, value = {}, gate = {},
     }
     for i = 1, M.CAP do

@@ -408,6 +408,72 @@ do
     ok(sawNote and sawTrig and sawCC, "four lanes emit together (note + trig + CC)")
 end
 
+-- ------------------------------------------------- engine: M4 gen ---
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "note"); Engine.setScale(1, Scales.MAJOR, 0)
+    Engine.generate(1, { kind = "gamut", base = 60, spread = 12, downUp = 64, seed = 42 })
+    local first = {}
+    for i = 1, 16 do first[i] = Engine.get(1, "pitch")[i] end
+    Engine.generate(1, { kind = "gamut", base = 60, spread = 12, downUp = 64, seed = 42 })
+    local same, inScale, inRange = true, true, true
+    local mask = Engine.get(1, "scaleMask")
+    for i = 1, 16 do
+        local p = Engine.get(1, "pitch")[i]
+        if p ~= first[i] then same = false end
+        if ((mask >> (p % 12)) & 1) == 0 then inScale = false end
+        if p < 48 or p > 72 then inRange = false end
+    end
+    ok(same, "gamut generator is deterministic for a seed")
+    ok(inScale, "gamut pitches are quantized to the scale")
+    ok(inRange, "gamut pitches stay within base +/- spread")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "trig")
+    Engine.generate(1, { kind = "euclid", hits = 3 })
+    local count = 0
+    for i = 1, 16 do count = count + Engine.get(1, "gate")[i] end
+    ok(count == 3, "euclidean generator places exactly `hits` onsets")
+end
+
+do
+    local G = require("generate")
+    local l = Lane.new("note")
+    G.configure(l, { seed = 5, base = 60, spread = 12 })
+    G.step(l, 1)
+    local a = l.pitch[1]
+    G.configure(l, { seed = 5, base = 60, spread = 12 })
+    G.step(l, 1)
+    ok(l.pitch[1] == a, "Generate.step is deterministic")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "note"); Engine.setScale(1, Scales.MAJOR, 0)
+    Engine.setAdvanceSource(1, "external.0")
+    Engine.generate(1, { kind = "gamut", base = 60, spread = 12, seed = 7, live = true })
+    ok(Engine.get(1, "generator") == 1, "live gamut generator is enabled")
+    Engine.onStart(); Engine.onPulse()
+    Engine.triggerExternal(1); Engine.onPulse()
+    local mask = Engine.get(1, "scaleMask")
+    local p = Engine.get(1, "pitch")[Engine.state(1).position]
+    ok(((mask >> (p % 12)) & 1) == 1, "live-generated step is in scale")
+end
+
+do
+    Engine.init{ lanes = 4 }
+    Engine.loadPreset{ lanes = { {
+        type = "note", scaleMask = Scales.MAJOR, root = 0,
+        generate = { kind = "gamut", seed = 3, spread = 12 },
+    } } }
+    local mask = Engine.get(1, "scaleMask")
+    local p = Engine.get(1, "pitch")[1]
+    ok(((mask >> (p % 12)) & 1) == 1, "preset generate fills in-scale pitches")
+end
+
 -- --------------------------------------------------------- no-alloc ---
 
 do
@@ -417,6 +483,7 @@ do
         Engine.setAdvanceSource(i, "transport.sixteenth")
         for k = 1, 16 do Engine.setPitch(i, k, 60 + k) end
     end
+    Engine.generate(1, { kind = "gamut", seed = 1, spread = 12, live = true })
     Engine.onStart()
     for _ = 1, 2000 do Engine.onPulse() end
     collectgarbage("collect"); collectgarbage("collect")

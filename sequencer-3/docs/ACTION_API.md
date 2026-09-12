@@ -82,7 +82,7 @@ seq3.ramp(lane)                      -- ramp pattern
 seq3.hill(lane)                      -- hill pattern
 seq3.boost(lane, factor)             -- raise/lower all values (MD2 Copy+turn)
 seq3.copy(from, to)                  -- copy one lane to another
-seq3.generate(lane, opts)            -- generator (Euclidean now, Gamut later)
+seq3.generate(lane, opts)            -- fill a lane (see Generators below)
 ```
 
 ## Presets / introspection
@@ -112,6 +112,22 @@ navigate the sequence with an external signal.
 (Trig/Gate) or its value crosses a threshold (Note/Mod). As a value source it
 reads lane `N`'s current value. The enum is wired from the start; behaviour
 lands after the 4-lane core.
+
+## Generators
+
+`seq3.generate(lane, opts)`:
+
+- **`kind = "gamut"`** (default): fill the lane around `base`, quantized to the
+  lane's scale. `spread` (semitones), `downUp` (0 = all below base .. 127 = all
+  above), `velSpread`, `gateSpread`, `seed`. On a Trig/Gate lane, `spread`
+  reads as density percent.
+  - `live = true`: regenerate the playhead step on every advance (endless).
+  - `fill = false`: configure only; don't fill the steps now.
+- **`kind = "euclid"`** (alias `rhythm`): fill a Trig/Gate lane with `hits`
+  onsets across the steps, optional `rotate`.
+
+Deterministic for a given `seed`; alloc-free, so `live` is safe on the pulse
+path.
 
 ## External MIDI mapping (host convention)
 

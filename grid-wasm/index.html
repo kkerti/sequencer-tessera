@@ -3,377 +3,417 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Grid Screen Test - Sequencer UI</title>
+    <title>Grid Screen Harness — VSN1</title>
     <style>
-      body { font-family: monospace; background: #1a1a1a; color: #ccc; margin: 20px; }
+      body { font-family: monospace; background: #161619; color: #cfcfd4; margin: 0; padding: 20px; }
+      h3 { color: #8a8a93; margin: 18px 0 6px 0; }
+      a { color: #6fb5e6; }
+
+      .wrap { max-width: 980px; margin: 0 auto; }
+      .row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+      .col { flex: 1 1 380px; min-width: 340px; }
+
+      /* --- canvas / emscripten --- */
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
-      textarea.emscripten { font-family: monospace; width: 80%; background: #2a2a2a; color: #eee; border: 1px solid #555; padding: 8px; }
+      textarea.emscripten { font-family: monospace; width: 100%; box-sizing: border-box;
+                            background: #202024; color: #eee; border: 1px solid #3a3a42; padding: 8px; }
       div.emscripten { text-align: center; }
-      div.emscripten_border { border: 2px solid #555; display: inline-block; }
-      canvas.emscripten { border: 0px none; background-color: black; }
+      div.emscripten_border { border: 2px solid #3a3a42; display: inline-block; }
+      canvas.emscripten { border: 0 none; background-color: black; }
 
       .spinner {
-        height: 50px; width: 50px; margin: 0px auto;
+        height: 40px; width: 40px; margin: 0 auto;
         animation: rotation 0.8s linear infinite;
-        border-left: 10px solid rgb(0,150,240); border-right: 10px solid rgb(0,150,240);
-        border-bottom: 10px solid rgb(0,150,240); border-top: 10px solid rgb(100,0,200);
+        border-left: 8px solid rgb(0,150,240); border-right: 8px solid rgb(0,150,240);
+        border-bottom: 8px solid rgb(0,150,240); border-top: 8px solid rgb(100,0,200);
         border-radius: 100%; background-color: rgb(200,100,250);
       }
       @keyframes rotation { from {transform: rotate(0deg);} to {transform: rotate(360deg);} }
 
-      .controls { margin: 10px 0; text-align: center; }
-      .controls button { background: #444; color: #eee; border: 1px solid #666; padding: 6px 16px;
-                         cursor: pointer; font-family: monospace; margin: 0 4px; }
-      .controls button:hover { background: #555; }
-      .controls button.active { background: #336; border-color: #66a; }
-      .controls select { background: #444; color: #eee; border: 1px solid #666; padding: 6px;
-                         font-family: monospace; }
-      .input-panel { margin: 12px auto; text-align: center; max-width: 640px; }
-      .input-row { margin: 8px 0; }
-      .input-row label { display: inline-block; margin-bottom: 6px; color: #aaa; }
-      .input-row input[type=number] { width: 90px; background: #444; color: #eee; border: 1px solid #666;
-                                     padding: 6px; font-family: monospace; }
-      .input-meta { margin-left: 8px; color: #8aa; }
-      .button-grid { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-      .button-grid.two-rows { width: 340px; }
-      .input-button { width: 74px; height: 38px; background: #3f3f3f; color: #eee; border: 1px solid #666;
-                      cursor: pointer; font-family: monospace; }
-      .input-button.pressed { background: #2a5577; border-color: #5da0d6; }
-      h3 { color: #888; margin: 15px 0 5px 0; text-align: center; }
+      /* --- controls --- */
+      .controls { margin: 10px 0; }
+      .controls button, .controls select {
+        background: #2d2d33; color: #eee; border: 1px solid #4a4a54; padding: 6px 12px;
+        cursor: pointer; font-family: monospace; margin: 0 4px 4px 0;
+      }
+      .controls button:hover { background: #3a3a42; }
+
+      /* --- VSN1 faceplate --- */
+      .panel { background: #1d1d21; border: 1px solid #32323a; border-radius: 8px;
+               padding: 14px; margin-top: 4px; }
+      .panel .label { color: #8a8a93; font-size: 12px; margin-bottom: 8px; }
+      .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+      .ctrl {
+        width: 64px; height: 44px; background: #33333a; color: #e7e7ea;
+        border: 1px solid #4a4a54; border-radius: 6px; cursor: pointer;
+        font-family: monospace; font-size: 12px; line-height: 1.2; text-align: center;
+        user-select: none; touch-action: none;
+      }
+      .ctrl small { display: block; color: #8a8a93; font-size: 10px; }
+      .ctrl.pressed { background: #23506f; border-color: #5da0d6; color: #fff; }
+      .ctrl.pressed small { color: #bcdcf3; }
+      .ctrl.enc { background: #3a2f20; border-color: #6e5a33; }
+      .ctrl.enc:hover { background: #473a27; }
+      .enc-readout { display: inline-block; margin-left: 8px; color: #d6b57a; font-size: 12px; }
+
+      details.spec { margin-top: 16px; background: #1d1d21; border: 1px solid #32323a;
+                     border-radius: 8px; padding: 10px 14px; }
+      details.spec summary { cursor: pointer; color: #8a8a93; }
+      details.spec code { color: #9fd0a0; }
+      details.spec table { border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+      details.spec td, details.spec th { border: 1px solid #32323a; padding: 3px 8px; text-align: left; }
     </style>
   </head>
   <body>
+  <div class="wrap">
     <figure style="overflow:visible;" id="spinner"><div class="spinner"></div><center style="margin-top:0.5em"><strong>emscripten</strong></center></figure>
     <div class="emscripten" id="status">Downloading...</div>
-    <div class="emscripten">
-      <progress value="0" max="100" id="progress" hidden=1></progress>
-    </div>
+    <div class="emscripten"><progress value="0" max="100" id="progress" hidden=1></progress></div>
 
-    <div style="text-align:center;">
-      <div class="emscripten_border">
-        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
-      </div>
-    </div>
-
-    <div class="controls">
-      <label for="screenFile">Screen file:</label>
-      <select id="screenFile">
-        <option value="">-- default demo --</option>
-      </select>
-      <button id="loadFileButton">Load .lua file</button>
-      <button id="loadScriptButton">Load from textareas</button>
-      <button id="reloadButton">Reload current</button>
-    </div>
-
-    <div class="input-panel">
-      <div class="input-row">
-        <label for="encoderInput">Endless encoder [8]</label><br>
-        <input type="number" id="encoderInput" step="1" value="0">
-        <span class="input-meta" id="encoderDisplay">delta +0 | sliderValue 50</span>
-      </div>
-
-      <div class="input-row">
-        <label>Small buttons [9-12]</label><br>
-        <div class="button-grid">
-          <button type="button" class="input-button" data-index="9">BTN 9</button>
-          <button type="button" class="input-button" data-index="10">BTN 10</button>
-          <button type="button" class="input-button" data-index="11">BTN 11</button>
-          <button type="button" class="input-button" data-index="12">BTN 12</button>
+    <div class="row">
+      <!-- LEFT: screen + faceplate -->
+      <div class="col">
+        <div style="text-align:center;">
+          <div class="emscripten_border">
+            <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+          </div>
         </div>
+
+        <h3>VSN1 faceplate</h3>
+        <div class="panel">
+          <div class="label">Buttons under screen — momentary [9&ndash;12]</div>
+          <div class="btn-row">
+            <button class="ctrl" data-index="9">BTN<small>9</small></button>
+            <button class="ctrl" data-index="10">BTN<small>10</small></button>
+            <button class="ctrl" data-index="11">BTN<small>11</small></button>
+            <button class="ctrl" data-index="12">BTN<small>12</small></button>
+          </div>
+
+          <div class="label">Endless encoder [8]
+            <span class="enc-readout" id="encReadout">value 0</span>
+          </div>
+          <div class="btn-row">
+            <button class="ctrl enc" id="encDown">ENC<small>&minus;</small></button>
+            <button class="ctrl enc" id="encUp">ENC<small>+</small></button>
+          </div>
+
+          <div class="label">Keyswitches — momentary [0&ndash;7]</div>
+          <div class="btn-row">
+            <button class="ctrl" data-index="0">KEY<small>0</small></button>
+            <button class="ctrl" data-index="1">KEY<small>1</small></button>
+            <button class="ctrl" data-index="2">KEY<small>2</small></button>
+            <button class="ctrl" data-index="3">KEY<small>3</small></button>
+            <button class="ctrl" data-index="4">KEY<small>4</small></button>
+            <button class="ctrl" data-index="5">KEY<small>5</small></button>
+            <button class="ctrl" data-index="6">KEY<small>6</small></button>
+            <button class="ctrl" data-index="7">KEY<small>7</small></button>
+          </div>
+        </div>
+
+        <details class="spec">
+          <summary>Input spec (what the Lua code sees) &mdash; full doc in INPUT_SPEC.md</summary>
+          <p>Every run, these globals are prepended to the init script:</p>
+          <table>
+            <tr><th>global</th><th>meaning</th></tr>
+            <tr><td><code>SCREEN_W</code> / <code>SCREEN_H</code></td><td>320 / 240</td></tr>
+            <tr><td><code>grid.button_value[i]</code></td><td>0&ndash;12: <code>0</code>/<code>127</code> (buttons), position (enc 8)</td></tr>
+            <tr><td><code>grid.button_state[i]</code></td><td>0 released / 1 pressed</td></tr>
+            <tr><td><code>grid.encoder_value</code></td><td>encoder accumulator 0&ndash;127</td></tr>
+            <tr><td><code>grid.encoder_delta</code></td><td>last turn: -1 / 0 / +1</td></tr>
+            <tr><td><code>grid.event_index</code></td><td>index of most recent event (-1 none)</td></tr>
+            <tr><td><code>grid.event_value</code></td><td>value that event carried</td></tr>
+          </table>
+          <p>Legacy aliases kept for seq2 screens: <code>sliderValue</code>, <code>uiControlDown[i]</code>,
+             <code>uiEncoderDelta</code>, <code>uiLastEventIndex</code>&hellip;</p>
+        </details>
       </div>
 
-      <div class="input-row">
-        <label>Keyswitches [0-7]</label><br>
-        <div class="button-grid two-rows">
-          <button type="button" class="input-button" data-index="0">KEY 0</button>
-          <button type="button" class="input-button" data-index="1">KEY 1</button>
-          <button type="button" class="input-button" data-index="2">KEY 2</button>
-          <button type="button" class="input-button" data-index="3">KEY 3</button>
-          <button type="button" class="input-button" data-index="4">KEY 4</button>
-          <button type="button" class="input-button" data-index="5">KEY 5</button>
-          <button type="button" class="input-button" data-index="6">KEY 6</button>
-          <button type="button" class="input-button" data-index="7">KEY 7</button>
+      <!-- RIGHT: editor -->
+      <div class="col">
+        <div class="controls">
+          <label for="screenFile">Screen file:</label>
+          <select id="screenFile">
+            <option value="">-- input demo (default) --</option>
+          </select>
+          <button id="loadScriptButton">Run textareas</button>
+          <button id="reloadButton">Reload</button>
         </div>
+
+        <h3>Log output</h3>
+        <textarea class="emscripten" id="output" rows="5"></textarea>
+
+        <h3>Init script (runs once)</h3>
+        <textarea class="emscripten" id="init_script" rows="8">-- Input demo. See the "Input spec" panel / INPUT_SPEC.md.
+BG    = {10,10,14}
+GREY  = {120,120,130}
+WHITE = {235,235,235}
+GREEN = {120,230,130}
+AMBER = {249,150,0}
+CYAN  = {0,200,220}
+
+NAME = {}
+for i=0,7  do NAME[i] = 'KEY '..i end
+NAME[8] = 'ENC'
+for i=9,12 do NAME[i] = 'BTN '..i end
+print('input demo init')</textarea>
+
+        <h3>Loop script (runs every frame)</h3>
+        <textarea class="emscripten" id="loop_script" rows="14">ggdrf(0, 0, 0, SCREEN_W, SCREEN_H, BG)
+
+ggdft(0, 'GRID INPUT DEMO', 8, 6, 8, CYAN)
+ggdl(0, 0, 22, SCREEN_W, 22, GREY)
+
+-- which control fired most recently, and with what value
+local ei = grid.event_index
+if ei >= 0 then
+  ggdft(0, 'last event', 8, 32, 8, GREY)
+  ggdft(0, NAME[ei]..'   index '..ei..'   value '..grid.event_value, 8, 46, 8, AMBER)
+else
+  ggdft(0, 'press a button or turn the encoder...', 8, 46, 8, GREY)
+end
+
+-- encoder state
+ggdft(0, 'encoder [8]', 8, 70, 8, GREY)
+ggdft(0, 'value '..grid.encoder_value..'    delta '..grid.encoder_delta, 8, 84, 8, WHITE)
+
+-- live value of every control; held buttons turn green
+ggdft(0, 'controls  (index:value)', 8, 108, 8, GREY)
+local x, y = 8, 124
+for i = 0, 12 do
+  local v = grid.button_value[i]
+  local held = (i ~= 8 and grid.button_state[i] == 1)
+  ggdft(0, i..':'..v, x, y, 8, held and GREEN or GREY)
+  x = x + 50
+  if x > 280 then x = 8; y = y + 18 end
+end
+
+ggdsw()</textarea>
       </div>
     </div>
-
-    <h3>Log output</h3>
-    <textarea class="emscripten" id="output" rows="6"></textarea>
-
-    <h3>Init script</h3>
-    <textarea class="emscripten" id="init_script" rows="10">
-loopcounter = 0
-print('init completed')
-print('slider'..sliderValue)
-    </textarea>
-
-    <h3>Loop script</h3>
-    <textarea class="emscripten" id="loop_script" rows="10">
-loopcounter = loopcounter+1
-ggdrf(0,0,0,320,240,{0,0,0})
-ggdd(0,loopcounter)
-ggdft(0,'hello '..loopcounter, 10, 10, 8, {255,255,255})
-ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
-    </textarea>
+  </div>
 
     <script type='text/javascript'>
-      // --- Query param persistence ---
-      function getQueryParam(param) {
-          const urlParams = new URLSearchParams(window.location.search);
-          return urlParams.get(param);
+      // ---------------------------------------------------------------
+      // Query-param persistence of the two textareas (survives reloads).
+      // ---------------------------------------------------------------
+      function getQueryParam(p) { return new URLSearchParams(window.location.search).get(p); }
+      function updateQueryParam(p, v) {
+        const url = new URL(window.location.href);
+        url.searchParams.set(p, v);
+        window.history.replaceState(null, '', url);
       }
-      function updateQueryParam(param, value) {
-          const url = new URL(window.location.href);
-          url.searchParams.set(param, value);
-          window.history.replaceState(null, '', url);
-      }
-
       const init_textarea = document.getElementById('init_script');
       const loop_textarea = document.getElementById('loop_script');
-
-      const init_qp = getQueryParam('init');
-      if (init_qp) init_textarea.value = decodeURIComponent(init_qp);
-      const loop_qp = getQueryParam('loop');
-      if (loop_qp) loop_textarea.value = decodeURIComponent(loop_qp);
-
+      const init_qp = getQueryParam('init'); if (init_qp) init_textarea.value = decodeURIComponent(init_qp);
+      const loop_qp = getQueryParam('loop'); if (loop_qp) loop_textarea.value = decodeURIComponent(loop_qp);
       init_textarea.addEventListener('input', () => updateQueryParam('init', encodeURIComponent(init_textarea.value)));
       loop_textarea.addEventListener('input', () => updateQueryParam('loop', encodeURIComponent(loop_textarea.value)));
 
-      // --- VSN1 control simulation ---
-      var uiControlDown = new Array(13).fill(0);
-      var uiControlPressed = new Array(13).fill(0);
-      var uiControlReleased = new Array(13).fill(0);
-      var uiEncoderDelta = 0;
-      var uiEncoderTicks = 0;
-      var uiEncoderPosition = 50; // 0-255 compatibility value for existing screens
-      var uiLastEventIndex = -1;
-      var uiLastEventDelta = 0;
+      // ===============================================================
+      // VSN1 input model  (contract documented in INPUT_SPEC.md)
+      //
+      //   indices 0-7  : keyswitches   (momentary 0/127)
+      //   index   8    : endless encoder (accumulated 0..127, +/- delta)
+      //   indices 9-12 : screen buttons (momentary 0/127)
+      //
+      // The only JS->Lua channel is loadScript(init, loop); a control
+      // event is delivered by re-running the script with a fresh block
+      // of globals prepended to init.  buildControlScript() emits that
+      // block.  We re-run on BOTH press and release so momentary values
+      // fall back to 0 on the screen.
+      // ===============================================================
+      const N = 13;
+      const ENCODER_INDEX = 8;
+      const PRESSED = 127, RELEASED = 0;
 
-      var encoderInputElement = document.getElementById('encoderInput');
-      var encoderDisplayElement = document.getElementById('encoderDisplay');
-      var encoderInputLastValue = parseInt(encoderInputElement.value, 10) || 0;
+      const gridState = {
+        value:   new Array(N).fill(0),   // 0/127 for buttons; 0..127 for encoder
+        pressed: new Array(N).fill(0),   // 0/1 button_state
+        encoderValue: 0,                 // mirror of value[8]
+        encoderDelta: 0,                 // one-shot, cleared after each run
+        encoderTicks: 0,                 // signed running total (legacy)
+        eventIndex: -1,                  // persists across runs
+        eventValue: 0,
+      };
 
-      function clampValue(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-      }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-      function tableToLuaIndexedArray(values) {
-        var parts = [];
-        for (var i = 0; i < values.length; i++) {
-          parts.push('[' + i + ']=' + values[i]);
-        }
+      function luaIndexedArray(values) {
+        const parts = [];
+        for (let i = 0; i < values.length; i++) parts.push('[' + i + ']=' + values[i]);
         return '{' + parts.join(',') + '}';
       }
 
-      function clearTransientControlState() {
-        uiEncoderDelta = 0;
-        uiLastEventIndex = -1;
-        uiLastEventDelta = 0;
-        uiControlPressed.fill(0);
-      }
-
+      // Serialize the current input state into Lua globals (the spec).
       function buildControlScript() {
-        var script = '';
-        script += 'sliderValue = ' + uiEncoderPosition + '\n';
-        script += 'uiEncoderIndex = 8\n';
-        script += 'uiEncoderDelta = ' + uiEncoderDelta + '\n';
-        script += 'uiEncoderTicks = ' + uiEncoderTicks + '\n';
-        script += 'uiLastEventIndex = ' + uiLastEventIndex + '\n';
-        script += 'uiLastEventDelta = ' + uiLastEventDelta + '\n';
-        script += 'uiControlDown = ' + tableToLuaIndexedArray(uiControlDown) + '\n';
-        script += 'uiControlPressed = ' + tableToLuaIndexedArray(uiControlPressed) + '\n';
-        script += 'uiControlReleased = ' + tableToLuaIndexedArray(uiControlReleased) + '\n';
-        return script;
+        let s = '';
+        s += 'SCREEN_W = 320\n';
+        s += 'SCREEN_H = 240\n';
+        s += 'ENCODER = ' + ENCODER_INDEX + '\n';
+        s += 'grid = {\n';
+        s += '  button_value = ' + luaIndexedArray(gridState.value) + ',\n';
+        s += '  button_state = ' + luaIndexedArray(gridState.pressed) + ',\n';
+        s += '  encoder = ' + ENCODER_INDEX + ',\n';
+        s += '  encoder_value = ' + gridState.encoderValue + ',\n';
+        s += '  encoder_delta = ' + gridState.encoderDelta + ',\n';
+        s += '  event_index = ' + gridState.eventIndex + ',\n';
+        s += '  event_value = ' + gridState.eventValue + ',\n';
+        s += '}\n';
+        // --- legacy aliases for sequencer-2 screens ---
+        s += 'sliderValue = ' + clamp(gridState.encoderValue * 2, 0, 255) + '\n';
+        s += 'uiEncoderIndex = ' + ENCODER_INDEX + '\n';
+        s += 'uiEncoderDelta = ' + gridState.encoderDelta + '\n';
+        s += 'uiEncoderTicks = ' + gridState.encoderTicks + '\n';
+        s += 'uiLastEventIndex = ' + gridState.eventIndex + '\n';
+        s += 'uiLastEventDelta = ' + gridState.encoderDelta + '\n';
+        s += 'uiControlDown = ' + luaIndexedArray(gridState.pressed) + '\n';
+        s += 'uiControlPressed = ' + luaIndexedArray(gridState.pressed) + '\n';
+        s += 'uiControlReleased = ' + luaIndexedArray(gridState.value.map(v => 0)) + '\n';
+        return s;
       }
 
-      function updateControlDisplays() {
-        var deltaLabel = uiEncoderDelta >= 0 ? ('+' + uiEncoderDelta) : String(uiEncoderDelta);
-        encoderDisplayElement.textContent = 'delta ' + deltaLabel + ' | sliderValue ' + uiEncoderPosition;
+      function updateReadout() {
+        document.getElementById('encReadout').textContent =
+          'value ' + gridState.encoderValue +
+          (gridState.encoderDelta ? ('   delta ' + (gridState.encoderDelta > 0 ? '+1' : '-1')) : '');
       }
 
-      function applyEncoderDelta(delta) {
-        if (!delta) return;
-        uiEncoderDelta = delta > 0 ? 1 : -1;
-        uiEncoderTicks += uiEncoderDelta;
-        uiEncoderPosition = clampValue(uiEncoderPosition + uiEncoderDelta, 0, 255);
-        uiLastEventIndex = 8;
-        uiLastEventDelta = uiEncoderDelta;
-        updateControlDisplays();
-        loadCurrentScript();
+      // NB: named reloadScript, not run() — Emscripten's runtime defines a global
+      // run() to boot the wasm, and index.js loads after us, so run() would clobber.
+      function reloadScript() {
+        if (typeof Module !== 'undefined' && Module.ccall) {
+          Module.ccall('loadScript', 'void', ['string', 'string'],
+            [buildControlScript() + init_textarea.value, loop_textarea.value]);
+        }
+        // encoder_delta is a one-shot: clear it so the next (unrelated) event injects 0.
+        gridState.encoderDelta = 0;
+        updateReadout();
       }
 
-      encoderInputElement.addEventListener('input', function () {
-        var currentValue = parseInt(encoderInputElement.value, 10);
-        if (Number.isNaN(currentValue) || currentValue === encoderInputLastValue) return;
-        var deltaDirection = currentValue > encoderInputLastValue ? 1 : -1;
-        encoderInputLastValue = currentValue;
-        applyEncoderDelta(deltaDirection);
+      // --- momentary buttons (0-7, 9-12) ---
+      function pressButton(i) {
+        if (gridState.pressed[i] === 1) return;
+        gridState.pressed[i] = 1;
+        gridState.value[i] = PRESSED;
+        gridState.eventIndex = i;
+        gridState.eventValue = PRESSED;
+        reloadScript();
+      }
+      function releaseButton(i) {
+        if (gridState.pressed[i] === 0) return;
+        gridState.pressed[i] = 0;
+        gridState.value[i] = RELEASED;
+        gridState.eventIndex = i;
+        gridState.eventValue = RELEASED;
+        reloadScript();
+      }
+
+      document.querySelectorAll('.ctrl[data-index]').forEach((el) => {
+        const i = parseInt(el.dataset.index, 10);
+        const down = (e) => { e.preventDefault(); el.classList.add('pressed'); pressButton(i); };
+        const up   = (e) => { e.preventDefault(); el.classList.remove('pressed'); releaseButton(i); };
+        el.addEventListener('pointerdown', down);
+        el.addEventListener('pointerup', up);
+        el.addEventListener('pointercancel', up);
+        el.addEventListener('pointerleave', (e) => { if (gridState.pressed[i]) up(e); });
       });
 
-      function wireMomentaryControlButton(buttonElement) {
-        var controlIndex = parseInt(buttonElement.dataset.index, 10);
-
-        function pressControl(event) {
-          event.preventDefault();
-          if (uiControlDown[controlIndex] === 1) return;
-          uiControlDown[controlIndex] = 1;
-          uiControlPressed[controlIndex] = 1;
-          uiControlReleased[controlIndex] = 0;
-          uiLastEventIndex = controlIndex;
-          uiLastEventDelta = 1;
-          buttonElement.classList.add('pressed');
-          loadCurrentScript();
-        }
-
-        function releaseControl(event) {
-          event.preventDefault();
-          if (uiControlDown[controlIndex] === 0) return;
-          uiControlDown[controlIndex] = 0;
-          buttonElement.classList.remove('pressed');
-        }
-
-        buttonElement.addEventListener('pointerdown', pressControl);
-        buttonElement.addEventListener('pointerup', releaseControl);
-        buttonElement.addEventListener('pointercancel', releaseControl);
-        buttonElement.addEventListener('pointerleave', releaseControl);
+      // --- endless encoder (index 8), driven by -/+ ---
+      function turnEncoder(dir) {
+        gridState.encoderDelta = dir > 0 ? 1 : -1;
+        gridState.encoderTicks += gridState.encoderDelta;
+        gridState.encoderValue = clamp(gridState.encoderValue + gridState.encoderDelta, 0, 127);
+        gridState.value[ENCODER_INDEX] = gridState.encoderValue;
+        gridState.eventIndex = ENCODER_INDEX;
+        gridState.eventValue = gridState.encoderValue;
+        reloadScript();
       }
+      document.getElementById('encUp').addEventListener('click', () => turnEncoder(+1));
+      document.getElementById('encDown').addEventListener('click', () => turnEncoder(-1));
+      updateReadout();
 
-      document.querySelectorAll('.input-button').forEach(wireMomentaryControlButton);
-      updateControlDisplays();
-
-      // --- Screen file loading ---
-      // Discover available .lua files in screens/ directory
+      // ===============================================================
+      // Screen-file loader (reads screens/*.lua via manifest.json).
+      // Default selection is the built-in demo above (no file load).
+      // ===============================================================
       async function discoverScreenFiles() {
         const select = document.getElementById('screenFile');
-        select.innerHTML = '<option value="">-- default demo --</option>';
         try {
-          // Try to fetch the file listing from the manifest
-          const manifestUrl = '../screens/manifest.json?v=' + Date.now();
-          const resp = await fetch(manifestUrl, { cache: 'no-store' });
+          const resp = await fetch('../screens/manifest.json?v=' + Date.now(), { cache: 'no-store' });
           if (resp.ok) {
             const files = await resp.json();
-            files.forEach(f => {
+            files.forEach((f) => {
               const opt = document.createElement('option');
               opt.value = f;
               opt.textContent = f.replace('.lua', '');
               select.appendChild(opt);
             });
             console.log('Loaded screen manifest:', files);
-            // Auto-select overview.lua if available, otherwise first file
-            const defaultFile = files.includes('overview.lua') ? 'overview.lua' : files[0];
-            if (defaultFile) {
-              select.value = defaultFile;
-              // Wait for WASM to be ready, then auto-load (skip if automated/headless)
-              if (!navigator.webdriver) {
-                const waitAndLoad = () => {
-                  if (typeof Module !== 'undefined' && Module.ccall) {
-                    loadLuaFile(defaultFile);
-                  } else {
-                    setTimeout(waitAndLoad, 200);
-                  }
-                };
-                setTimeout(waitAndLoad, 500);
-              }
-            }
           }
-        } catch(e) {
-          console.log('No manifest.json found, manual file entry available');
+        } catch (e) {
+          console.log('No manifest.json found, built-in demo only');
         }
       }
       discoverScreenFiles();
 
-      // Load a .lua file, split on -- INIT / -- LOOP markers
       async function loadLuaFile(filename) {
         try {
           const resp = await fetch('../screens/' + filename);
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
           const code = await resp.text();
-
-          // Split on section markers
-          var initCode = '';
-          var loopCode = '';
-
+          let initCode = '', loopCode = '';
           const initMatch = code.match(/-- INIT START\n([\s\S]*?)-- INIT END/);
           const loopMatch = code.match(/-- LOOP START\n([\s\S]*?)-- LOOP END/);
-
           if (initMatch && loopMatch) {
             initCode = initMatch[1].trim();
             loopCode = loopMatch[1].trim();
           } else {
-            // Fallback: everything before "-- LOOP" is init, everything after is loop
-            const parts = code.split(/^-- LOOP\s*$/m);
-            if (parts.length >= 2) {
-              initCode = parts[0].trim();
-              loopCode = parts.slice(1).join('\n').trim();
-            } else {
-              // No markers: put everything in loop
-              loopCode = code.trim();
-            }
+            loopCode = code.trim();
           }
-
           init_textarea.value = initCode;
           loop_textarea.value = loopCode;
-          loadCurrentScript();
+          reloadScript();
           console.log('Loaded: ' + filename);
-        } catch(e) {
+        } catch (e) {
           console.error('Failed to load ' + filename + ': ' + e.message);
         }
       }
 
-      // Auto-load on dropdown change
-      document.getElementById('screenFile').addEventListener('change', function() {
+      document.getElementById('screenFile').addEventListener('change', function () {
         if (this.value) loadLuaFile(this.value);
       });
-
-      document.getElementById('loadFileButton').addEventListener('click', function() {
+      document.getElementById('loadScriptButton').addEventListener('click', reloadScript);
+      document.getElementById('reloadButton').addEventListener('click', function () {
         const sel = document.getElementById('screenFile');
-        if (sel.value) {
-          loadLuaFile(sel.value);
-        } else {
-          // Prompt for manual filename
-          const name = prompt('Enter .lua filename (relative to screens/):', 'pattern.lua');
-          if (name) loadLuaFile(name);
-        }
+        if (sel.value) loadLuaFile(sel.value); else reloadScript();
       });
 
-      document.getElementById('reloadButton').addEventListener('click', function() {
-        const sel = document.getElementById('screenFile');
-        if (sel.value) {
-          loadLuaFile(sel.value);
-        } else {
-          loadCurrentScript();
-        }
-      });
-
-      function loadCurrentScript() {
-        if (typeof Module !== 'undefined' && Module.ccall) {
-          Module.ccall('loadScript', 'void', ['string', 'string'],
-            [buildControlScript() + init_textarea.value, loop_textarea.value]);
-          clearTransientControlState();
-          updateControlDisplays();
-        }
+      // Auto-run the built-in demo once the WASM is ready (unless headless).
+      if (!navigator.webdriver) {
+        const waitAndRun = () => {
+          if (typeof Module !== 'undefined' && Module.ccall) reloadScript();
+          else setTimeout(waitAndRun, 150);
+        };
+        setTimeout(waitAndRun, 400);
       }
 
-      document.getElementById('loadScriptButton').addEventListener('click', loadCurrentScript);
-
-      // --- Emscripten Module ---
+      // ===============================================================
+      // Emscripten Module boilerplate
+      // ===============================================================
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
 
       var Module = {
-        print: (function() {
+        print: (function () {
           var element = document.getElementById('output');
           if (element) element.value = '';
           return (...args) => {
             var text = args.join(' ');
             console.log(text);
             if (element) {
-              // Keep log size manageable: trim if over 200 lines
               var lines = element.value.split('\n');
-              if (lines.length > 200) {
-                element.value = lines.slice(-100).join('\n');
-              }
+              if (lines.length > 200) element.value = lines.slice(-100).join('\n');
               element.value += text + "\n";
               element.scrollTop = element.scrollHeight;
             }
@@ -397,8 +437,8 @@ ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
           Module.setStatus.last.text = text;
           if (m) {
             text = m[1];
-            progressElement.value = parseInt(m[2])*100;
-            progressElement.max = parseInt(m[4])*100;
+            progressElement.value = parseInt(m[2]) * 100;
+            progressElement.max = parseInt(m[4]) * 100;
             progressElement.hidden = false;
             spinnerElement.hidden = false;
           } else {
@@ -412,16 +452,14 @@ ggdt(0,'hello '..loopcounter, 10, 20, 24, {255,255,255})
         totalDependencies: 0,
         monitorRunDependencies: (left) => {
           this.totalDependencies = Math.max(this.totalDependencies, left);
-          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
         }
       };
       Module.setStatus('Downloading...');
       window.onerror = () => {
         Module.setStatus('Exception thrown, see JavaScript console');
         spinnerElement.style.display = 'none';
-        Module.setStatus = (text) => {
-          if (text) console.error('[post-exception status] ' + text);
-        };
+        Module.setStatus = (text) => { if (text) console.error('[post-exception status] ' + text); };
       };
     </script>
     <script async type="text/javascript" src="index.js"></script>

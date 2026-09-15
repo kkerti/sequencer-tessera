@@ -158,36 +158,36 @@ for i=9,12 do NAME[i] = 'BTN '..i end
 print('input demo init')</textarea>
 
         <h3>Loop script (runs every frame)</h3>
-        <textarea class="emscripten" id="loop_script" rows="14">ggdrf(0, 0, 0, SCREEN_W, SCREEN_H, BG)
+        <textarea class="emscripten" id="loop_script" rows="14">draw_area_filled(0, 0, 0, SCREEN_W, SCREEN_H, BG)
 
-ggdft(0, 'GRID INPUT DEMO', 8, 6, 8, CYAN)
-ggdl(0, 0, 22, SCREEN_W, 22, GREY)
+draw_text_fast(0, 'GRID INPUT DEMO', 8, 6, 8, CYAN)
+draw_line(0, 0, 22, SCREEN_W, 22, GREY)
 
 -- which control fired most recently, and with what value
 local ei = grid.event_index
 if ei >= 0 then
-  ggdft(0, 'last event', 8, 32, 8, GREY)
-  ggdft(0, NAME[ei]..'   index '..ei..'   value '..grid.event_value, 8, 46, 8, AMBER)
+  draw_text_fast(0, 'last event', 8, 32, 8, GREY)
+  draw_text_fast(0, NAME[ei]..'   index '..ei..'   value '..grid.event_value, 8, 46, 8, AMBER)
 else
-  ggdft(0, 'press a button or turn the encoder...', 8, 46, 8, GREY)
+  draw_text_fast(0, 'press a button or turn the encoder...', 8, 46, 8, GREY)
 end
 
 -- encoder state
-ggdft(0, 'encoder [8]', 8, 70, 8, GREY)
-ggdft(0, 'value '..grid.encoder_value..'    delta '..grid.encoder_delta, 8, 84, 8, WHITE)
+draw_text_fast(0, 'encoder [8]', 8, 70, 8, GREY)
+draw_text_fast(0, 'value '..grid.encoder_value..'    delta '..grid.encoder_delta, 8, 84, 8, WHITE)
 
 -- live value of every control; held buttons turn green
-ggdft(0, 'controls  (index:value)', 8, 108, 8, GREY)
+draw_text_fast(0, 'controls  (index:value)', 8, 108, 8, GREY)
 local x, y = 8, 124
 for i = 0, 12 do
   local v = grid.button_value[i]
   local held = (i ~= 8 and grid.button_state[i] == 1)
-  ggdft(0, i..':'..v, x, y, 8, held and GREEN or GREY)
+  draw_text_fast(0, i..':'..v, x, y, 8, held and GREEN or GREY)
   x = x + 50
   if x > 280 then x = 8; y = y + 18 end
 end
 
-ggdsw()</textarea>
+draw_swap()</textarea>
       </div>
     </div>
   </div>
@@ -269,6 +269,15 @@ ggdsw()</textarea>
         s += 'uiControlDown = ' + luaIndexedArray(gridState.pressed) + '\n';
         s += 'uiControlPressed = ' + luaIndexedArray(gridState.pressed) + '\n';
         s += 'uiControlReleased = ' + luaIndexedArray(gridState.value.map(v => 0)) + '\n';
+        // --- real device draw-function names, aliased onto the wasm ggd* primitives ---
+        // The device exposes these as methods on the LCD element; the low-level global
+        // form takes a leading screen index. Same functions, +1 arg — so screen code /
+        // the widget-system lcd shim can call the real names here. (ggd* still work.)
+        s += 'draw_area_filled = ggdrf\n';   // (idx, x1,y1,x2,y2, {r,g,b})
+        s += 'draw_line = ggdl\n';           // (idx, x1,y1,x2,y2, {r,g,b})
+        s += 'draw_text = ggdt\n';           // (idx, str, x,y, size, {r,g,b})  truetype
+        s += 'draw_text_fast = ggdft\n';     // (idx, str, x,y, size, {r,g,b})  bitmap
+        s += 'draw_swap = ggdsw\n';          // ()  -- no index
         return s;
       }
 

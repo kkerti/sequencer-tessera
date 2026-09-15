@@ -69,14 +69,22 @@ uiLastEventIndex   -- = event_index
 uiLastEventDelta
 ```
 
-## Drawing API (baked into the wasm)
+## Drawing API
 
-Layer is the first arg (`0`). Colors are `{r,g,b}` 0..255. Screen is 320×240.
+Prefer the **real device names** — the prelude aliases them onto the wasm's
+`ggd*` primitives, so screen code (and the widget-system `lcd` shim) uses the
+same names as the device. The leading `0` is the **screen index**; on the device
+the element-method form (`self:draw_area_filled(...)`) supplies it implicitly, so
+the *only* difference is that leading arg. Colors are `{r,g,b}` 0..255. Screen is
+320×240.
 
-| call | effect |
-|------|--------|
-| `ggdrf(0, x1, y1, x2, y2, {r,g,b})` | filled rectangle (also used full-screen to clear) |
-| `ggdl(0, x1, y1, x2, y2, {r,g,b})`  | line |
-| `ggdft(0, text, x, y, size, {r,g,b})` | bitmap text (use `size` 8) |
-| `ggdt(0, text, x, y, size, {r,g,b})`  | truetype text (scalable) |
-| `ggdsw()` | swap/flush — call once at the end of `loop` |
+| real name (preferred) | wasm primitive | effect |
+|------|------|--------|
+| `draw_area_filled(0, x1, y1, x2, y2, {r,g,b})` | `ggdrf` | filled rectangle (also used full-screen to clear) |
+| `draw_line(0, x1, y1, x2, y2, {r,g,b})`  | `ggdl` | line |
+| `draw_text_fast(0, text, x, y, size, {r,g,b})` | `ggdft` | bitmap text (use `size` 8) |
+| `draw_text(0, text, x, y, size, {r,g,b})`  | `ggdt` | truetype text (scalable) |
+| `draw_swap()` | `ggdsw` | swap/flush — call once at the end of `loop` (no index) |
+
+The `ggd*` names still work (they are the underlying primitives), but new code
+should use the real names.

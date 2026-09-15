@@ -25,12 +25,16 @@ Two runtimes, one widget contract.
 | | Device (VSN1R) — canonical | grid-wasm harness — preview |
 |---|---|---|
 | Code loading | `require`-able TEXT bundles, ≤ ~10 KB each | flat script, **no `require`**, ~2 KB init |
-| Draw API | `lcd:ldaf / ldft / ldsw` (methods on the control element) | `ggdrf / ggdt / ggdl / ggdsw` (globals, layer 0) |
-| Status | real target | best-effort; harness code is outdated/minified |
+| Draw API | `self.lcd:draw_*(...)` — methods on the LCD control element | same names as globals, with a leading screen index |
+| Status | real target | best-effort; harness code to be brought up to real names |
 
-Widget `render` code never calls either API directly. It calls the **`gfx`**
-abstraction (§3), and a backend maps `gfx` onto the runtime. Keep-light rule:
-the reusable part is the contract, not the backend.
+**There is only one draw API, not two.** The element method call and the
+low-level global call are the *same functions*; the global form just takes a
+leading screen-index argument (`self:screen_index()`) that the method form
+supplies implicitly. So widget code calls the documented element methods
+directly (§3) — no abstraction layer. The harness bridges the index difference
+with a small shim that is **harness-only scaffolding** and never appears in
+widget code (§3.1).
 
 On device the system lives under the profile's element-255 setup
 (`require` the core there) and is driven from the screen element's draw event
@@ -47,9 +51,11 @@ picks only the primitives it needs.
 |---|---|
 | `widget_core.lua` | `Layout` + the base `Widget` contract |
 | `widget_std.lua`  | standard primitives: `label`, `toggle`, `range` |
-| `gfx_device.lua`  | backend wrapping `lcd:ldaf/ldft/ldsw` (canonical) |
-| `gfx_harness.lua` | backend wrapping `ggd*` — **written to contract, untested** |
 | `SPEC.md`         | this document |
+
+There is **no** `gfx_device` / `gfx_harness` backend pair — widgets call the LCD
+element methods directly. The only harness-specific code is the `lcd` shim of
+§3.1, which lives in the grid-wasm preview scaffolding, not in this system.
 
 Project-specific widgets (e.g. seq-3 lanes, the 16-step matrix cell) live in the
 consuming project and build on `widget_core` — they are **not** in `widget_std`.
@@ -60,28 +66,63 @@ chunks). No `collectgarbage`, no `package.loaded` manipulation, no
 
 ---
 
-## 3. `gfx` contract
+## 3. Draw handle (`self.lcd`)
 
-A backend-neutral draw handle. **Four calls only**; add more only when a widget
-genuinely needs one.
+Widgets draw through **`self.lcd`**, the LCD control element, using the
+documented element methods directly — no wrapper. The handle is **injected at
+`Layout:initialize`** and propagated to every widget as `self.lcd` (assigned by
+`addWidget`, alongside bounds). Widgets never reach for a global draw API.
+
+The primitives a widget uses (all take **absolute pixel corners**, 320×240;
+colors are `{r,g,b}` 0..255):
 
 ```
-gfx:rect(x, y, w, h, {r,g,b})          -- filled rectangle
-gfx:text(str, x, y, size, {r,g,b})     -- text
-gfx:line(x1, y1, x2, y2, {r,g,b})      -- line
-gfx:swap()                             -- flush/swap buffer (once per drawn frame)
+self.lcd:draw_area_filled(x1, y1, x2, y2, {r,g,b})   -- filled rectangle (no alpha blend)
+self.lcd:draw_text(str, x, y, size, {r,g,b})         -- truetype text (scalable)
+self.lcd:draw_text_fast(str, x, y, size, {r,g,b})    -- bitmap text (cheaper)
+self.lcd:draw_line(x1, y1, x2, y2, {r,g,b})          -- line
+self.lcd:draw_swap()                                 -- flush/swap buffer (once per drawn frame)
 ```
 
-- Coordinates are absolute screen pixels (320×240). Colors are `{r,g,b}` 0..255.
-- `gfx` is **injected at `Layout:initialize`** and propagated to every widget as
-  `self.gfx`. Widgets never reach for a global draw API.
-- **Backend mapping:**
-  - device: `rect` → `lcd:ldaf(x, y, x+w, y+h, c)` (note: `ldaf` takes
-    *corners*, so w/h are converted); `text` → `lcd:ldft`; `swap` → `lcd:ldsw`.
-  - harness: `rect` → `ggdrf(0, x, y, x+w, y+h, c)`; `text` → `ggdt`;
-    `line` → `ggdl`; `swap` → `ggdsw`.
-- LED calls (`glp` / `glc`) are **out of scope** — they are not screen draw and
-  stay with the host.
+Other documented methods (`draw_rectangle`, `draw_rectangle_rounded_filled`,
+`draw_polygon_filled`, `draw_pixel`, `screen_width/height`, …) are available on
+the same handle; the list above is just the common set the std primitives use.
+
+Note: these are the **current** names. The two source profiles used the old
+abbreviated forms (`lcd:ldaf` → `draw_area_filled`, `lcd:ldft` → `draw_text`,
+`lcd:ldsw` → `draw_swap`); new code uses the full names.
+
+LED calls (`glp` / `glc`) are **out of scope** — they are not screen draw and
+stay with the host.
+
+### 3.1 Harness scaffolding — the `lcd` shim (grid-wasm only)
+
+This subsection exists to keep the harness detail **out of the widget code**.
+grid-wasm has no LCD element; it exposes the draw functions as globals that take
+a leading screen index. Since that index is the *only* difference from the
+element methods, the harness supplies a stand-in `lcd` whose methods forward to
+the globals with the index prepended:
+
+```lua
+-- grid-wasm preview scaffolding — NOT part of widget-system, NOT shipped to device.
+local idx = 0                          -- screen index the harness globals expect
+lcd = setmetatable({}, {
+  __index = function(_, name)
+    return function(_, ...) return _G[name](idx, ...) end   -- self:draw_x(a) -> draw_x(idx, a)
+  end,
+})
+```
+
+Rules that keep this from polluting the end result:
+
+- Widget and Layout code **must not** reference this shim, the index, or any
+  global draw name. It only ever calls `self.lcd:draw_*`. The shim is transparent.
+- The shim lives in the grid-wasm init block, not in `widget_core`/`widget_std`.
+  Device builds never load it (the device's `self.lcd` is the real element).
+- Prerequisite: grid-wasm must expose its draw globals under the **real names**
+  (`draw_area_filled`, `draw_text`, `draw_swap`, `draw_line`, …), replacing the
+  current `ggd*` aliases. Once renamed, the shim needs no name map — only the
+  index prefix. (Tracked separately from the widget-system work.)
 
 ---
 
@@ -89,7 +130,7 @@ gfx:swap()                             -- flush/swap buffer (once per drawn fram
 
 ```
 Layout:new()
-Layout:initialize(gfx, cols, rows, x, y, w, h)
+Layout:initialize(lcd, cols, rows, x, y, w, h)
 Layout:addWidget(cx, cy, widget)   -- places widget in cell (cx,cy); returns widget
 Layout:render(frame)               -- draw pass; `frame` is a monotonic counter
 ```
@@ -100,7 +141,7 @@ Layout:render(frame)               -- draw pass; `frame` is a monotonic counter
 - **Cell index** is row-major: `index = cy * cols + cx`.
 - `addWidget` computes and assigns the widget's **absolute** bounds once:
   `widget.x = self.x + cx*cellW`, `widget.y = self.y + cy*cellH`,
-  `widget.w = cellW`, `widget.h = cellH`; and sets `widget.gfx = self.gfx`,
+  `widget.w = cellW`, `widget.h = cellH`; and sets `widget.lcd = self.lcd`,
   `widget.parent = self`. No per-frame coordinate recompute.
 - No auto-fill of empty cells (the suku `DW_Dummy` fill is dropped). An empty
   cell is simply skipped.
@@ -123,10 +164,10 @@ so a cell may hold a sub-`Layout`. This unifies "screen regions" and grids:
 1. Iterate cells in index order (a cheap flag-check loop — no upward dirty
    propagation).
 2. For each cell, consult its `update` descriptor (§5) to decide whether to
-   render. Only cells that render issue `gfx` draw calls — this is where the
+   render. Only cells that render issue `lcd:draw_*` calls — this is where the
    perf win lives (draw calls are the expensive part, not the loop).
 3. Track whether **anything** drew this frame.
-4. Call `gfx:swap()` **only if** something drew (skip the flush on fully-static
+4. Call `lcd:draw_swap()` **only if** something drew (skip the flush on fully-static
    frames). Only the top-level render owns the swap; nested renders draw but do
    not swap.
 
@@ -137,7 +178,7 @@ so a cell may hold a sub-`Layout`. This unifies "screen regions" and grids:
 ```
 Widget:new(...)                 -- constructor. NO separate init:
                                 --   bounds are assigned by Layout:addWidget.
-Widget:render(self)             -- draw within self.x/y/w/h via self.gfx
+Widget:render(self)             -- draw within self.x/y/w/h via self.lcd
 Widget:set(self, ...)           -- OPTIONAL: push new data; marks change=true
 Widget:midirx_cb(self, hdr, ev) -- OPTIONAL: reactive MIDI-in hook
 ```
@@ -149,7 +190,7 @@ Fields the system reads/writes:
 | `update` | update-cadence descriptor (below); default `{mode="dirty"}` |
 | `change` | dirty flag; `set` sets it true, `render` clears it |
 | `x,y,w,h` | absolute bounds, assigned by `addWidget` |
-| `gfx` | injected draw handle |
+| `lcd` | injected draw handle (the LCD element) |
 | `parent` | owning Layout |
 | `focusable` | reserved, default **false**. Inert in v1 (no focus system); kept as a zero-cost hook so a project can layer focus later without a contract change |
 
@@ -193,11 +234,12 @@ the core of selective rendering:
 ```lua
 local core = require("widget_core")
 local std  = require("widget_std")
-local gfx  = require("gfx_device").new(self)   -- self = control element on device
+-- `self` is the LCD control element on device; in grid-wasm it is the shim of §3.1.
+-- Either way the widgets only ever see `self.lcd:draw_*`.
 
 -- one 2×1 region across the top strip
 local top = core.Layout:new()
-top:initialize(gfx, 2, 1, 0, 0, 320, 24)
+top:initialize(self, 2, 1, 0, 0, 320, 24)      -- pass the LCD element as the draw handle
 
 local nameW = top:addWidget(0, 0, std.label:new("TRACK", {40,40,40}))
 local volW  = top:addWidget(1, 0, std.range:new("VOL", {255,255,0}))  -- H bar
@@ -213,6 +255,6 @@ For a nested grid, an addWidget target is itself a Layout:
 
 ```lua
 local matrix = core.Layout:new()
-matrix:initialize(gfx, 4, 4, 0, 24, 320, 168)   -- 4×4, its own selective render
+matrix:initialize(self, 4, 4, 0, 24, 320, 168)  -- 4×4, its own selective render
 grid:addWidget(0, 1, matrix)                     -- a cell of an outer layout
 ```

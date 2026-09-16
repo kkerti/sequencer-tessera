@@ -14,14 +14,17 @@
 local core = require("layout_core")
 local M = {}
 
--- generic setter: merge known keys into the widget and mark it dirty.
+-- generic setter: merge known keys into the widget and mark it dirty --
+-- but ONLY if a value actually changed, so repeated identical set{}
+-- calls (button states, live data) cost nothing.
 local function make_set(keys)
   return function(self, t)
+    local dirty = false
     for i = 1, #keys do
       local k = keys[i]
-      if t[k] ~= nil then self[k] = t[k] end
+      if t[k] ~= nil and t[k] ~= self[k] then self[k] = t[k]; dirty = true end
     end
-    self.change = true
+    if dirty then self.change = true end
   end
 end
 
@@ -173,31 +176,24 @@ function M.arc(opts)
 end
 
 -- ---------------------------------------------------------------------------
--- text_button: <=4-char label, auto-fit to the cell and centred, coloured by
--- active state. set{ label=, active=, color= }.
+-- text_button: <=4-char label, auto-fit + centred. An INDEPENDENT toggle --
+-- it mirrors one physical toggle button and knows nothing about the others.
+-- Push-driven and fully selective: the profile keeps the widget reference
+-- (addWidget returns it) and calls set{ on=true/false } from the button's own
+-- press. No dispatch, no index, no callback; set only dirties on change.
+-- On label = white, off = dim.
 -- ---------------------------------------------------------------------------
--- text_button: <=4-char label, auto-fit + centred. Exclusive selection is
--- push-driven and fully selective (no polling, no always-render): the profile
--- dispatches select_cb(idx) from the physical button presses; every button sets
--- selected = (idx == its index), so exactly one lights and only the two that
--- changed mark themselves dirty. Active label = white, inactive = dim.
---   set{ index=<Grid element> } is used only to route select_cb.
 function M.text_button(opts)
   opts = opts or {}
   return {
     label = opts.label or "",
-    index = opts.index,                        -- id this button answers select_cb for
-    selected = opts.selected or false,
+    on    = opts.on or false,                  -- toggle state
     dim   = opts.dim or 80, hi = opts.hi or 255,
     pad   = opts.pad or 4,
-    set   = make_set({ "label", "selected" }),
-    select_cb = function(self, idx)            -- exclusive: only the matching index stays selected
-      local s = (idx == self.index)
-      if s ~= self.selected then self.selected = s; self.change = true end
-    end,
+    set   = make_set({ "label", "on" }),
     render = function(self)
       local lcd = self.lcd
-      local shade = self.selected and self.hi or self.dim
+      local shade = self.on and self.hi or self.dim
       lcd:draw_area_filled(self.x, self.y, self.x + self.w, self.y + self.h, { 0, 0, 0 })
       local avail = self.w - 2 * self.pad
       local s  = core.fitSize(self.label, avail, self.h, 8)

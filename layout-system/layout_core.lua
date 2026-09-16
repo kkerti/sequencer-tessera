@@ -144,7 +144,7 @@ function Layout:render(frame)
     if cell.children then                      -- nested Layout: recurse
       if cell:render(frame) then drew = true end
     elseif should_render(cell, frame) then
-      cell:render(frame)                       -- widget draws content + own indicator (frame optional)
+      cell:render()                            -- widget draws content + its own indicator
       cell.change = false                      -- engine clears the dirty flag
       drew = true
     end

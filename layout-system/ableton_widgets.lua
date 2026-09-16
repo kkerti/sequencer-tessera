@@ -16,15 +16,15 @@ local M = {}
 
 -- a shared table for a set of text_buttons that select exclusively (one active
 -- at a time). Pass the same group to each button via opts.group.
-function M.button_group() return { active = nil, members = {}, _f = -1 } end
+function M.button_group() return { active = nil, members = {} } end
 
--- once per frame, scan the group's buttons and latch `active` to whichever just
--- had a press edge (button_value 0 -> >0). Order-independent, so every button
--- reads a consistent `active` the same frame (no 1-frame lag). Release does not
--- change the selection, so it stays latched like a mode selector.
-local function poll_group(g, frame)
-  if g._f == frame then return end
-  g._f = frame
+-- scan the group's buttons and latch `active` to whichever just had a press edge
+-- (button_value 0 -> >0). Self-idempotent: it updates every member's `_last`, so
+-- the first caller of the frame consumes the edge and later callers are no-ops.
+-- Order-independent -> every button reads a consistent `active` the same frame
+-- (no 1-frame lag). Release does not change the selection, so it stays latched
+-- like a mode selector.
+local function poll_group(g)
   for i = 1, #g.members do
     local m = g.members[i]
     local v = (ele and m.index and ele[m.index]) and ele[m.index]:button_value() or 0
@@ -206,11 +206,11 @@ function M.text_button(opts)
     _last = 0,
     update = { mode = "always" },              -- poll button_value() each frame (like the original redraw)
     set   = make_set({ "label" }),
-    render = function(self, frame)
+    render = function(self)
       local lcd = self.lcd
       local on
       if self.group then
-        poll_group(self.group, frame or 0)     -- resolve exclusive selection once per frame
+        poll_group(self.group)                 -- resolve exclusive selection (self-idempotent)
         on = (self.group.active == self.index)
       else
         -- standalone: active = the physical button value. Modules use the long

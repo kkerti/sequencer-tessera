@@ -1,0 +1,278 @@
+{
+    "id": "5cff656d-39f3-46d0-b026-5e531ecb4558",
+    "modifiedAt": "2026-09-16T12:32:45.200Z",
+    "createdAt": "2026-09-16T12:32:45.200Z",
+    "name": "new layout sys demo",
+    "description": "Layout-system demo: layout_core + my_own_widgets modules required on the system setup; one draw_arc arc-potmeter widget on the screen, driven by looped-back MIDI.",
+    "type": "VSN1L",
+    "version": {
+        "major": "1",
+        "minor": "6",
+        "patch": "5"
+    },
+    "configType": "profile",
+    "configs": [
+        {
+            "controlElementNumber": 0,
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)"
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 1
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)"
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 2
+        },
+        {
+            "controlElementNumber": 3,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 4,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ],
+            "controlElementNumber": 5
+        },
+        {
+            "controlElementNumber": 6,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 7
+        },
+        {
+            "controlElementNumber": 8,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Endless Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)"
+                },
+                {
+                    "config": "--[[@sen]] self:epmo(0)self:epv0(50)self:epmi(0)self:epma(127)self:epse(50)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 7
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 9,
+            "events": [
+                {
+                    "event": 0,
+                    "config": ""
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if myWg ~=nil then myWg:setter(\"HI\")end",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 10
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 11
+        },
+        {
+            "controlElementNumber": 12,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 13,
+            "events": [
+                {
+                    "config": "--[[@cb]] glsb(255) canvas=LC.Layout:new() canvas:initialize(self,1,1,0,0,320,240) canvas:addWidget(0,0,WG.draw_arc({color={0,200,220}})) self:ldaf(0,0,320,240,{0,0,0}) canvas:render(FRAME)",
+                    "event": 0
+                },
+                {
+                    "event": 8,
+                    "config": "--[[@cb]] FRAME=FRAME+1 canvas:render(FRAME)"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 255,
+            "events": [
+                {
+                    "config": "--[[@cb]] LC=require(\"layout_core\") WG=require(\"my_own_widgets\") FRAME=0 self.midirx_cb=function(self,hdr,ev)if canvas then canvas:dispatch(\"midirx_cb\",hdr,ev)end end",
+                    "event": 0
+                },
+                {
+                    "event": 4,
+                    "config": "--[[@cb]] gpl(gpn())"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        }
+    ],
+    "owner": "eePyy59w5KXLy0wkvqsv1iPmLUh1",
+    "virtualPath": "",
+    "access": [],
+    "public": false,
+    "isEditable": true,
+    "syncStatus": "local",
+    "cloudId": ""
+}

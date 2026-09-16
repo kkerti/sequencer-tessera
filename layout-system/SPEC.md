@@ -57,26 +57,32 @@ On device the system lives under the profile's element-255 setup
 
 ## 2. Files
 
-All under `widget-system/`. Split so a project always requires a small core and
-picks only the primitives it needs.
+All under `layout-system/`. A project requires the small core and writes (or
+copies) whatever widgets it needs.
 
 | File | Contents |
 |---|---|
-| `widget_core.lua` | the **`Layout` engine** (render lifecycle, selective draw, swap, `dispatch` fan-out, bounds/`lcd` injection) + the optional free `drawIndicator` helper (§5) |
-| `widget_std.lua`  | reference widgets: `label`, `toggle`, `range` |
+| `layout_core.lua` | the **`Layout` engine** (render lifecycle, selective draw, swap, `dispatch` fan-out, bounds/`lcd` injection) + the optional free `drawIndicator` helper (§5) — **built** |
+| `my_own_widgets.lua` | example consumer widget module: `draw_arc` (an arc-potmeter indicator) — **built**, demo reference |
+| `widget_std.lua`  | planned reference widgets (`label`, `toggle`, `range`) — not yet built |
 | `SPEC.md`         | this document |
 
-`widget_core` is the product — and it is small: there is **no base `Widget`
+These are **filesystem modules**, written with the long, human-readable LCD
+names (`draw_area_filled`, `draw_swap`, …); the Grid editor minifies them to the
+short names on upload. Inline profile-event code (the config JSON) is the
+opposite — it must already use the short names (`ldaf`, `ldsw`, …).
+
+`layout_core` is the product — and it is small: there is **no base `Widget`
 class**. A widget is any table with a `render` method (§5); the engine renders it
-when dirty. `widget_std` is a set of examples showing how a consumer writes a
-widget; a project may use them, copy them, or ignore them and write its own.
+when dirty. `widget_std`/`my_own_widgets` are just examples of how a consumer
+writes a widget; a project may use them, copy them, or ignore them.
 
 There is **no** `gfx_device` / `gfx_harness` backend pair — widgets call the LCD
 element methods directly. The only harness-specific code is the `lcd` shim of
 §3.1, which lives in the grid-wasm preview scaffolding, not in this system.
 
 Project-specific and consumer widgets (e.g. seq-3 lanes, the 16-step matrix
-cell) live in the consuming project and build on `widget_core` — they are **not**
+cell) live in the consuming project and build on `layout_core` — they are **not**
 in `widget_std`.
 
 Each bundle is plain TEXT ≤ ~10 KB (the module watchdog reboots on oversized
@@ -136,7 +142,7 @@ Rules that keep this from polluting the end result:
 
 - Widget and Layout code **must not** reference this shim, the index, or any
   global draw name. It only ever calls `self.lcd:draw_*`. The shim is transparent.
-- The shim lives in the grid-wasm init block, not in `widget_core`/`widget_std`.
+- The shim lives in the grid-wasm init block, not in `layout_core`/`widget_std`.
   Device builds never load it (the device's `self.lcd` is the real element).
 - Prerequisite: grid-wasm must expose its draw globals under the **real names**
   (`draw_area_filled`, `draw_text`, `draw_swap`, `draw_line`, …), replacing the
@@ -279,7 +285,7 @@ affordance. Consequences:
   indicator together (the indicator is an overlay, so the content beneath is
   repainted by the full-cell redraw; never try to erase just the border).
 
-To avoid every widget re-coding the same border/dot/bar, `widget_core` offers an
+To avoid every widget re-coding the same border/dot/bar, `layout_core` offers an
 **optional free helper** (not a base method, no inheritance):
 
 ```
@@ -349,7 +355,7 @@ Because the host already holds these refs, device navigation usually needs no
 
 Still out of scope:
 
-- **Seq-3 lane / step widgets.** Project-level, built on `widget_core`.
+- **Seq-3 lane / step widgets.** Project-level, built on `layout_core`.
 - **LED rendering.** Host concern (`glp/glc`).
 
 ---
@@ -361,7 +367,7 @@ No base class, no `props` container — it stores its own fields and marks itsel
 dirty in its own callback:
 
 ```lua
-local core = require("widget_core")
+local core = require("layout_core")
 
 -- a consumer-authored widget: a horizontal value bar, fed by MIDI-in
 local function newBar(color)

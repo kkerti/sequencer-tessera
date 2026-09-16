@@ -1,0 +1,281 @@
+{
+    "id": "148a953d-fa23-4d85-bedc-a519472a8646",
+    "modifiedAt": "2026-09-15T13:21:20.492Z",
+    "createdAt": "2026-06-04T15:33:33.263Z",
+    "name": "Copy of VSN1 Ableton Master Control",
+    "description": "Control your Ableton with VSN1!\n\nDownload the control script here: [Grid VSN1 Master Control Script](https://docs.intech.studio/presets/vsn1/Grid_VSN1.zip)\n\n\nInstall the script:\n1. Download the 'Grid_VSN1.zip' archive.\n2. Extract its contents to the following location on Windows /Documents/Ableton/User Library/Remote Scripts/ or to /Music/Ableton/User Library/Remote Scripts/ on MacOS.\n3. You shoud now see a folder in this location called 'Grid_VSN1'.\n4. Restart Ableton.\n5. In Preferences, under Tempo & MIDI, choose your Control Surface from the dropdown 'Grid VSN1' and then add 'Intech Grid MIDI Controller' for both input and output.\n6. Enable 'Intech Grid MIDI Controller' for 'Track' and 'Remote' for inputs and outputs.\n",
+    "type": "VSN1L",
+    "version": {
+        "major": "1",
+        "minor": "7",
+        "patch": "2"
+    },
+    "configType": "profile",
+    "configs": [
+        {
+            "controlElementNumber": 0,
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 1
+        },
+        {
+            "controlElementNumber": 2,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 3,
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ],
+            "controlElementNumber": 4
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)"
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 5
+        },
+        {
+            "controlElementNumber": 6,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@l]] local cc,ival=32+ele[10]:bva()//127*8+self:ind(),gmaps(self:get_auto_value(),self:bmi(),self:bma(),self:bma(),self:bmi())//1--[[@gms]] self:gms(15,176,cc,-1)--[[@sglp]] self:glp(-1,ival*2)",
+                    "event": 3
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ],
+            "controlElementNumber": 7
+        },
+        {
+            "controlElementNumber": 8,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@sen]] self:epmo(0)self:epv0(50)self:epmi(0)self:epma(16383)self:epse(50)--[[@cb]] self.sync=true"
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)--[[@bpr]] if self:bst()>0 then--[[@cb]] ele[11]:bva(0)self:epv0(200)self:epse(200)--[[@bprel]] else--[[@cb]] self:epv0(50)self:epse(50)--[[@bpre]] end",
+                    "event": 3
+                },
+                {
+                    "event": 7,
+                    "config": "--[[@l]] local lsb,msb=self:epva()//128,self:epva()%128--[[@cb]] if self:epel()>200 and ele[9]:bva()>0 then gmbs(1,1)gmbs(1,0)self.sync=false gtt(self:ind(),50)end--[[@if]] if self.sync==true then--[[@gms]] self:gms(15,224,msb,lsb)--[[@en]] end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] self.sync=true"
+                }
+            ]
+        },
+        {
+            "controlElementNumber": 9,
+            "events": [
+                {
+                    "config": "--[[@cb]] function setLed(val)for i=0,4,1 do local intensity,lednum=gsc(i,val,0,254),glag(8,i)glp(lednum,2,intensity)end end function setRGB(rgb)for i=0,gec()-2 do ele[i]:glc(1,{rgb})ele[i]:glc(2,{rgb})end end function bRGB(i,rgb)ele[i]:glc(1,{rgb})end function draw_arc(cx,cy,r,R,a1,a2,total_s,c)if a1==a2 then return end local max_span=math.rad(300)local current_span=math.abs(a2-a1)local active_segments=math.floor((current_span/max_span)*total_s)if active_segments<1 then return end local step_angle=max_span/total_s local sweep_dir=(a2<a1)and -1 or 1 local x,y,M={},{},math for i=0,active_segments do local a=a1+(i*step_angle*sweep_dir)x[#x+1]=cx+R*M.cos(a)y[#y+1]=cy+R*M.sin(a)end for i=active_segments,0,-1 do local a=a1+(i*step_angle*sweep_dir)x[#x+1]=cx+r*M.cos(a)y[#y+1]=cy+r*M.sin(a)end ele[13]:ldpof(x,y,c)end",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] function db()for i=0,240-s,s do ele[13]:ldaf(0,i+s-1,320,i+s,{255,0,0})end for i=0,320-s,s do ele[13]:ldaf(i+s-1,0,i+s,240,{255,0,0})end end function ARRfy(hs,st,en)local a={}for i=st,en,2 do a[#a+1]=htn(hs:sub(i,i+1))end return a end TP_array={{0,255,0},{200,200,200},{255,0,0},{255,80,0},{60,60,240},{100,100,200},{240,60,60},{200,100,100}}--[[@cb]] self.midirx_cb=function(self,header,event)if header[1]==13 and ele[10]:bva()>0 and event[3]<44 and event[3]>39 then ele[event[3]-40]:glc(1,{{TP_array[event[3]-39][1]*event[4]//127,TP_array[event[3]-39][2]*event[4]//127,TP_array[event[3]-39][3]*event[4]//127}})end end gtt(10,1000)",
+                    "event": 0
+                },
+                {
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bva()==0 then for i=0,7 do ele[i]:glc(1,{{0,0,0}})end self:gms(15,176,48,127)elseif self:bva()==127 then for i=0,3 do ele[i]:glc(1,{{0,0,0}})end self:gms(15,176,49,127)for i=4,7 do ele[i]:glc(1,{TP_array[i+1]})end print(self:bva(),self:ind())end",
+                    "event": 3
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] self:gms(15,176,48,127)--favs request"
+                }
+            ],
+            "controlElementNumber": 10
+        },
+        {
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] --[[Button Init]]"
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bst()>0 then ele[8]:epse(10)ele[8]:epv0(10)else ele[8]:epse(50)ele[8]:epv0(50)end"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] print(\"tick\")"
+                }
+            ],
+            "controlElementNumber": 11
+        },
+        {
+            "controlElementNumber": 12,
+            "events": [
+                {
+                    "config": "--[[@cb]] --[[Button Init]]",
+                    "event": 0
+                },
+                {
+                    "event": 3,
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)"
+                },
+                {
+                    "config": "--[[@cb]] print(\"tick\")",
+                    "event": 6
+                }
+            ]
+        },
+        {
+            "events": [
+                {
+                    "config": "--[[@cb]] ss=\" \" print(\" \")glsb(255)s=16 cx,cy=160,120 function c(text,n)self:ldft(text,0.5*s+s*(n-9)*5,cy+6.5*s,s,{60+((200-60)*ele[n]:bva()//127),60+((200-60)*ele[n]:bva()//127),60+((200-60)*ele[n]:bva()//127)})end function parseString(str,rgb)local id=0 local sig=ss local int=\"\" local fr=\"\" local u=\"\" local cs=\"int\" for i=1,#str do local x=string.sub(str,i,i)if i==1 and x==\"-\" then sig=\"-\" elseif cs==\"u\" then u=u..x elseif x==\" \" and cs~=\"u\" then cs=\"u\" elseif x==\".\" and cs==\"int\" then cs=\"fr\" fr=fr..x else if cs==\"int\" then int=int..x elseif cs==\"fr\" then fr=fr..x end end end fr=(fr):sub(1,3)int=string.rep(ss,5-#int-#fr)..int self:ldft(sig..int..fr..ss..u,s*id,cy-2.5*s,s*2,rgb)end",
+                    "event": 0
+                },
+                {
+                    "event": 8,
+                    "config": "--[[@cb]] local col,g,b={RGB[1]*2,RGB[2]*2,RGB[3]*2},{200,200,200},{0,0,0}local seg=96 if CMD[1]and CMD[4]then self:ldaf(s*1,cy-6.5*s,320,cy-4.5*s,b)self:ldft(T:match(\"(.+):\"),s*1,cy-6.5*s,s,col)self:ldft(T:match(\":(.+)\"),s*1,cy-5.5*s,s,col)CMD[1],CMD[4]=false,false elseif CMD[2]then self:ldaf(s*1,cy-4.5*s,320,cy-3.5*s,b)self:ldft(P,s*1,cy-4.5*s,s,g)CMD[2]=false end self:ldaf(0,cy-3.5*s,320,cy+5.5*s,b)local dir=(V:sub(-1)==\"L\" or V:sub(-1)==\"R\" or V:sub(-1)==\"C\")and 1 or 0 local w=gmaps(Val,0,16383,0,1)local a1=dir==1 and math.rad(270)or math.rad(120)local r,rw=2.5*s,0.5*s parseString(V,col)draw_arc(cx,cy+3*s,r-rw/2,r+rw/2,math.rad(120),math.rad(420),seg,{60,60,60})draw_arc(cx,cy+3*s,r-rw/2,r+rw/2,math.rad(120+(150*dir)),math.rad(120+(150*dir))+(math.rad(300)*(w-(0.5*dir))),seg,col)local ss=\" \" self:ldaf(0,cy+6.5*s,320,cy+7.5*s,b)c(\"Hovr\",9)c(\"Tprt\",10)c(\"FinC\",11)c(\"Test\",12)self:ldsw()"
+                }
+            ],
+            "controlElementNumber": 13
+        },
+        {
+            "controlElementNumber": 255,
+            "events": [
+                {
+                    "event": 0,
+                    "config": "--[[@cb]] T,P,V,CMD=\"0:0\",\"0\",\"0\",{}Val=1 RGB={60,60,60}function htn(hex)return tonumber(hex,16)end function sx_rx(hs)local e=ele[8]if hs:sub(1,10):lower()==\"f000223806\" then print(hs)local cmd=htn(hs:sub(11,12))CMD[cmd]=true if cmd==1 or cmd==2 or cmd==3 then local h=hs:sub(13,-3)local s=\"\" for i=1,#h,2 do s=s..string.char(htn(h:sub(i,i+1)))end if cmd==1 then T=s elseif cmd==2 then P=s else V=s end elseif cmd==4 then RGB=ARRfy(hs,13,17)e:glc(2,{{RGB[1]*2,RGB[2]*2,RGB[3]*2}})elseif cmd==5 then local msb,lsb=htn(hs:sub(13,14)),htn(hs:sub(15,16))Val=(msb*128)+lsb e:epva(Val)setLed(msb*2)e.sync=true elseif cmd==6 then local msb,lsb=htn(hs:sub(13,14)),htn(hs:sub(15,16))Val=(msb*128)+lsb setLed(msb*2)elseif cmd==8 then local a=ARRfy(hs,13,19)ele[a[1]]:glc(1,{{a[2]*2,a[3]*2,a[4]*2}})end end end self.sysexrx_cb=function(self,header,sysex)if header[1]==13 then sx_rx(sysex)end end gtt(14,10000)"
+                },
+                {
+                    "event": 4,
+                    "config": "--[[@cb]] collectgarbage(\"collect\")local memory_kb=collectgarbage(\"count\")print(string.format(\"Memory used after GC:%.2f KB\",memory_kb))"
+                },
+                {
+                    "event": 6,
+                    "config": "--[[@cb]] collectgarbage(\"collect\")local memory_kb=collectgarbage(\"count\")print(string.format(\"Memory used after GC:%.2f KB\",memory_kb))gtt(14,10000)"
+                }
+            ]
+        }
+    ],
+    "owner": "hpFrrSYgf3a7z7gAg4nkUl26XNP2",
+    "virtualPath": "",
+    "files": [],
+    "access": [
+        "7ZOAy8UmSGTsNeQcKmNLMUgfEbW2"
+    ],
+    "public": true,
+    "isEditable": false,
+    "syncStatus": "cloud",
+    "cloudId": "kMC3tRpchUBesy9CPQhK"
+}

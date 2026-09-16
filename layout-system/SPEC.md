@@ -239,9 +239,11 @@ widget is just a table the engine renders when it is dirty.
 ### The only thing the engine requires
 
 ```
-Widget:render(self)   -- MANDATORY: draw content (and any active/focus indicator)
+Widget:render(self, frame)  -- MANDATORY: draw content (and any active/focus indicator)
                       --   within self.x/y/w/h via self.lcd. Reads whatever fields the
-                      --   widget chose to store. This is the sole universal method.
+                      --   widget chose to store. `frame` (the monotonic counter) is
+                      --   passed for frame-based animation/polling; most widgets ignore it.
+                      --   This is the sole universal method.
 ```
 
 Fields the engine reads (everything else on the table is the widget's own):

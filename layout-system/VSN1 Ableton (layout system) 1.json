@@ -173,7 +173,7 @@
             "controlElementNumber": 9,
             "events": [
                 {
-                    "config": "--[[@cb]] function setLed(val)for i=0,4,1 do local intensity,lednum=gsc(i,val,0,254),glag(8,i)glp(lednum,2,intensity)end end function setRGB(rgb)for i=0,gec()-2 do ele[i]:glc(1,{rgb})ele[i]:glc(2,{rgb})end end function bRGB(i,rgb)ele[i]:glc(1,{rgb})end function draw_arc(cx,cy,r,R,a1,a2,total_s,c)if a1==a2 then return end local max_span=math.rad(300)local current_span=math.abs(a2-a1)local active_segments=math.floor((current_span/max_span)*total_s)if active_segments<1 then return end local step_angle=max_span/total_s local sweep_dir=(a2<a1)and -1 or 1 local x,y,M={},{},math for i=0,active_segments do local a=a1+(i*step_angle*sweep_dir)x[#x+1]=cx+R*M.cos(a)y[#y+1]=cy+R*M.sin(a)end for i=active_segments,0,-1 do local a=a1+(i*step_angle*sweep_dir)x[#x+1]=cx+r*M.cos(a)y[#y+1]=cy+r*M.sin(a)end ele[13]:ldpof(x,y,c)end",
+                    "config": "--[[@cb]] function setLed(val)for i=0,4,1 do local intensity,lednum=gsc(i,val,0,254),glag(8,i)glp(lednum,2,intensity)end end",
                     "event": 0
                 },
                 {
@@ -189,7 +189,7 @@
         {
             "events": [
                 {
-                    "config": "--[[@cb]] function db()for i=0,240-s,s do ele[13]:ldaf(0,i+s-1,320,i+s,{255,0,0})end for i=0,320-s,s do ele[13]:ldaf(i+s-1,0,i+s,240,{255,0,0})end end function ARRfy(hs,st,en)local a={}for i=st,en,2 do a[#a+1]=htn(hs:sub(i,i+1))end return a end TP_array={{0,255,0},{200,200,200},{255,0,0},{255,80,0},{60,60,240},{100,100,200},{240,60,60},{200,100,100}}--[[@cb]] self.midirx_cb=function(self,header,event)if header[1]==13 and ele[10]:bva()>0 and event[3]<44 and event[3]>39 then ele[event[3]-40]:glc(1,{{TP_array[event[3]-39][1]*event[4]//127,TP_array[event[3]-39][2]*event[4]//127,TP_array[event[3]-39][3]*event[4]//127}})end end gtt(10,1000)",
+                    "config": "--[[@cb]] TP_array={{0,255,0},{200,200,200},{255,0,0},{255,80,0},{60,60,240},{100,100,200},{240,60,60},{200,100,100}}--[[@cb]] self.midirx_cb=function(self,header,event)if header[1]==13 and ele[10]:bva()>0 and event[3]<44 and event[3]>39 then ele[event[3]-40]:glc(1,{{TP_array[event[3]-39][1]*event[4]//127,TP_array[event[3]-39][2]*event[4]//127,TP_array[event[3]-39][3]*event[4]//127}})end end gtt(10,1000)",
                     "event": 0
                 },
                 {
@@ -240,7 +240,7 @@
         {
             "events": [
                 {
-                    "config": "--[[@rxmd]] grxm(0,7) grxm(1,7) grxm(2,4) grxm(3,6)--[[@cb]] glsb(255)self:ldaf(0,0,320,240,{0,0,0})if LC and AW then canvas=LC.Layout:new()canvas:initialize(self,nil,nil,0,0,320,240)canvas:place(0,4,320,52,AW.nav_info({}))canvas:place(0,60,320,40,AW.value_writer({}))canvas:place(60,104,200,96,AW.arc({}))local row=LC.Layout:new()row:initialize(self,4,1,0,0,320,24)canvas:place(0,210,320,26,row)row:addWidget(0,0,AW.text_button({label=\"Hovr\",index=9}))row:addWidget(1,0,AW.text_button({label=\"Tprt\",index=10}))row:addWidget(2,0,AW.text_button({label=\"FinC\",index=11}))row:addWidget(3,0,AW.text_button({label=\"Test\",index=12}))canvas:render(FRAME)else self:ldft(\"modules not loaded\",40,110,16,{200,80,80})self:ldsw()end",
+                    "config": "--[[@rxmd]] grxm(0,7) grxm(1,7) grxm(2,4) grxm(3,6)--[[@cb]] glsb(255)self:ldaf(0,0,320,240,{0,0,0})if LC and AW then canvas=LC.Layout:new()canvas:initialize(self,nil,nil,0,0,320,240)canvas:place(0,4,320,52,AW.nav_info({}))canvas:place(0,60,320,40,AW.value_writer({}))canvas:place(60,104,200,96,AW.arc({}))local g=AW.button_group()local row=LC.Layout:new()row:initialize(self,4,1,0,0,320,24)canvas:place(0,210,320,26,row)row:addWidget(0,0,AW.text_button({label=\"Hovr\",index=9,group=g}))row:addWidget(1,0,AW.text_button({label=\"Tprt\",index=10,group=g}))row:addWidget(2,0,AW.text_button({label=\"FinC\",index=11,group=g}))row:addWidget(3,0,AW.text_button({label=\"Test\",index=12,group=g}))canvas:render(FRAME)else self:ldft(\"modules not loaded\",40,110,16,{200,80,80})self:ldsw()end",
                     "event": 0
                 },
                 {
@@ -259,11 +259,11 @@
                 },
                 {
                     "event": 4,
-                    "config": "--[[@cb]] collectgarbage(\"collect\")local memory_kb=collectgarbage(\"count\")print(string.format(\"Memory used after GC:%.2f KB\",memory_kb))"
+                    "config": "--[[@cb]] collectgarbage(\"collect\")"
                 },
                 {
                     "event": 6,
-                    "config": "--[[@cb]] collectgarbage(\"collect\")local memory_kb=collectgarbage(\"count\")print(string.format(\"Memory used after GC:%.2f KB\",memory_kb))gtt(14,10000)"
+                    "config": "--[[@cb]] collectgarbage(\"collect\")"
                 }
             ]
         }

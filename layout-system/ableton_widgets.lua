@@ -14,6 +14,25 @@
 local core = require("layout_core")
 local M = {}
 
+-- a shared table for a set of text_buttons that select exclusively (one active
+-- at a time). Pass the same group to each button via opts.group.
+function M.button_group() return { active = nil, members = {}, _f = -1 } end
+
+-- once per frame, scan the group's buttons and latch `active` to whichever just
+-- had a press edge (button_value 0 -> >0). Order-independent, so every button
+-- reads a consistent `active` the same frame (no 1-frame lag). Release does not
+-- change the selection, so it stays latched like a mode selector.
+local function poll_group(g, frame)
+  if g._f == frame then return end
+  g._f = frame
+  for i = 1, #g.members do
+    local m = g.members[i]
+    local v = (ele and m.index and ele[m.index]) and ele[m.index]:button_value() or 0
+    if v > 0 and m._last == 0 then g.active = m.index end
+    m._last = v
+  end
+end
+
 -- generic setter: merge known keys into the widget and mark it dirty.
 local function make_set(keys)
   return function(self, t)
@@ -178,20 +197,28 @@ end
 -- ---------------------------------------------------------------------------
 function M.text_button(opts)
   opts = opts or {}
-  return {
+  local b = {
     label = opts.label or "",
     index = opts.index,                        -- physical Grid element this mirrors
-    dim   = opts.dim or 80, hi = opts.hi or 255,  -- dim .. white by button value
+    group = opts.group,                        -- optional shared table for exclusive selection
+    dim   = opts.dim or 80, hi = opts.hi or 255,
     pad   = opts.pad or 4,
-    update = { mode = "always" },              -- reflect ele[index]:bva() live, like the original
+    _last = 0,
+    update = { mode = "always" },              -- poll button_value() each frame (like the original redraw)
     set   = make_set({ "label" }),
-    render = function(self)
+    render = function(self, frame)
       local lcd = self.lcd
-      -- active state = the physical button's value (bva), exactly as the source
-      -- profile did: bright/white when pressed, dim otherwise.
-      local v = 0
-      if ele and self.index and ele[self.index] then v = ele[self.index]:bva() end
-      local shade = self.dim + (self.hi - self.dim) * v // 127
+      local on
+      if self.group then
+        poll_group(self.group, frame or 0)     -- resolve exclusive selection once per frame
+        on = (self.group.active == self.index)
+      else
+        -- standalone: active = the physical button value. Modules use the long
+        -- API name; the Grid editor minifies button_value() -> bva() on upload.
+        local v = (ele and self.index and ele[self.index]) and ele[self.index]:button_value() or 0
+        on = (v > 0)
+      end
+      local shade = on and self.hi or self.dim
       lcd:draw_area_filled(self.x, self.y, self.x + self.w, self.y + self.h, { 0, 0, 0 })
       local avail = self.w - 2 * self.pad
       local s  = core.fitSize(self.label, avail, self.h, 8)
@@ -200,6 +227,8 @@ function M.text_button(opts)
       lcd:draw_text_fast(self.label, tx, ty, s, { shade, shade, shade })
     end,
   }
+  if b.group then b.group.members[#b.group.members + 1] = b end
+  return b
 end
 
 return M

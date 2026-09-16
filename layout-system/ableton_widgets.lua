@@ -179,26 +179,25 @@ end
 function M.text_button(opts)
   opts = opts or {}
   return {
-    label = opts.label or "", active = opts.active or false,
-    on    = opts.on or { 255, 255, 255 }, dim = opts.dim or { 80, 80, 80 },
-    index = opts.index,                        -- Grid element this button mirrors
+    label = opts.label or "",
+    index = opts.index,                        -- physical Grid element this mirrors
+    dim   = opts.dim or 80, hi = opts.hi or 255,  -- dim .. white by button value
     pad   = opts.pad or 4,
-    set   = make_set({ "label", "active", "on" }),
-    -- exclusive selection: a focus event carries the focused element index;
-    -- only the matching button lights (others clear). Dispatched from the
-    -- physical button presses (§ profile), so it is one-focus-at-a-time.
-    focus_cb = function(self, idx)
-      local a = (idx == self.index)
-      if a ~= self.active then self.active = a; self.change = true end
-    end,
+    update = { mode = "always" },              -- reflect ele[index]:bva() live, like the original
+    set   = make_set({ "label" }),
     render = function(self)
       local lcd = self.lcd
+      -- active state = the physical button's value (bva), exactly as the source
+      -- profile did: bright/white when pressed, dim otherwise.
+      local v = 0
+      if ele and self.index and ele[self.index] then v = ele[self.index]:bva() end
+      local shade = self.dim + (self.hi - self.dim) * v // 127
       lcd:draw_area_filled(self.x, self.y, self.x + self.w, self.y + self.h, { 0, 0, 0 })
       local avail = self.w - 2 * self.pad
       local s  = core.fitSize(self.label, avail, self.h, 8)
       local tx = core.centerX(self.label, s, self.x, self.w)
       local ty = self.y + (self.h - s) // 2
-      lcd:draw_text_fast(self.label, tx, ty, s, self.active and self.on or self.dim)
+      lcd:draw_text_fast(self.label, tx, ty, s, { shade, shade, shade })
     end,
   }
 end

@@ -177,7 +177,7 @@
                     "event": 0
                 },
                 {
-                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)",
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@cb]] if canvas then canvas:dispatch(\"focus_cb\",9)end",
                     "event": 3
                 },
                 {
@@ -193,7 +193,7 @@
                     "event": 0
                 },
                 {
-                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bva()==0 then for i=0,7 do ele[i]:glc(1,{{0,0,0}})end self:gms(15,176,48,127)elseif self:bva()==127 then for i=0,3 do ele[i]:glc(1,{{0,0,0}})end self:gms(15,176,49,127)for i=4,7 do ele[i]:glc(1,{TP_array[i+1]})end print(self:bva(),self:ind())end",
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bva()==0 then for i=0,7 do ele[i]:glc(1,{{0,0,0}})end self:gms(15,176,48,127)elseif self:bva()==127 then for i=0,3 do ele[i]:glc(1,{{0,0,0}})end self:gms(15,176,49,127)for i=4,7 do ele[i]:glc(1,{TP_array[i+1]})end print(self:bva(),self:ind())end if canvas then canvas:dispatch(\"focus_cb\",10)end",
                     "event": 3
                 },
                 {
@@ -211,7 +211,7 @@
                 },
                 {
                     "event": 3,
-                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bst()>0 then ele[8]:epse(10)ele[8]:epv0(10)else ele[8]:epse(50)ele[8]:epv0(50)end"
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@cb]] if self:bst()>0 then ele[8]:epse(10)ele[8]:epv0(10)else ele[8]:epse(50)ele[8]:epv0(50)end if canvas then canvas:dispatch(\"focus_cb\",11)end"
                 },
                 {
                     "event": 6,
@@ -229,7 +229,7 @@
                 },
                 {
                     "event": 3,
-                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)"
+                    "config": "--[[@sbc]] self:bmo(1)self:bmi(0)self:bma(127)--[[@sglc]] self:glc(-1,{{-1,-1,-1,1}})self:glp(-1,-1)--[[@gms]] self:gms(-1,-1,-1,-1)--[[@cb]] if canvas then canvas:dispatch(\"focus_cb\",12)end"
                 },
                 {
                     "config": "--[[@cb]] print(\"tick\")",
@@ -255,7 +255,7 @@
             "events": [
                 {
                     "event": 0,
-                    "config": "--[[@cb]] FRAME=0 local ok,e=pcall(function()LC=require(\"layout_core\")AW=require(\"ableton_widgets\")end)if not ok then print(\"ableton demo require failed: \"..tostring(e))end self.sysexrx_cb=function(self,header,sysex)if canvas then canvas:dispatch(\"sysexrx_cb\",header,sysex)end end"
+                    "config": "--[[@cb]] FRAME=0 function htn(h)return tonumber(h,16)end local ok,e=pcall(function()LC=require(\"layout_core\")AW=require(\"ableton_widgets\")end)if not ok then print(\"ableton require failed: \"..tostring(e))end local function hw(hs)if hs:sub(1,10):lower()~=\"f000223806\" then return end local c=htn(hs:sub(11,12))local en=ele[8]if c==4 then en:glc(2,{{htn(hs:sub(13,14))*2,htn(hs:sub(15,16))*2,htn(hs:sub(17,18))*2}})elseif c==5 then local m,l=htn(hs:sub(13,14)),htn(hs:sub(15,16))en:epva(m*128+l)setLed(m*2)en.sync=true elseif c==6 then setLed(htn(hs:sub(13,14))*2)elseif c==8 then local i=htn(hs:sub(13,14))ele[i]:glc(1,{{htn(hs:sub(15,16))*2,htn(hs:sub(17,18))*2,htn(hs:sub(19,20))*2}})end end self.sysexrx_cb=function(self,header,sysex)hw(sysex)if canvas then canvas:dispatch(\"sysexrx_cb\",header,sysex)end end"
                 },
                 {
                     "event": 4,

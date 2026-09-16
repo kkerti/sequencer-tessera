@@ -180,18 +180,16 @@ function M.text_button(opts)
   opts = opts or {}
   return {
     label = opts.label or "", active = opts.active or false,
-    color = opts.color or { 220, 220, 220 }, dim = opts.dim or { 60, 60, 60 },
+    on    = opts.on or { 255, 255, 255 }, dim = opts.dim or { 80, 80, 80 },
     index = opts.index,                        -- Grid element this button mirrors
     pad   = opts.pad or 4,
-    set   = make_set({ "label", "active", "color" }),
-    sysexrx_cb = function(self, header, hs)     -- cmd 8: element LED (idx + RGB)
-      if not is_ableton(hs) or cmd_of(hs) ~= 8 then return end
-      local a = hex_bytes(hs, 13, 4)
-      if a[1] == self.index then
-        self.color  = rgb2({ a[2], a[3], a[4] })
-        self.active = (a[2] + a[3] + a[4]) > 0
-        self.change = true
-      end
+    set   = make_set({ "label", "active", "on" }),
+    -- exclusive selection: a focus event carries the focused element index;
+    -- only the matching button lights (others clear). Dispatched from the
+    -- physical button presses (§ profile), so it is one-focus-at-a-time.
+    focus_cb = function(self, idx)
+      local a = (idx == self.index)
+      if a ~= self.active then self.active = a; self.change = true end
     end,
     render = function(self)
       local lcd = self.lcd
@@ -200,7 +198,7 @@ function M.text_button(opts)
       local s  = core.fitSize(self.label, avail, self.h, 8)
       local tx = core.centerX(self.label, s, self.x, self.w)
       local ty = self.y + (self.h - s) // 2
-      lcd:draw_text_fast(self.label, tx, ty, s, self.active and self.color or self.dim)
+      lcd:draw_text_fast(self.label, tx, ty, s, self.active and self.on or self.dim)
     end,
   }
 end

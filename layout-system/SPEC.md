@@ -155,10 +155,21 @@ Rules that keep this from polluting the end result:
 
 ```
 Layout:new()
-Layout:initialize(lcd, cols, rows, x, y, w, h)
-Layout:addWidget(cx, cy, widget)   -- places widget in cell (cx,cy); returns widget
-Layout:render(frame)               -- draw pass; `frame` is a monotonic counter
+Layout:initialize(lcd, cols, rows, x, y, w, h)   -- cols/rows may be nil for placement-only
+Layout:addWidget(cx, cy, widget)      -- GRID: place in uniform cell (cx,cy); returns widget
+Layout:place(x, y, w, h, widget)      -- EXPLICIT: place at an arbitrary rect (rel. to origin)
+Layout:render(frame)                  -- draw pass; `frame` is a monotonic counter
+Layout:dispatch(cbName, ...)          -- fan an event to children implementing cbName (§5)
 ```
+
+Two placement modes, both appending to the same child list:
+
+- **`addWidget` (uniform grid)** — for even sub-divisions (a 4×1 button row, a
+  4×4 matrix). `cols`/`rows` are the cell counts; a cell is `w/cols` × `h/rows`.
+- **`place` (explicit rect)** — for **variable-size screen regions** (a real UI:
+  a 3-line nav band, a value line, a big arc, a slim button row have different
+  heights a uniform grid can't express). Composes with the grid: `place` a slim
+  bottom band, then fill it with a nested `4×1` grid Layout.
 
 - `cols` = horizontal cell count, `rows` = vertical cell count. A cell is
   `w/cols` × `h/rows`. (Explicit names — the source profiles used misleading
@@ -294,6 +305,22 @@ core.drawIndicator(lcd, x, y, w, h, style)   -- style e.g. {kind="bar-top", colo
 
 A widget MAY call it from `render`; a widget that wants a bespoke indicator just
 draws its own. It is a convenience, not part of the contract.
+
+### Text helpers (also free functions)
+
+`draw_text_fast`'s glyph advance is ~= `size` px/char (sizes are multiples of 8).
+Fitting and centring text within a widget's bounds recurs across widgets (value
+readouts, buttons, labels), so `layout_core` exposes three tiny free helpers —
+again, functions, not a base class:
+
+```
+core.textWidth(text, size)                 -- #text * size (an upper bound; never overflows)
+core.fitSize(text, maxW, maxSize, minSize) -- largest multiple-of-8 size that fits maxW
+core.centerX(text, size, x, w)             -- left x to centre the text in [x, x+w]
+```
+
+Verified against the reference: "Hovr" in an 80 px slot → `fitSize` = 16
+(`4×16=64≤80`, `4×24=96>80`), matching the hand-tuned original.
 
 ### Why this shape (rejected alternatives)
 

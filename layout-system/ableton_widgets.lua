@@ -14,25 +14,6 @@
 local core = require("layout_core")
 local M = {}
 
--- a shared table for a set of text_buttons that select exclusively (one active
--- at a time). Pass the same group to each button via opts.group.
-function M.button_group() return { active = nil, members = {} } end
-
--- scan the group's buttons and latch `active` to whichever just had a press edge
--- (button_value 0 -> >0). Self-idempotent: it updates every member's `_last`, so
--- the first caller of the frame consumes the edge and later callers are no-ops.
--- Order-independent -> every button reads a consistent `active` the same frame
--- (no 1-frame lag). Release does not change the selection, so it stays latched
--- like a mode selector.
-local function poll_group(g)
-  for i = 1, #g.members do
-    local m = g.members[i]
-    local v = (ele and m.index and ele[m.index]) and ele[m.index]:button_value() or 0
-    if v > 0 and m._last == 0 then g.active = m.index end
-    m._last = v
-  end
-end
-
 -- generic setter: merge known keys into the widget and mark it dirty.
 local function make_set(keys)
   return function(self, t)
@@ -195,30 +176,28 @@ end
 -- text_button: <=4-char label, auto-fit to the cell and centred, coloured by
 -- active state. set{ label=, active=, color= }.
 -- ---------------------------------------------------------------------------
+-- text_button: <=4-char label, auto-fit + centred. Exclusive selection is
+-- push-driven and fully selective (no polling, no always-render): the profile
+-- dispatches select_cb(idx) from the physical button presses; every button sets
+-- selected = (idx == its index), so exactly one lights and only the two that
+-- changed mark themselves dirty. Active label = white, inactive = dim.
+--   set{ index=<Grid element> } is used only to route select_cb.
 function M.text_button(opts)
   opts = opts or {}
-  local b = {
+  return {
     label = opts.label or "",
-    index = opts.index,                        -- physical Grid element this mirrors
-    group = opts.group,                        -- optional shared table for exclusive selection
+    index = opts.index,                        -- id this button answers select_cb for
+    selected = opts.selected or false,
     dim   = opts.dim or 80, hi = opts.hi or 255,
     pad   = opts.pad or 4,
-    _last = 0,
-    update = { mode = "always" },              -- poll button_value() each frame (like the original redraw)
-    set   = make_set({ "label" }),
+    set   = make_set({ "label", "selected" }),
+    select_cb = function(self, idx)            -- exclusive: only the matching index stays selected
+      local s = (idx == self.index)
+      if s ~= self.selected then self.selected = s; self.change = true end
+    end,
     render = function(self)
       local lcd = self.lcd
-      local on
-      if self.group then
-        poll_group(self.group)                 -- resolve exclusive selection (self-idempotent)
-        on = (self.group.active == self.index)
-      else
-        -- standalone: active = the physical button value. Modules use the long
-        -- API name; the Grid editor minifies button_value() -> bva() on upload.
-        local v = (ele and self.index and ele[self.index]) and ele[self.index]:button_value() or 0
-        on = (v > 0)
-      end
-      local shade = on and self.hi or self.dim
+      local shade = self.selected and self.hi or self.dim
       lcd:draw_area_filled(self.x, self.y, self.x + self.w, self.y + self.h, { 0, 0, 0 })
       local avail = self.w - 2 * self.pad
       local s  = core.fitSize(self.label, avail, self.h, 8)
@@ -227,8 +206,6 @@ function M.text_button(opts)
       lcd:draw_text_fast(self.label, tx, ty, s, { shade, shade, shade })
     end,
   }
-  if b.group then b.group.members[#b.group.members + 1] = b end
-  return b
 end
 
 return M

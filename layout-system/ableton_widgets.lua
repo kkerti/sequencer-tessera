@@ -25,6 +25,30 @@ local function make_set(keys)
   end
 end
 
+-- ---------------------------------------------------------------------------
+-- Ableton sysex decode helpers. The sysex arrives as a hex STRING. Protocol
+-- (from the VSN1 Ableton Master Control profile), payload starts at hex pos 13:
+--   cmd 1=track name  2=param name  3=value string  4=RGB(3 bytes, 7-bit)
+--   cmd 5/6=value 14-bit (msb,lsb)  8=element LED (idx + RGB)
+-- Each widget's sysexrx_cb picks the commands it needs and ignores the rest.
+-- ---------------------------------------------------------------------------
+local function htn(h) return tonumber(h, 16) end
+local function is_ableton(hs) return hs:sub(1, 10):lower() == "f000223806" end
+local function cmd_of(hs) return htn(hs:sub(11, 12)) end
+local function hex_ascii(hs)                    -- decode payload (hex pos 13..) minus the F7 terminator
+  local h, s = hs:sub(13, -3), ""
+  for i = 1, #h, 2 do s = s .. string.char(htn(h:sub(i, i + 1))) end
+  return s
+end
+local function hex_bytes(hs, st, n)             -- n bytes (2 hex each) from hex pos st
+  local a = {}
+  for i = 0, n - 1 do a[i + 1] = htn(hs:sub(st + i * 2, st + i * 2 + 1)) end
+  return a
+end
+local function rgb2(b) return { b[1] * 2, b[2] * 2, b[3] * 2 } end   -- 7-bit -> 8-bit
+-- a centred (pan-style) control's value string ends in L / R / C
+local function is_centered(str) local c = str:sub(-1) return c == "L" or c == "R" or c == "C" end
+
 -- filled annular sector, a1..a2 radians, inner r / outer R, `segments` steps.
 local function draw_arc(lcd, cx, cy, r, R, a1, a2, segments, color)
   if a1 == a2 then return end
@@ -56,6 +80,13 @@ function M.nav_info(opts)
     color = opts.color or { 200, 200, 200 },
     line  = opts.line or 16,                 -- line height / text size (mult of 8)
     set   = make_set({ "track", "param", "color" }),
+    sysexrx_cb = function(self, header, hs)
+      if not is_ableton(hs) then return end
+      local cmd = cmd_of(hs)
+      if cmd == 1 then self.track = hex_ascii(hs); self.change = true
+      elseif cmd == 2 then self.param = hex_ascii(hs); self.change = true
+      elseif cmd == 4 then self.color = rgb2(hex_bytes(hs, 13, 3)); self.change = true end
+    end,
     render = function(self)
       local lcd, x, y, lh = self.lcd, self.x, self.y, self.line
       lcd:draw_area_filled(x, y, x + self.w, y + self.h, { 0, 0, 0 })
@@ -84,6 +115,9 @@ function M.value_writer(opts)
     text = opts.text or "", color = opts.color or { 220, 220, 220 },
     maxSize = opts.maxSize or 32,
     set   = make_set({ "text", "color" }),
+    sysexrx_cb = function(self, header, hs)     -- cmd 3: value string (already formatted by Ableton)
+      if is_ableton(hs) and cmd_of(hs) == 3 then self.text = hex_ascii(hs); self.change = true end
+    end,
     render = function(self)
       local lcd = self.lcd
       lcd:draw_area_filled(self.x, self.y, self.x + self.w, self.y + self.h, { 0, 0, 0 })
@@ -107,6 +141,18 @@ function M.arc(opts)
     value = 0, centered = opts.centered or false,
     color = opts.color or { 0, 200, 220 }, track = opts.track or { 60, 60, 60 },
     set   = make_set({ "value", "color", "centered" }),
+    sysexrx_cb = function(self, header, hs)
+      if not is_ableton(hs) then return end
+      local cmd = cmd_of(hs)
+      if cmd == 5 or cmd == 6 then                       -- 14-bit value
+        local b = hex_bytes(hs, 13, 2)
+        self.value = (b[1] * 128 + b[2]) / 16383; self.change = true
+      elseif cmd == 3 then                                -- value string -> centred vs absolute
+        self.centered = is_centered(hex_ascii(hs)); self.change = true
+      elseif cmd == 4 then                                -- track colour
+        self.color = rgb2(hex_bytes(hs, 13, 3)); self.change = true
+      end
+    end,
     render = function(self)
       local lcd = self.lcd
       local cx, cy = self.x + self.w / 2, self.y + self.h / 2
@@ -135,8 +181,18 @@ function M.text_button(opts)
   return {
     label = opts.label or "", active = opts.active or false,
     color = opts.color or { 220, 220, 220 }, dim = opts.dim or { 60, 60, 60 },
+    index = opts.index,                        -- Grid element this button mirrors
     pad   = opts.pad or 4,
     set   = make_set({ "label", "active", "color" }),
+    sysexrx_cb = function(self, header, hs)     -- cmd 8: element LED (idx + RGB)
+      if not is_ableton(hs) or cmd_of(hs) ~= 8 then return end
+      local a = hex_bytes(hs, 13, 4)
+      if a[1] == self.index then
+        self.color  = rgb2({ a[2], a[3], a[4] })
+        self.active = (a[2] + a[3] + a[4]) > 0
+        self.change = true
+      end
+    end,
     render = function(self)
       local lcd = self.lcd
       lcd:draw_area_filled(self.x, self.y, self.x + self.w, self.y + self.h, { 0, 0, 0 })

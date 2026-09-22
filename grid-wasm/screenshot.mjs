@@ -42,11 +42,18 @@ const sliderInit =
     `uiLastEventDelta=0\n` +
     `uiControlDown=${luaIdxArr(13)}\n` +
     `uiControlPressed=${luaIdxArr(13)}\n` +
-    `uiControlReleased=${luaIdxArr(13)}\n`;
+    `uiControlReleased=${luaIdxArr(13)}\n` +
+    // draw globals under the real device names (mirror index.html's
+    // buildControlScript) — the widget-system lcd shim needs them
+    `draw_area_filled=ggdrf\n` +
+    `draw_line=ggdl\n` +
+    `draw_text=ggdt\n` +
+    `draw_text_fast=ggdft\n` +
+    `draw_swap=ggdsw\n`;
 console.log(`File: ${luaFile} | Init: ${initCode.length}b | Loop: ${loopCode.length}b | Slider: ${sliderVal}`);
 
-if (initCode.length > 2040) {
-    console.warn(`WARNING: Init code is ${initCode.length} bytes, exceeds ~2048 byte WASM limit!`);
+if (initCode.length > 15000) {
+    console.warn(`WARNING: Init code is ${initCode.length} bytes, exceeds the 16 KB chunk buffer of the patched harness VM!`);
 }
 
 (async () => {
@@ -62,7 +69,11 @@ if (initCode.length > 2040) {
 
     await page.goto('http://localhost:8080/grid-wasm/index.html');
     await page.waitForFunction(
-        () => typeof Module !== 'undefined' && typeof Module.ccall === 'function',
+        () => {
+            const out = document.getElementById('output');
+            return typeof Module !== 'undefined' && typeof Module.ccall === 'function' &&
+                   out && out.value.indexOf('hello') !== -1;   // wasm VM prints "hello, world!" once booted
+        },
         { timeout: 15000 }
     );
 

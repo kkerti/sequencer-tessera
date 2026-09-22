@@ -1,0 +1,54 @@
+diff --git a/wasm/main.c b/wasm/main.c
+index fe1e883..d00cf66 100644
+--- a/wasm/main.c
++++ b/wasm/main.c
+@@ -15,7 +15,7 @@
+ #include "lua.h"
+ #include "lualib.h"
+ 
+-const size_t LUA_MEM_SIZE = 200000;
++const size_t LUA_MEM_SIZE = 2097152;
+ static uint8_t LUA_MEM[LUA_MEM_SIZE];
+ 
+ void* allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
+@@ -102,8 +102,11 @@ static void* custom_lua_allocator(void* ud, void* ptr, size_t osize, size_t nsiz
+ }
+ 
+ uint8_t config_changed = 0;
+-char grid_lua_init_script[2048] = {0};
+-char grid_lua_loop_script[2048] = {0};
++// NOTE (sequencer-tessera harness patch): upstream caps these at 2048 bytes,
++// which strcpy-overflows on larger screen scripts. 16 KB each matches the
++// device-side text-chunk budget with headroom.
++char grid_lua_init_script[16384] = {0};
++char grid_lua_loop_script[16384] = {0};
+ 
+ #include <SDL/SDL.h>
+ #include <stdio.h>
+@@ -160,6 +163,17 @@ void EMSCRIPTEN_KEEPALIVE loadScript(char* setup, char* loop) {
+   config_changed = 1;
+   // loopcounter = keyCode;
+ }
++
++// NOTE (sequencer-tessera harness patch): grid_lua_do_* stores Lua errors in
++// an internal string without printing; expose it (plus the print buffer) so
++// the page can surface script failures.
++EMSCRIPTEN_KEEPALIVE char* getLuaError() {
++  return grid_lua_get_error_string(&grid_lua_state);
++}
++
++EMSCRIPTEN_KEEPALIVE char* getLuaOutput() {
++  return grid_lua_get_output_string(&grid_lua_state);
++}
+ #endif
+ 
+ struct grid_vlcd_model {
+@@ -235,7 +249,7 @@ int main(int argc, char** argv) {
+ 
+   arena_init(&inst);
+ 
+-  ta_init(LUA_MEM, LUA_MEM + LUA_MEM_SIZE - 1, 2048, 16, 4);
++  ta_init(LUA_MEM, LUA_MEM + LUA_MEM_SIZE - 1, 8192, 16, 4);
+ 
+   grid_lua_init(&grid_lua_state, allocator, &inst);
+ 

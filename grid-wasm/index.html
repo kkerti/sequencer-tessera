@@ -289,8 +289,14 @@ draw_swap()</textarea>
 
       // NB: named reloadScript, not run() — Emscripten's runtime defines a global
       // run() to boot the wasm, and index.js loads after us, so run() would clobber.
+      // The wasm VM prints "hello, world!" once booted; ccall exists before that
+      // (async wasm init), so callers must wait for this flag.
+      function wasmReady() {
+        const out = document.getElementById('output');
+        return out && out.value.indexOf('hello') !== -1;
+      }
       function reloadScript() {
-        if (typeof Module !== 'undefined' && Module.ccall) {
+        if (typeof Module !== 'undefined' && Module.ccall && wasmReady()) {
           Module.ccall('loadScript', 'void', ['string', 'string'],
             [buildControlScript() + init_textarea.value, loop_textarea.value]);
         }
@@ -400,7 +406,7 @@ draw_swap()</textarea>
       // Auto-run the built-in demo once the WASM is ready (unless headless).
       if (!navigator.webdriver) {
         const waitAndRun = () => {
-          if (typeof Module !== 'undefined' && Module.ccall) reloadScript();
+          if (typeof Module !== 'undefined' && Module.ccall && wasmReady()) reloadScript();
           else setTimeout(waitAndRun, 150);
         };
         setTimeout(waitAndRun, 400);

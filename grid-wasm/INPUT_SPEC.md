@@ -17,10 +17,12 @@ Grid Lua API (`button_value`, `button_state`) so logic transfers to a device.
 | 0–7   | keyswitches       | momentary | `0` released / `127` pressed  |
 | 8     | endless encoder   | rotary    | accumulated `0..127`          |
 | 9–12  | buttons under screen | momentary | `0` released / `127` pressed |
+| 13    | encoder press     | momentary | `0` released / `127` pressed  |
 
 All buttons are **momentary** (Grid default): held = `127`, released = `0`.
-The encoder has no press value; it reports an accumulated position and a per-turn
-delta. In the harness it is driven by **ENC −** / **ENC +** (one increment each).
+The encoder itself has no press value (it reports an accumulated position and a
+per-turn delta, driven by **ENC −** / **ENC +**); the real VSN1 encoder is
+clickable, so the harness exposes the press as a separate control (index 13).
 
 ## Globals injected before every run
 
@@ -30,9 +32,9 @@ SCREEN_H = 240            -- screen height (px)
 ENCODER  = 8              -- index of the encoder control
 
 grid = {
-  -- per-control value, indexed 0..12
-  button_value = { [0]=0, ... [12]=0 },   -- 0 / 127 for buttons; position for encoder(8)
-  button_state = { [0]=0, ... [12]=0 },   -- 0 = released, 1 = pressed (buttons only)
+  -- per-control value, indexed 0..13
+  button_value = { [0]=0, ... [13]=0 },   -- 0 / 127 for buttons; position for encoder(8)
+  button_state = { [0]=0, ... [13]=0 },   -- 0 = released, 1 = pressed (buttons only)
 
   encoder       = 8,      -- same as ENCODER, for convenience
   encoder_value = 0,      -- encoder accumulator, clamped 0..127

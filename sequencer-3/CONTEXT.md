@@ -106,6 +106,41 @@ Non-core code that moves data in/out. Stdio→MIDI on Mac now; Grid VSN1 later.
 **preset / slot**:
 A saved full engine state. Lua-chunk format, 24 slots.
 
+### Grid screens
+
+**screen**:
+A top-level UI state on the Grid module: Overview, Focus, or Config. One screen
+is rendered at a time. _Avoid_: view, page, mode (mode is reserved for the
+Note-lane MIDI-note behaviour)
+
+**Overview**:
+The screen showing all four lanes at once, one 1×16 strip per lane. Dims is
+ignored here; steps show linearly.
+
+**Focus**:
+The screen showing one lane's step matrix, always as a 4×4 grid regardless of
+the lane's `dims`. Playback order still follows the lane's `dims` navigation.
+
+**Config**:
+The screen showing a menu of settings (lane config or globals). Entered from
+Overview or Focus; back returns to the previous screen.
+
+**step cell**:
+One widget instance on screen representing one step. One cell carries the
+value(s), the playhead marker, and the selection marker. _Avoid_: cell for a
+sequence position (that is a **step**)
+
+**playhead marker**:
+The indicator showing which step is currently playing. Distinct from selection.
+
+**selected step**:
+The step currently targeted for editing (the one Shred/Zero/the encoder act on).
+
+**GUI host**:
+The Grid-side adapter module that owns widget references, feeds the Core at the
+two observation points (clock in, action out), and pushes state into widgets.
+Widgets never touch the Core. _Avoid_: adapter (ambiguous with the Mac one)
+
 ## Rejected
 
 **track / pattern / sequence**: seq-2's multi-layer composition model, simplified

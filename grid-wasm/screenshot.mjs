@@ -66,9 +66,14 @@ if (initCode.length > 2040) {
         { timeout: 15000 }
     );
 
+    // Load through the page's own path (set textareas + click Run) so
+    // buildControlScript() injects the `grid` globals and the real-name draw
+    // aliases exactly as it does for interactive use.
     await page.evaluate(([i, l]) => {
-        Module.ccall('loadScript', 'void', ['string', 'string'], [i, l]);
-    }, [sliderInit + initCode, loopCode]);
+        document.getElementById('init_script').value = i;
+        document.getElementById('loop_script').value = l;
+        document.getElementById('loadScriptButton').click();
+    }, [initCode, loopCode]);
 
     await page.waitForTimeout(1500);
 

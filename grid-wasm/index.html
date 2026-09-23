@@ -95,6 +95,7 @@
           <div class="btn-row">
             <button class="ctrl enc" id="encDown">ENC<small>&minus;</small></button>
             <button class="ctrl enc" id="encUp">ENC<small>+</small></button>
+            <button class="ctrl enc" data-index="13">ENC<small>PRESS</small></button>
           </div>
 
           <div class="label">Keyswitches — momentary [0&ndash;7]</div>
@@ -137,6 +138,7 @@
           </select>
           <button id="loadScriptButton">Run textareas</button>
           <button id="reloadButton">Reload</button>
+          <button id="loadSeq3Button">Load seq-3 GUI</button>
         </div>
 
         <h3>Log output</h3>
@@ -215,6 +217,9 @@ draw_swap()</textarea>
       //   indices 0-7  : keyswitches   (momentary 0/127)
       //   index   8    : endless encoder (accumulated 0..127, +/- delta)
       //   indices 9-12 : screen buttons (momentary 0/127)
+      //   index   13   : encoder press (momentary 0/127; the real VSN1
+      //                  encoder is clickable but has no press value of
+      //                  its own, so the harness exposes it separately)
       //
       // The only JS->Lua channel is loadScript(init, loop); a control
       // event is delivered by re-running the script with a fresh block
@@ -222,8 +227,9 @@ draw_swap()</textarea>
       // block.  We re-run on BOTH press and release so momentary values
       // fall back to 0 on the screen.
       // ===============================================================
-      const N = 13;
+      const N = 14;
       const ENCODER_INDEX = 8;
+      const ENC_PRESS_INDEX = 13;
       const PRESSED = 127, RELEASED = 0;
 
       const gridState = {
@@ -395,6 +401,101 @@ draw_swap()</textarea>
       document.getElementById('reloadButton').addEventListener('click', function () {
         const sel = document.getElementById('screenFile');
         if (sel.value) loadLuaFile(sel.value); else reloadScript();
+      });
+
+      // ===============================================================
+      // seq-3 GUI loader. The wasm VM cannot require filesystem modules
+      // (no FS) and its heap is tiny, so module sources arrive as escaped
+      // string chunks pushed through loadScript (one call per ~1.6 KB, each
+      // awaited via a print() handshake), then installed with load(reader).
+      // See sequencer-3/docs/SCREENS.md §6 for the mechanics.
+      // ===============================================================
+      const SEQ3_MODULES = [
+        ['layout_core', '../layout-system/layout_core.lua'],
+        ['boot', '../sequencer-3/gui/boot.lua'],
+        ['host', '../sequencer-3/gui/host.lua'],
+        ['mock_engine', '../sequencer-3/gui/mock_engine.lua'],
+        ['widgets', '../sequencer-3/gui/widgets.lua'],
+      ];
+      const SEQ3_SCREEN = '../sequencer-3/screens/seq3_gui.lua';
+
+      function luaStr3(s) {
+        let out = '"';
+        for (let i = 0; i < s.length; i++) {
+          const c = s[i], code = s.charCodeAt(i);
+          if (c === '\\') out += '\\\\';
+          else if (c === '"') out += '\\"';
+          else if (c === '\n') out += '\\n';
+          else if (c === '\r') out += '\\r';
+          else if (c === '\t') out += '\\t';
+          else if (code < 32) out += '\\' + code;
+          else out += c;
+        }
+        return out + '"';
+      }
+
+      function stripLuaComments3(src) {
+        return src.split('\n').map(line => {
+          let out = '', q = null;
+          for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (q) { out += c; if (c === '\\') { out += line[++i] ?? ''; continue; } if (c === q) q = null; }
+            else if (c === '"' || c === "'") { q = c; out += c; }
+            else if (c === '-' && line[i + 1] === '-') break;
+            else out += c;
+          }
+          return out.replace(/\s+$/, '').replace(/^\s+/, '');
+        }).filter(l => l.length > 0).join('\n');
+      }
+
+      function waitForTag3(tag, ms) {
+        return new Promise((resolve, reject) => {
+          const out = document.getElementById('output');
+          const started = out.value.length;
+          const to = setTimeout(() => reject(new Error('handshake timeout: ' + tag)), 4000);
+          (function poll() {
+            // the print handshake lands in the output textarea; tail-scan it
+            if (out.value.slice(started).split('\n').includes(tag)) return resolve();
+            setTimeout(poll, 40);
+          })();
+        });
+      }
+
+      async function loadSeq3() {
+        for (const [name, file] of SEQ3_MODULES) {
+          const resp = await fetch(file + '?v=' + Date.now(), { cache: 'no-store' });
+          if (!resp.ok) throw new Error('fetch ' + file + ': ' + resp.status);
+          const src = stripLuaComments3(await resp.text());
+          for (let i = 0; i < src.length; i += 1600) {
+            const piece = src.slice(i, i + 1600);
+            const last = i + 1600 >= src.length;
+            const tail = last
+              ? ` local arr=MA[${luaStr3(name)}] __C=__C or {} local ix=0 local f,e=load(function() ix=ix+1 local p=arr[ix] arr[ix]=nil return p end,${luaStr3(name)},"t") __C[${luaStr3(name)}]=f if not f then print("CMFAIL ${name} " .. tostring(e)) else print("CM ${name}") end MA[${luaStr3(name)}]=nil collectgarbage()`
+              : ` print("CD ${name}:${i}")`;
+            const init = (i === 0 ? `MA=MA or {} MA[${luaStr3(name)}]={} ` : ``)
+              + `MA[${luaStr3(name)}][#MA[${luaStr3(name)}]+1]=${luaStr3(piece)}` + tail;
+            const tag = last ? 'CM ' + name : 'CD ' + name + ':' + i;
+            const done = waitForTag3(tag);
+            Module.ccall('loadScript', 'void', ['string', 'string'], [init, '']);
+            await done;
+          }
+        }
+        const resp = await fetch(SEQ3_SCREEN + '?v=' + Date.now(), { cache: 'no-store' });
+        const code = await resp.text();
+        const initMatch = code.match(/-- INIT START\n([\s\S]*?)-- INIT END/);
+        const loopMatch = code.match(/-- LOOP START\n([\s\S]*?)-- LOOP END/);
+        if (!initMatch || !loopMatch) throw new Error('seq3 screen file markers missing');
+        init_textarea.value = initMatch[1].trim();
+        loop_textarea.value = loopMatch[1].trim();
+        reloadScript();
+        if (Module.resumeMainLoop) Module.resumeMainLoop();
+        console.log('seq-3 GUI loaded');
+      }
+
+      document.getElementById('loadSeq3Button').addEventListener('click', async function () {
+        this.disabled = true;
+        try { await loadSeq3(); this.textContent = 'seq-3 loaded'; }
+        catch (e) { console.log('seq3 load failed: ' + e.message); this.textContent = 'seq-3 failed — retry'; this.disabled = false; }
       });
 
       // Auto-run the built-in demo once the WASM is ready (unless headless).

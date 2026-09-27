@@ -51,6 +51,18 @@ function M.parse(value, default)
     return v
 end
 
+-- Reverse lookup for persist/GUI display: enum -> the public string. The
+-- reverse table is built on first call only, so the device never pays for it
+-- unless something actually asks for a name.
+local REVERSE
+function M.name(src)
+    if not REVERSE then
+        REVERSE = {}
+        for k, v in pairs(NAMES) do REVERSE[v] = k end
+    end
+    return REVERSE[src] or "off"
+end
+
 function M.isTransport(src)
     return src >= M.TRANSPORT_WHOLE and src <= M.TRANSPORT_SIXTEENTH
 end

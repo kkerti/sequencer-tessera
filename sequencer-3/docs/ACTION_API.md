@@ -95,8 +95,44 @@ seq3.dump()                          -- full engine snapshot
 seq3.set(lane, field, v)             -- generic escape hatch
 ```
 
-Slot files are read and written by the `persist` module
-(`persist.load(path)` / `persist.save(path)`), keeping IO out of the Core.
+### Slots
+
+Slot files are read and written by the `persist` module, keeping IO out of the
+Core:
+
+```lua
+persist.save(path)          -- write the live engine state
+persist.load(path)          -- read a file and apply it through loadPreset
+persist.saveSlot(n)         -- presets/NN.lua
+persist.loadSlot(n)
+persist.slotPath(n)         -- "presets/NN.lua"
+persist.serialize()         -- the same chunk as a string (no IO)
+persist.SLOTS               -- 24
+```
+
+A saved file is a Lua chunk of exactly the same shape as the hand-written
+`presets/` files — `return { version = 1, lanes = { ... } }` — so a saved slot
+stays readable and hand-editable, and any preset is a valid save file.
+
+**Save is lossless against load**: every field `loadPreset` reads, `save`
+writes, and `load(save(x)) == x` for all lane settings. Guaranteed by a
+round-trip test in `tests/run.lua`. Specifics:
+
+- Trigger/value sources are written as their public names
+  (`advanceSource = "transport.sixteenth"`), and only when routed.
+- Derived fields are **not** stored: `width`/`height` are rebuilt from `dims`,
+  and `scaleMask` from `rawScaleMask` + `root`.
+- Live playback state is **not** stored: `position`, `activeNote`, `divCount`
+  and friends. Loading never moves the playhead.
+- Step arrays are written for the lane's own type, plus any other array holding
+  non-default data — so switching a lane's type doesn't drop the data behind it.
+- A live generator (`generator == 1`) is written with `fill = false` and
+  `seed` set to the lane's current RNG state: the saved steps stay
+  authoritative and the lane resumes its sequence instead of restarting it.
+
+The terminal harness exposes both over the stdin protocol as `SAVE <slot>` /
+`LOAD <slot>`; `tools/bridge.py` forwards lines typed in its terminal, so a
+slot can be saved or recalled mid-session.
 
 ## Addressing (value sources)
 

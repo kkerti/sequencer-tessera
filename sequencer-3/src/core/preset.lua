@@ -8,7 +8,7 @@
 local Lane = require("lane")
 
 return function(E, tool)
-    local lanep = tool.lanep
+    local lanep, clamp = tool.lanep, tool.clamp
     local M = {}
 
     function M.copy(from, to)
@@ -58,7 +58,16 @@ return function(E, tool)
                 if p.addressSource then E.setAddressSource(i, p.addressSource) end
                 if p.xAddressSource then E.setXAddressSource(i, p.xAddressSource) end
                 if p.yAddressSource then E.setYAddressSource(i, p.yAddressSource) end
-                if p.minNote or p.maxNote then E.setRange(i, p.minNote or 0, p.maxNote or 127) end
+                -- Ranges are set per type directly (E.setRange routes by lane
+                -- type, which would mislabel a Mod lane's pair on reload).
+                if p.minNote or p.maxNote then
+                    l.minNote = clamp(p.minNote or 0, 0, 127)
+                    l.maxNote = clamp(p.maxNote or 127, 0, 127)
+                end
+                if p.minValue or p.maxValue then
+                    l.minValue = clamp(p.minValue or 0, 0, 127)
+                    l.maxValue = clamp(p.maxValue or 127, 0, 127)
+                end
                 if p.pitch then for k = 1, #p.pitch do l.pitch[k] = p.pitch[k] end end
                 if p.velocity then for k = 1, #p.velocity do l.velocity[k] = p.velocity[k] end end
                 if p.stepLength then for k = 1, #p.stepLength do l.stepLength[k] = p.stepLength[k] end end

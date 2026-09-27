@@ -239,6 +239,121 @@ do
        "preset 01 sets the advance source")
 end
 
+-- ------------------------------------------------- persist round-trip ---
+-- Save must be lossless against load: build a fully-configured four-lane
+-- state, write it, reload into a fresh engine, and compare every saved field.
+-- Writes to a temp file, never into presets/ (those are hand-authored demos).
+
+do
+    local tmp = os.tmpname()
+
+    local function configure()
+        Engine.init{ lanes = 4, channel = 1 }
+        Engine.setType(1, "note"); Engine.setDimensions(1, "4x4")
+        Engine.setScale(1, 0x5AD, 9); Engine.setRange(1, 36, 96)
+        Engine.setChannel(1, 5); Engine.setDivision(1, 2)
+        Engine.setXAdvanceSource(1, "transport.sixteenth")
+        Engine.setYAdvanceSource(1, "transport.quarter")
+        Engine.setResetSource(1, "external.0")
+        Engine.setShiftSource(1, "lane.3"); Engine.setShiftAmount(1, 3)
+        for k = 1, 16 do
+            Engine.setPitch(1, k, 40 + k * 2)
+            Engine.setVelocity(1, k, 30 + k * 3)
+            Engine.setStepLength(1, k, 1 + k)
+        end
+        Engine.setType(2, "mod"); Engine.setController(2, 74)
+        Engine.setRange(2, 20, 110)
+        Engine.setAdvanceSource(2, "transport.eighth")
+        Engine.setAddressSource(2, "external.3")
+        for k = 1, 16 do Engine.setValue(2, k, k * 7) end
+        Engine.setType(3, "trig"); Engine.setDimensions(3, "8x2")
+        Engine.setMidiNote(3, 38); Engine.setChannel(3, 10)
+        Engine.setAdvanceSource(3, "transport.sixteenth")
+        Engine.generate(3, { kind = "euclid", hits = 5, rotate = 2 })
+        Engine.setType(4, "gate"); Engine.setLength(4, 12)
+        Engine.setMidiNote(4, 45); Engine.setPreviousSource(4, "lane.1")
+        Engine.generate(4, { kind = "gamut", base = 64, spread = 40, downUp = 90,
+                            velSpread = 12, gateSpread = 3, seed = 77, live = true })
+    end
+
+    -- Saved settings only: playback state and derived fields are excluded.
+    local SKIP = { position=1, emit=1, pendingReset=1, fired=1, divCount=1,
+                   activeNote=1, noteOffIn=1, sustain=1, width=1, height=1,
+                   scaleMask=1 }
+    local ARRAYS = { pitch=1, velocity=1, stepLength=1, value=1, gate=1 }
+
+    local function snapshot()
+        local snap = {}
+        for i = 1, #Engine.lanes do
+            local l, s = Engine.lanes[i], {}
+            for k, v in pairs(l) do
+                if not SKIP[k] then
+                    if ARRAYS[k] then
+                        local a = {}
+                        for j = 1, Lane.CAP do a[j] = v[j] end
+                        s[k] = a
+                    else
+                        s[k] = v
+                    end
+                end
+            end
+            snap[i] = s
+        end
+        return snap
+    end
+
+    configure()
+    -- Run the live generator so rng sits mid-sequence, not at its seed.
+    Engine.onStart()
+    for _ = 1, 200 do Engine.onPulse() end
+    Engine.onStop()
+    local before = snapshot()
+
+    ok(Persist.save(tmp), "save writes a state file")
+
+    Engine.init{ lanes = 4, channel = 1 }
+    ok(Persist.load(tmp), "saved state loads back")
+    local after = snapshot()
+
+    local diffs, firstDiff = 0, nil
+    for i = 1, 4 do
+        local b, a = before[i], after[i]
+        local keys = {}
+        for k in pairs(b) do keys[k] = true end
+        for k in pairs(a) do keys[k] = true end
+        for k in pairs(keys) do
+            if ARRAYS[k] then
+                for j = 1, Lane.CAP do
+                    if (b[k] and b[k][j]) ~= (a[k] and a[k][j]) then
+                        diffs = diffs + 1
+                        firstDiff = firstDiff or string.format("lane %d %s[%d]", i, k, j)
+                    end
+                end
+            elseif b[k] ~= a[k] then
+                diffs = diffs + 1
+                firstDiff = firstDiff or string.format("lane %d %s (%s -> %s)",
+                    i, k, tostring(b[k]), tostring(a[k]))
+            end
+        end
+    end
+    ok(diffs == 0, "save/load round-trip is lossless (" .. tostring(diffs)
+       .. " diffs, first: " .. tostring(firstDiff) .. ")")
+
+    -- Derived fields are rebuilt, not stored.
+    ok(Engine.get(1, "width") == 4 and Engine.get(1, "height") == 4,
+       "round-trip rebuilds dims-derived width/height")
+    ok(Engine.get(1, "scaleMask") == Scales.rotate(0x5AD, 9),
+       "round-trip rebuilds the rotated scale mask")
+    ok(Engine.get(4, "generator") == 1, "round-trip keeps a live generator on")
+    ok(Engine.get(2, "minValue") == 20 and Engine.get(2, "maxValue") == 110,
+       "round-trip keeps a Mod lane's own value range")
+
+    -- A saved slot is a valid preset chunk: it reloads over a running engine.
+    local reload = Persist.load(tmp)
+    ok(reload, "a saved file reloads over an already-configured engine")
+    os.remove(tmp)
+end
+
 -- ------------------------------------------------------- engine: M2 nav ---
 
 do

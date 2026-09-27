@@ -8,6 +8,9 @@ Spawns the Lua sequencer as a coprocess and wires it to virtual MIDI ports:
 Usage:
     python3 tools/bridge.py --lua "lua proto/term/main.lua"
 
+Lines typed into this terminal are forwarded to the sequencer, so you can
+`SAVE 20` / `LOAD 20` a slot mid-session.
+
 Then in Ableton: enable the "Sequencer3ClockIn" output (send MIDI clock to it),
 and record/monitor from "Sequencer3NotesOut". Set each Ableton track's channel
 to match the sequencer lane's channel.
@@ -84,6 +87,25 @@ def proc_to_midi_out(proc, port_name):
             sys.stderr.write(f"[bridge] bad line: {line}\n")
 
 
+def console_to_proc(proc):
+    """Lines typed in this terminal -> the Lua process's stdin.
+
+    This is how SAVE/LOAD reach the sequencer while a session is running:
+    type `SAVE 20` or `LOAD 20` here. Also accepts START/STOP/QUIT.
+    """
+    for raw in sys.stdin:
+        line = raw.strip()
+        if not line:
+            continue
+        if proc.poll() is not None:
+            break
+        try:
+            proc.stdin.write(line + "\n")
+            proc.stdin.flush()
+        except (BrokenPipeError, ValueError):
+            break
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lua", required=True,
@@ -98,9 +120,11 @@ def main():
                             text=True, bufsize=1)
     sys.stderr.write(f"[bridge] spawned: {args.lua}\n")
 
-    t = threading.Thread(target=midi_in_to_proc,
-                         args=(proc, args.in_port), daemon=True)
-    t.start()
+    threading.Thread(target=midi_in_to_proc,
+                     args=(proc, args.in_port), daemon=True).start()
+    threading.Thread(target=console_to_proc, args=(proc,), daemon=True).start()
+    sys.stderr.write("[bridge] type SAVE <slot> / LOAD <slot> here "
+                     "(also START / STOP / QUIT)\n")
     try:
         proc_to_midi_out(proc, args.out_port)   # blocks until Lua exits
     except KeyboardInterrupt:

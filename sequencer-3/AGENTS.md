@@ -100,7 +100,31 @@ Adapters
   modulation by a value source is a separate, deferred decision.
 - **Gamut** is a generator over Note/Trig lanes, not a new lane type. Parameters
   and UI still to be mapped.
-- **Presets:** 24 Lua-chunk files under `presets/`, loaded on demand.
+- **Presets:** 24 Lua-chunk files under `presets/`, loaded on demand. Saving
+  writes the same shape, losslessly (see `docs/ACTION_API.md` > Slots).
+
+## Corrections to earlier notes (found 2026-09-27, verified against a working profile)
+
+Two claims in this file were wrong and cost a device cycle. Both are fixed in
+`tools/gen_profile.py`:
+
+1. **`rtmrx_cb` signature.** This file said "seq-1 uses `function(self, t)`; we
+   use the same" — we did **not**. v7/v8 generated
+   `function(self,h,t)RX.handle(t,...)`, so `h` took the status byte and `t` was
+   `nil`: **MIDI clock could never have worked**, independently of the boot
+   failure. seq-1's authoritative wiring (`sequencer-1/configs/VSN1.lua:95`) is
+   `function(self, t)`. `tests/boot_sim.lua` now pins this.
+2. **"seq-1 never used gms."** The installed, cold-boot-proven profile
+   `lib seq 4 (vsn1 only, fully working)` calls `gms(e.ch,0x90,...)` directly.
+   seq-1's *newer* `configs/VSN1.lua` uses `midi_send`, so both worked — `gms`
+   was never demonstrated to be the crash cause. The grxm/gms theory that drove
+   v7's rewiring rested on this.
+
+Also: the element skeleton in `tools/vsn1r_template.json` is cloned from
+**seq-2** (the dead project), not from seq-1. It carries `print("tick")` on the
+timer of all 14 elements; seq-1's working profile has 2. v9 blanks all but el
+255's RAM diagnostic. `--probe` emits a profile with every event blank to test
+whether the skeleton itself is the killer.
 
 ## Device-code reality (measured on VSN1R)
 
@@ -116,9 +140,24 @@ Adapters
 - Profile generation: `tools/gen_profile.py` clones the proven 15-element
   skeleton; event configs are compiled with `luac -p` before the profile is
   written (a glued `endself` token once made the editor call it corrupt).
-- Verified device draw: `scr:draw_text_fast(text, x, y, size, color)` +
-  `draw_swap()` — long names in FS modules, short names (`ldaf/ldft/ldsw`)
-  in inline event scripts only.
+- **Device draw API — the complete proven set.** Taken from seq-1's
+  cold-boot-proven `dist/sequencer_ui.lua`; nothing else is known to exist:
+  ```
+  scr:draw_rectangle_filled(x0, y0, x1, y1, {r,g,b})   -- CORNERS, not w/h
+  scr:draw_rectangle(x0, y0, x1, y1, {r,g,b})
+  scr:draw_text_fast(text, x, y, size, {r,g,b})
+  scr:draw_swap()
+  ```
+  **Corners are inclusive: 0..319 x 0..239.** A full-screen clear is
+  `(0, 0, 319, 239)` — `(0, 0, 320, 240)` writes one pixel past each edge.
+  Long names in FS modules, short names (`ldaf/ldft/ldsw`) in inline event
+  scripts only.
+- **`draw_area_filled` DOES NOT EXIST.** seq-3's device modules called it 11
+  times; it appears nowhere in seq-1's proven code. On device the chain loaded
+  fine and then the screen crashed and rebooted the module. Fixed, and
+  `tests/lcd_mock.lua` now whitelists the four real primitives and bounds-checks
+  every coordinate, so this fails on the Mac instead. The old mock returned a
+  function for *any* method name, which is exactly how it reached hardware.
 
 ## Proposed layout (to be built)
 
@@ -179,6 +218,58 @@ no-alloc test, `bridge.py`, preset. M2: X/Y advance and address, shift/rotate,
 same-pulse lane→lane, `io/midi_in` external mapping, presets 02/03. M3: lane
 fire semantics per type, four-lane presets 04/05. M4: `generate.lua` Gamut +
 Euclid, live generation, preset 06. Tests: 73 checks.
+
+## M5 — save/recall + lane monitor (BUILT)
+
+- `src/core/persist.lua` writes the live state as a preset-shaped Lua chunk,
+  **lossless against `loadPreset`** and idempotent (`load` then `save` is
+  byte-identical). Sources are written as names; derived and live-playback
+  fields are not stored. `saveSlot`/`loadSlot` address `presets/NN.lua`.
+- `src/io/monitor.lua` — Mac-only host adapter: a four-line live view, one line
+  per lane, on **stderr** (stdout is the MIDI line protocol). `--monitor`.
+- Device trigger: **Config > GLOBALS > slot / save / load**, added to
+  `src/device/menu.lua`; `persist` is required on the first save or load only.
+  Module file storage is flat, so `Persist.prefix` is set to `"s"` there and
+  slots are `s01.lua`..`s24.lua` (seq-1 ships `d0.lua` the same way).
+- **`persist.lua` obeys the device rules**: no `string.format`, `table.concat`,
+  `math.type` or `collectgarbage` on any path the module can reach. Values go
+  straight into `file:write`, as seq-1's proven on-device persist does, so no
+  whole-file string is held in RAM. `tests/dist_smoke.lua` asserts all four
+  bans against the built bundles.
+- Harness: `SAVE <slot>` / `LOAD <slot>` on the stdin protocol; `bridge.py`
+  forwards lines typed in its terminal, so slots work mid-session.
+- Verified on the Ableton code path (START/CLK on stdin, exactly what
+  `bridge.py` sends): preset 05's four-lane polyrhythm emits 17/9/7/5 note-ons
+  per bar for divisions 1/2/3/4, each lane on its own channel with its own
+  pitches, every note-on matched by a note-off; a saved four-type slot recalls
+  in a fresh process and plays deterministically.
+- **`dist/` regenerated as v9.** v8 (bundles required at setup) **cold-boot
+  died on device**, confirming the ladder above: *no* eager-at-setup build has
+  ever booted, and shrinking the eager load is not enough. v9's setup does
+  **zero requires** — it only defines a global loader `L()` and assigns
+  `rtmrx_cb`; the chain compiles on the first MIDI byte (`--setup=press`
+  defers it to the first control press instead; `--setup=eager` restores v8).
+  See `dist/README.md` for the bisection ladder.
+
+## Measured RAM: seq-3 vs seq-1 (host Lua, ratios not device truth)
+
+| | seq-1 (4 trk x 64 steps) | seq-3 (4 lanes x 16 steps) |
+|---|---|---|
+| core resident above baseline | **27.4 KB** | **67.6 KB** |
+| of which module code | ~23 KB | **55.1 KB** |
+| of which lane data | ~4.3 KB | 12.5 KB (2.5 KB/lane) |
+
+seq-3 is ~2.5x seq-1's core RAM while storing 4x fewer steps, and the cost is
+**code, not data**: `engine.lua` alone is 30.9 KB of the 55.1 KB. Levers, in
+value order:
+
+1. **28 one-line `M.set*` functions in `engine.lua`** at ~435 B each
+   (measured) ~= 12 KB. A table-driven dispatcher over a field/clamp table
+   would reclaim most of it. `M.set(lane, field, v)` already exists.
+2. **Debug info is 21% of module cost** (10.5 KB on the 5 core modules): a win
+   only if the device can load stripped bytecode rather than text.
+3. Lane data is already cheap; cutting features to save step storage would be
+   aimed at the wrong 12.5 KB.
 
 ## Cross-cutting references
 

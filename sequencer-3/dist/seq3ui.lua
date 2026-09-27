@@ -1,16 +1,16 @@
 local R={}
 local _host=require
-local _1
-local _x
+local B={engine="seq3",ext="seq3x",generate="seq3x",lane="seq3",ops="seq3x",persist="seq3p",preset="seq3p",scales="seq3",sources="seq3",transport="seq3"}
+local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
- if not _1 then _1=_host('seq3') end local m=_1[n] if m then return m end
- if not _x then _x=_host('seq3x') end x=_x[n] if x then return x end
+ local b=B[n]
+ if b then
+  local m=C[b] if not m then m=_host(b) C[b]=m end
+  local v=m[n] if v~=nil then return v end
+ end
  error('seq3 module not found: '..tostring(n))
 end
-local _1
-local _x
-local x
 R["device_boot"]=(function()
 
 local Engine = require("engine")
@@ -77,12 +77,12 @@ end
 end
 function M.status(lcd)
 if not Engine then
-lcd:draw_area_filled(0, 0, 320, 240, { 12, 12, 16 })
+lcd:draw_rectangle_filled(0, 0, 319, 239, { 12, 12, 16 })
 lcd:draw_text_fast("seq3: press a key to load", 8, 110, 16, { 120, 220, 255 })
 lcd:draw_swap()
 return
 end
-lcd:draw_area_filled(0, 0, 320, 240, { 12, 12, 16 })
+lcd:draw_rectangle_filled(0, 0, 319, 239, { 12, 12, 16 })
 for i = 1, #Engine.lanes do
 local l = Engine.lanes[i]
 lcd:draw_text_fast(i .. " " .. l.type .. " " .. l.position,
@@ -155,19 +155,19 @@ end
 function S.touch() S.dirtyFlag = true end
 local function cell(lcd, x, y, w, h, l, step, selStep)
 local color = TYPE_COLORS[l.type]
-lcd:draw_area_filled(x, y, x + w, y + h, DIM)
+lcd:draw_rectangle_filled(x, y, x + w, y + h, DIM)
 local v = stripValue(l, step)
 if l.type == "note" or l.type == "mod" then
 local fh = math.floor(v / 127 * h)
-if fh > 0 then lcd:draw_area_filled(x, y + h - fh, x + w, y + h, color) end
+if fh > 0 then lcd:draw_rectangle_filled(x, y + h - fh, x + w, y + h, color) end
 elseif v == 1 then
-lcd:draw_area_filled(x, y, x + w, y + h, color)
+lcd:draw_rectangle_filled(x, y, x + w, y + h, color)
 end
-if step == l.position then lcd:draw_area_filled(x, y + h - 2, x + w, y + h, BAR) end
-if step == selStep then lcd:draw_area_filled(x, y, x + w, y + 2, BAR) end
+if step == l.position then lcd:draw_rectangle_filled(x, y + h - 2, x + w, y + h, BAR) end
+if step == selStep then lcd:draw_rectangle_filled(x, y, x + w, y + 2, BAR) end
 end
 local function drawOverview(lcd)
-lcd:draw_area_filled(0, 0, 320, 240, BG)
+lcd:draw_rectangle_filled(0, 0, 319, 239, BG)
 for lane = 1, #Engine.lanes do
 local l = Engine.state(lane)
 local y = (lane - 1) * 60
@@ -198,7 +198,7 @@ elseif l.type == "mod" then return tostring(l.value[s])
 else return (l.gate[s] == 1) and "ON" or "OFF" end
 end
 local function drawFocus(lcd)
-lcd:draw_area_filled(0, 0, 320, 240, BG)
+lcd:draw_rectangle_filled(0, 0, 319, 239, BG)
 local l = Engine.state(S.selLane)
 for row = 1, 4 do
 for col = 1, 4 do
@@ -206,7 +206,7 @@ local s = (row - 1) * 4 + col
 cell(lcd, (col - 1) * 70, (row - 1) * 58 + 6, 66, 52, l, s, S.selStep)
 end
 end
-lcd:draw_area_filled(282, 6, 318, 122, DIM)
+lcd:draw_rectangle_filled(282, 6, 318, 122, DIM)
 lcd:draw_text_fast(paramLabel(), 286, 20, 8, GREY)
 lcd:draw_text_fast(readout(l), 286, 40, 16, WHITE)
 lcd:draw_swap()
@@ -327,9 +327,22 @@ title = "GLOBALS",
 items = {
 { label = "run",   field = "running", bool = true },
 { label = "reset", field = "_reset" },
+{ label = "slot",  field = "_slot", lo = 1, hi = 24 },
+{ label = "save",  field = "_save" },
+{ label = "load",  field = "_load" },
 },
 },
 }
+M.slot = 1
+M.status = "-"
+local Persist
+local function persist()
+if not Persist then
+Persist = require("persist")
+Persist.prefix = "s"
+end
+return Persist
+end
 function M.init(screenState, engine)
 S = screenState
 Engine = engine
@@ -343,12 +356,20 @@ if v < lo then return lo elseif v > hi then return hi end return v
 end
 function M.itemValue(it)
 if it.field == "_reset" then return "-" end
+if it.field == "_slot" then return tostring(M.slot) end
+if it.field == "_save" or it.field == "_load" then return M.status end
 if it.bool then return Engine.running and "on" or "off" end
 return tostring(Engine.state(S.selLane)[it.field])
 end
 function M.applyItem(it, d)
 if it.field == "_reset" then
 Engine.reset()
+elseif it.field == "_slot" then
+M.slot = clamp(M.slot + d, it.lo, it.hi)
+elseif it.field == "_save" then
+M.status = persist().saveSlot(M.slot) and "ok" or "err"
+elseif it.field == "_load" then
+M.status = persist().loadSlot(M.slot) and "ok" or "err"
 elseif it.bool then
 if Engine.running then Engine.onStop() else Engine.onStart() end
 else
@@ -383,7 +404,7 @@ S.touch()
 end
 end
 function M.draw(lcd)
-lcd:draw_area_filled(0, 0, 320, 240, BG)
+lcd:draw_rectangle_filled(0, 0, 319, 239, BG)
 local page = PAGES[M.page]
 lcd:draw_text_fast(page.title .. " " .. S.selLane, 8, 8, 16, WHITE)
 for i, it in ipairs(page.items) do

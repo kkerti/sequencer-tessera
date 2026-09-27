@@ -25,6 +25,35 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 TEMPLATE = os.path.join(HERE, "vsn1r_template.json")
 
+
+def iso_now():
+    """createdAt / modifiedAt are ISO 8601 UTC strings in every real profile
+    (the template's own, and the cold-boot-proven seq-1 one). We used to write
+    integer epoch milliseconds here, which profile-cloud refused to load."""
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + ".000Z"
+
+
+def check_schema(prof):
+    """Every top-level field must have the same JSON type as the template's.
+
+    The template IS a real profile the editor produced, so a type mismatch
+    means we have written something the editor/profile-cloud will not parse.
+    This is what caught createdAt/modifiedAt being ints.
+    """
+    tmpl = json.load(open(TEMPLATE))
+    for k, tv in tmpl.items():
+        if k == "configs":
+            continue
+        if k not in prof:
+            raise SystemExit(f"profile schema: missing top-level field {k!r}")
+        if type(prof[k]) is not type(tv):
+            raise SystemExit(
+                f"profile schema: {k!r} is {type(prof[k]).__name__}, "
+                f"template has {type(tv).__name__} ({tv!r})")
+    extra = set(prof) - set(tmpl)
+    if extra:
+        raise SystemExit(f"profile schema: fields absent from the template: {sorted(extra)}")
+
 # --- element 255, event 0: system setup (<= 900 chars) ----------------------
 # v7, SEQ-1 WIRING (the project with a proven cold boot):
 #   - midi_send(ch, st, p1, p2) — NOT gms() (seq-1 never used gms)
@@ -34,18 +63,70 @@ TEMPLATE = os.path.join(HERE, "vsn1r_template.json")
 #     lazy periphery so the engine's lazy loaders resolve). seq-1's proven
 #     setup loaded ~10 KB eagerly; ours is ~37 KB across three chunks —
 #     if this still dies cold, the next cut is requiring seq3x on first use.
-SETUP = (
-    '--[[@cb]] SEQ3=require("seq3")'
-    'UI=require("seq3ui")'
-    'X=require("seq3x")'
-    'RX=UI.midi_rx '
-    'RX.ensure() '
-    'self.rtmrx_cb=function(self,h,t)RX.handle(t,midi_send)end'
+# v9 SETUP MODES. The project's own measured ladder (AGENTS.md) says the ONE
+# shape that ever cold-booted "requires NOTHING at setup"; every eager-at-setup
+# build died, v8 included (it required seq3 + seq3ui AND ran the demo there).
+# So setup now does no requires at all: it defines a global lazy loader and
+# assigns rtmrx_cb. Nothing compiles until a trigger fires.
+#
+#   --setup=none   (DEFAULT) chain loads on the first MIDI byte
+#   --setup=press            chain loads only on the first CONTROL PRESS;
+#                            MIDI is ignored until then (the v5 shape)
+#   --setup=eager            v8 shape: require both bundles at setup
+#
+# rtmrx_cb SIGNATURE: seq-1's authoritative wiring (configs/VSN1.lua) is
+# function(self, t) — TWO params. v7/v8 used function(self, h, t), so `t` was
+# nil and RX.handle never saw a status byte: MIDI clock could not work at all.
+# Fixed here.
+SETUP_MODE = "eager"
+for _a in sys.argv:
+    if _a.startswith("--setup="):
+        SETUP_MODE = _a.split("=", 1)[1]
+if "--eager-x" in sys.argv and SETUP_MODE == "eager":
+    pass
+if not any(a.startswith("--setup=") for a in sys.argv):
+    SETUP_MODE = "none"
+assert SETUP_MODE in ("none", "press", "eager"), f"bad --setup={SETUP_MODE}"
+
+# The lazy loader, defined (not run) at setup. Global so every event can call
+# it. Requiring seq3ui pulls seq3 through its own shim, so one call is enough.
+LOADER = (
+    'function L()'
+    'if not RX then'
+    ' UI=require("seq3ui")'
+    ' RX=UI.midi_rx'
+    ' RX.ensure()'
+    'end '
+    'return RX '
+    'end '
 )
+
+if SETUP_MODE == "eager":
+    SETUP = (
+        '--[[@cb]] SEQ3=require("seq3")'
+        'UI=require("seq3ui")'
+        'RX=UI.midi_rx '
+        'RX.ensure() '
+        'self.rtmrx_cb=function(self,t)RX.handle(t,midi_send)end'
+    )
+elif SETUP_MODE == "press":
+    # MIDI does not load the chain; only a control press does.
+    SETUP = ('--[[@cb]] ' + LOADER
+             + 'self.rtmrx_cb=function(self,t)if RX then RX.handle(t,midi_send)end end')
+else:
+    # Default: the first MIDI byte loads the chain.
+    SETUP = ('--[[@cb]] ' + LOADER
+             + 'self.rtmrx_cb=function(self,t)L().handle(t,midi_send)end')
+
+EAGER_X = "--eager-x" in sys.argv
 
 
 def press_cb(call):
-    return f"--[[@cb]] if RX then {call} end"
+    """A control press. With a lazy setup the press is also a load trigger, so
+    it goes through L(); with the eager setup RX already exists."""
+    if SETUP_MODE == "eager":
+        return f"--[[@cb]] if RX then {call} end"
+    return f"--[[@cb]] L() if RX then {call} end"
 
 
 # --- element 255, event 6: timer — RAM diagnostic ---------------------------
@@ -55,13 +136,17 @@ MEM = '--[[@cb]] print("seq3 mem KB: " .. collectgarbage("count"))'
 
 # --- element 13, event 8: screen draw (<= 900 chars) ------------------------
 # The adapter (inside the pre-linked bundle) draws the live view when dirty.
+# MUST NOT call L(): the draw event fires during the cold-boot sequence, so
+# loading from here would defeat the whole point of a bare setup. The screen
+# stays dark until a MIDI byte or a key press has loaded the chain.
 DRAW = "--[[@cb]] if RX then RX.ui(self) end"
 
 # Encoder turn keeps its --[[@sen]] relative-mode setup (epmo(1)) — the only
 # way epva() yields a ±1 delta on device (seq-2 hardware finding).
 ENCODER_TURN = (
     '--[[@sen]] self:epmo(1)self:epv0(64)self:epmi(0)self:epma(127)self:epse(1)'
-    '--[[@cb]] if RX then RX.turn(self:epva()-64) end'
+    + ('--[[@cb]] if RX then RX.turn(self:epva()-64) end' if SETUP_MODE == "eager"
+       else '--[[@cb]] L() if RX then RX.turn(self:epva()-64) end')
 )
 
 # Control elements: keyswitches 0-7 -> RX.key(i), encoder click -> RX.press(),
@@ -117,9 +202,68 @@ def set_event(element, event_id, config):
     element["events"].append({"event": event_id, "config": config})
 
 
-def main():
+def write_probe():
+    """--probe: the smallest possible profile on this element skeleton.
+
+    EVERY event config is blanked except el 13 ev0 (glsb(255), which the
+    working seq-1 profile also has) and el 255 ev6, which prints "probe alive".
+    No require, no module code, no draw. It answers one question that nothing
+    on the Mac can:
+
+      boots + prints "probe alive"  -> the element skeleton and our event
+                                       wiring are innocent; the problem is the
+                                       Lua we load (bundles / setup).
+      dies                          -> the seq-2-derived template itself is
+                                       the killer; rebuild it from a working
+                                       seq-1 profile instead.
+    """
     prof = copy.deepcopy(json.load(open(TEMPLATE)))
     by = {c["controlElementNumber"]: c for c in prof["configs"]}
+    for c in prof["configs"]:
+        for e in c["events"]:
+            e["config"] = ""
+    set_event(by[13], 0, "--[[@cb]] glsb(255)")
+    set_event(by[255], 6, '--[[@cb]] print("probe alive")')
+    validate_events(prof)
+    now = iso_now()
+    prof.update({
+        "id": str(uuid.uuid4()),
+        "name": "seq3 probe",
+        "description": ("seq-3 boot probe: every event blank except a timer "
+                        "print. No require, no module code. If this cold boots, "
+                        "the element skeleton is innocent."),
+        "fileName": "seq3 probe.json",
+        "createdAt": now, "modifiedAt": now,
+        "isEditable": True, "syncStatus": "local",
+    })
+    check_schema(prof)
+    data = json.dumps(prof)
+    out = os.path.join(ROOT, "dist", "seq3 probe.json")
+    open(out, "w").write(data)
+    print(f"wrote {out}  ({len(data)} B)")
+    if "--install" in sys.argv:
+        dst = os.path.expanduser("~/Documents/grid-userdata/configs/seq3 probe.json")
+        open(dst, "w").write(data)
+        print(f"wrote {dst}")
+
+
+def main():
+    if "--probe" in sys.argv:
+        write_probe()
+        return
+    prof = copy.deepcopy(json.load(open(TEMPLATE)))
+    by = {c["controlElementNumber"]: c for c in prof["configs"]}
+
+    # The seq-2 template puts print("tick") on the timer (ev6) of ALL 14
+    # elements; seq-1's working profile has 2. Fourteen timers printing during
+    # the cold-boot sequence is needless churn, so blank every element timer
+    # and keep only el 255's RAM diagnostic.
+    for _n, _c in by.items():
+        if _n == 255:
+            continue
+        for _e in _c["events"]:
+            if _e["event"] == 6:
+                _e["config"] = ""
 
     set_event(by[255], 0, SETUP)
     set_event(by[255], 6, MEM)
@@ -130,18 +274,19 @@ def main():
 
     validate_events(prof)
 
-    now = int(time.time() * 1000)
+    now = iso_now()
     prof.update({
         "id": str(uuid.uuid4()),
         "name": "seq3 core",
-        "description": ("seq-3 v6: seq-2-shaped pre-linked bundles (seq3.lua core, "
-                        "seq3ui.lua boot+screen) loaded eagerly at setup like the "
-                        "proven working profile; 2-lane demo; mem prints."),
+        "description": ("seq-3 v11 (setup=" + SETUP_MODE
+                        + "): nothing required at setup; lazy bundles; "
+                          "slot save/load in Config."),
         "fileName": "seq3 core.json",
         "createdAt": now, "modifiedAt": now,
         "isEditable": True, "syncStatus": "local",
     })
 
+    check_schema(prof)
     data = json.dumps(prof)
     out = os.path.join(ROOT, "dist", "seq3 core.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -154,6 +299,10 @@ def main():
         print(f"wrote {dst}")
 
     print(f"elements: {sorted(by)} | setup {len(SETUP)}/900 | draw {len(DRAW)}/900")
+    print(f"setup mode: {SETUP_MODE} | seq3x: {'EAGER' if EAGER_X else 'lazy'}")
+    ticks = sum(1 for c in prof["configs"] for e in c["events"]
+                if e["event"] == 6 and e.get("config", "").strip())
+    print(f"timer (ev6) events kept: {ticks} (was 14 from the seq-2 template)")
 
 
 if __name__ == "__main__":

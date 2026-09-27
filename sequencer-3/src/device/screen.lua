@@ -58,20 +58,20 @@ function S.touch() S.dirtyFlag = true end
 -- one step cell: dim base + value fill + playhead/selection bars
 local function cell(lcd, x, y, w, h, l, step, selStep)
     local color = TYPE_COLORS[l.type]
-    lcd:draw_area_filled(x, y, x + w, y + h, DIM)
+    lcd:draw_rectangle_filled(x, y, x + w, y + h, DIM)
     local v = stripValue(l, step)
     if l.type == "note" or l.type == "mod" then
         local fh = math.floor(v / 127 * h)
-        if fh > 0 then lcd:draw_area_filled(x, y + h - fh, x + w, y + h, color) end
+        if fh > 0 then lcd:draw_rectangle_filled(x, y + h - fh, x + w, y + h, color) end
     elseif v == 1 then
-        lcd:draw_area_filled(x, y, x + w, y + h, color)
+        lcd:draw_rectangle_filled(x, y, x + w, y + h, color)
     end
-    if step == l.position then lcd:draw_area_filled(x, y + h - 2, x + w, y + h, BAR) end
-    if step == selStep then lcd:draw_area_filled(x, y, x + w, y + 2, BAR) end
+    if step == l.position then lcd:draw_rectangle_filled(x, y + h - 2, x + w, y + h, BAR) end
+    if step == selStep then lcd:draw_rectangle_filled(x, y, x + w, y + 2, BAR) end
 end
 
 local function drawOverview(lcd)
-    lcd:draw_area_filled(0, 0, 320, 240, BG)
+    lcd:draw_rectangle_filled(0, 0, 319, 239, BG)
     for lane = 1, #Engine.lanes do
         local l = Engine.state(lane)
         local y = (lane - 1) * 60
@@ -105,7 +105,7 @@ local function readout(l)
 end
 
 local function drawFocus(lcd)
-    lcd:draw_area_filled(0, 0, 320, 240, BG)
+    lcd:draw_rectangle_filled(0, 0, 319, 239, BG)
     local l = Engine.state(S.selLane)
     for row = 1, 4 do
         for col = 1, 4 do
@@ -113,7 +113,7 @@ local function drawFocus(lcd)
             cell(lcd, (col - 1) * 70, (row - 1) * 58 + 6, 66, 52, l, s, S.selStep)
         end
     end
-    lcd:draw_area_filled(282, 6, 318, 122, DIM)
+    lcd:draw_rectangle_filled(282, 6, 318, 122, DIM)
     lcd:draw_text_fast(paramLabel(), 286, 20, 8, GREY)
     lcd:draw_text_fast(readout(l), 286, 40, 16, WHITE)
     lcd:draw_swap()

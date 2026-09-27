@@ -7,9 +7,9 @@ proven shape: few plain-text bundles, each <= ~10 KB, pre-linked through a
 registry shim (require resolves inside the bundle; no FS module load at
 runtime, no per-file boot cost).
 
-  dist/seq3.lua       core chain: sources, scales, lane, transport, generate,
-                      ext, ops, preset, engine (self-contained, ~13 KB)
-  dist/seq3ui.lua     boot + midi_rx + screen + menu (needs seq3, ~10 KB)
+  dist/seq3.lua       core chain: sources, scales, lane, transport, engine
+  dist/seq3ui.lua     boot + midi_rx + screen + menu (needs seq3)
+  dist/seq3x.lua      lazy periphery: generate, ext, ops, preset, persist
 
 The profile's setup requires seq3 then seq3ui and fills the demo — mirroring
 seq-2's working setup (14.8 KB eager) — with grxm/rtmrx armed at setup.
@@ -23,11 +23,15 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "dist")
 
 # (key, source path) per bundle, in dependency order -------------------------
-# v7 follows seq-1's PROVEN bundle sizes (its biggest was 10.3 KB): split the
-# core so no bundle is far above 10 KB, and keep the demo-unused periphery
-# (generate/ext/ops/preset) in a THIRD bundle that only loads when one of
-# those actions is first used (engine's loadGenerate/loadExt/loadOps/loadPreset
-# call require() — the bundle shim serves them without any FS-module load).
+# v10: the lazy periphery is split by TRIGGER, because the device ran out of
+# memory compiling the single 11.2 KB seq3x once seq3 + seq3ui were resident:
+#
+#   LUA not OK! error loading module 'seq3x' from file '/seq3x.lua':
+#                                                       not enough memory
+#
+# Shred/Zero is 843 B of code but was dragging in 11.2 KB. Splitting means the
+# most-used live feature compiles ~4.8 KB and save/load ~6.9 KB, separately —
+# the peak compile more than halves and neither pulls the other.
 CORE = [
     ("sources",   "src/core/sources.lua"),
     ("scales",    "src/core/scales.lua"),
@@ -41,17 +45,34 @@ UI = [
     ("screen",      "src/device/screen.lua"),
     ("menu",        "src/device/menu.lua"),
 ]
-# Lazy periphery: NOT loaded at setup. The engine's lazy loaders require
-# these names on first use; the CORE bundle's require shim falls through to
-# the host require, which (after the profile's setup has required seq3x) is
-# a registry hit — no FS involvement. If seq3x is not loaded yet, the
-# require errors; acceptable: those actions are unused by the demo.
-EXTRA = [
+# Live performance ops: Shred / Zero / rotate, Gamut / Euclid, X-Y addressing.
+OPS = [
+    ("ops",       "src/core/ops.lua"),
     ("generate",  "src/core/generate.lua"),
     ("ext",       "src/core/ext.lua"),
-    ("ops",       "src/core/ops.lua"),
-    ("preset",    "src/core/preset.lua"),
 ]
+# Save / load / copy. Only the Config slot items and loadPreset need these.
+PERSIST = [
+    ("preset",    "src/core/preset.lua"),
+    ("persist",   "src/core/persist.lua"),
+]
+
+BUNDLES = [
+    ("seq3.lua",   CORE),
+    ("seq3ui.lua", UI),
+    ("seq3x.lua",  OPS),
+    ("seq3p.lua",  PERSIST),
+]
+
+# module name -> the bundle that holds it. The shim uses this to resolve a
+# cross-bundle require DIRECTLY, so requiring "ops" pulls seq3x and nothing
+# else. (The old shim tried each fallback in turn, so one miss could compile a
+# bundle we never needed — exactly the RAM we are trying not to spend.)
+OWNER = {}
+for _name, _mods in BUNDLES:
+    _key = _name[:-4]                     # strip ".lua"
+    for _k, _ in _mods:
+        OWNER[_k] = _key
 
 def strip(src):
     """Strip comments and blank lines, string-aware (same as strip_lua.py)."""
@@ -87,47 +108,49 @@ def strip(src):
             out_lines.append(s)
     return "\n".join(out_lines)
 
-SHIM = """local R={}
+SHIM_HEAD = """local R={}
 local _host=require
-local _1
-local _x
+local B=%s
+local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
- if not _1 then _1=_host(%(host)r) end local m=_1[n] if m then return m end
- if not _x then _x=_host(%(extra)r) end x=_x[n] if x then return x end
+ local b=B[n]
+ if b then
+  local m=C[b] if not m then m=_host(b) C[b]=m end
+  local v=m[n] if v~=nil then return v end
+ end
  error('seq3 module not found: '..tostring(n))
 end
 """
 
+def owner_map(exclude):
+    """Lua table literal: module name -> owning bundle, for names NOT local to
+    this bundle (a local name is served from R before B is consulted)."""
+    items = ["%s=%r" % (k, v) for k, v in sorted(OWNER.items()) if k not in exclude]
+    return "{" + ",".join(items).replace("'", '"') + "}"
+
 SELF_SHIM = "local R={}\nlocal function require(n) return R[n] end\n"
 
-def build(name, modules, fallback=None):
+def build(name, modules):
     """Pack modules into one bundle: R[key]=(function() <src> end)() pairs.
 
-    fallback: bundle name to delegate to when a key is missing locally
-    (the bundle's returned table is fetched via the host require at first
-    miss). None = fully self-contained.
+    Cross-bundle names resolve through the OWNER map in the shim, so each
+    bundle only ever compiles the bundle that actually owns a missing name.
     """
-    parts = []
-    if fallback:
-        parts.append(SHIM % {"host": fallback[0], "extra": fallback[1]})
-        parts.append("local _1\nlocal _x\nlocal x\n")
-    else:
-        parts.append(SELF_SHIM)
+    local_keys = {k for k, _ in modules}
+    parts = [SHIM_HEAD % owner_map(local_keys)]
     for key, path in modules:
         src = strip(open(os.path.join(ROOT, path)).read())
         parts.append(f'R["{key}"]=(function()\n\n{src}\n\nend)()\n')
-    parts.append(f"return R\n")
+    parts.append("return R\n")
     data = "".join(parts)
     out = os.path.join(OUT, name)
     open(out, "w").write(data)
     print(f"wrote {out}  ({len(data)} B)")
+    return len(data)
 
 if __name__ == "__main__":
-    # seq3.lua: core chain; falls through to seq3ui (device_boot etc.) and
-    # seq3x (generate/ext/ops/preset) for the lazy modules it names.
-    build("seq3.lua", CORE, fallback=("seq3ui", "seq3x"))
-    # seq3ui.lua: falls back to seq3 (lane/scales/engine) and seq3x.
-    build("seq3ui.lua", UI, fallback=("seq3", "seq3x"))
-    # seq3x.lua: needs lane/scales/engine from seq3 only.
-    build("seq3x.lua", EXTRA, fallback=("seq3", "seq3x"))
+    total = 0
+    for name, mods in BUNDLES:
+        total += build(name, mods)
+    print(f"4 bundles, {total} B total")

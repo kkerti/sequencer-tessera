@@ -67,12 +67,12 @@ end
 -- Does NOT ensure(): before the first key press this must stay free.
 function M.status(lcd)
     if not Engine then
-        lcd:draw_area_filled(0, 0, 320, 240, { 12, 12, 16 })
+        lcd:draw_rectangle_filled(0, 0, 319, 239, { 12, 12, 16 })
         lcd:draw_text_fast("seq3: press a key to load", 8, 110, 16, { 120, 220, 255 })
         lcd:draw_swap()
         return
     end
-    lcd:draw_area_filled(0, 0, 320, 240, { 12, 12, 16 })
+    lcd:draw_rectangle_filled(0, 0, 319, 239, { 12, 12, 16 })
     for i = 1, #Engine.lanes do
         local l = Engine.lanes[i]
         lcd:draw_text_fast(i .. " " .. l.type .. " " .. l.position,

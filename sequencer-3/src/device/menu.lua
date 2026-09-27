@@ -33,9 +33,26 @@ local PAGES = {
         items = {
             { label = "run",   field = "running", bool = true },
             { label = "reset", field = "_reset" },
+            { label = "slot",  field = "_slot", lo = 1, hi = 24 },
+            { label = "save",  field = "_save" },
+            { label = "load",  field = "_load" },
         },
     },
 }
+
+-- Slot save/load. persist.lua is required on the FIRST save or load only, so
+-- the file-IO code never compiles unless the performer asks for it.
+M.slot = 1
+M.status = "-"
+local Persist
+
+local function persist()
+    if not Persist then
+        Persist = require("persist")
+        Persist.prefix = "s"          -- module file storage is flat: s01.lua
+    end
+    return Persist
+end
 
 function M.init(screenState, engine)
     S = screenState
@@ -53,6 +70,8 @@ end
 
 function M.itemValue(it)
     if it.field == "_reset" then return "-" end
+    if it.field == "_slot" then return tostring(M.slot) end
+    if it.field == "_save" or it.field == "_load" then return M.status end
     if it.bool then return Engine.running and "on" or "off" end
     return tostring(Engine.state(S.selLane)[it.field])
 end
@@ -60,6 +79,12 @@ end
 function M.applyItem(it, d)
     if it.field == "_reset" then
         Engine.reset()
+    elseif it.field == "_slot" then
+        M.slot = clamp(M.slot + d, it.lo, it.hi)
+    elseif it.field == "_save" then
+        M.status = persist().saveSlot(M.slot) and "ok" or "err"
+    elseif it.field == "_load" then
+        M.status = persist().loadSlot(M.slot) and "ok" or "err"
     elseif it.bool then
         if Engine.running then Engine.onStop() else Engine.onStart() end
     else
@@ -97,7 +122,7 @@ function M.turn(d)
 end
 
 function M.draw(lcd)
-    lcd:draw_area_filled(0, 0, 320, 240, BG)
+    lcd:draw_rectangle_filled(0, 0, 319, 239, BG)
     local page = PAGES[M.page]
     lcd:draw_text_fast(page.title .. " " .. S.selLane, 8, 8, 16, WHITE)
     for i, it in ipairs(page.items) do

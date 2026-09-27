@@ -1,16 +1,16 @@
 local R={}
 local _host=require
-local _1
-local _x
+local B={device_boot="seq3ui",ext="seq3x",generate="seq3x",menu="seq3ui",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3p",screen="seq3ui"}
+local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
- if not _1 then _1=_host('seq3ui') end local m=_1[n] if m then return m end
- if not _x then _x=_host('seq3x') end x=_x[n] if x then return x end
+ local b=B[n]
+ if b then
+  local m=C[b] if not m then m=_host(b) C[b]=m end
+  local v=m[n] if v~=nil then return v end
+ end
  error('seq3 module not found: '..tostring(n))
 end
-local _1
-local _x
-local x
 R["sources"]=(function()
 
 local M = {}
@@ -52,6 +52,14 @@ if type(value) == "number" then return value end
 local v = NAMES[value]
 if v == nil then return default or M.OFF end
 return v
+end
+local REVERSE
+function M.name(src)
+if not REVERSE then
+REVERSE = {}
+for k, v in pairs(NAMES) do REVERSE[v] = k end
+end
+return REVERSE[src] or "off"
 end
 function M.isTransport(src)
 return src >= M.TRANSPORT_WHOLE and src <= M.TRANSPORT_SIXTEENTH

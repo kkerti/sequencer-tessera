@@ -12,7 +12,10 @@ local Sources   = require("sources")
 local Scales    = require("scales")
 local Lane      = require("lane")
 local Transport = require("transport")
-local Generate  = require("generate")
+
+-- generate.lua and ops.lua load LAZILY (see loadGenerate/loadOps below): the
+-- pulse path needs only Generate.step, so the modules compile on first use —
+-- each resident module costs device RAM (see dist/README.md measurements).
 
 local M = {}
 
@@ -132,36 +135,43 @@ local function applyAddress(lane, src)
     end
 end
 
-local function applyXAddress(lane, src)
-    local v = sourceValue(src)
-    if not v then return end
-    local x = (v * lane.width) // 127
-    if x >= lane.width then x = lane.width - 1 end
-    if x < 0 then x = 0 end
-    local y = (lane.position - 1) // lane.width
-    local pos = y * lane.width + x + 1
-    if pos ~= lane.position then
-        lane.position = pos
-        lane.emit = true
-    end
-end
-
-local function applyYAddress(lane, src)
-    local v = sourceValue(src)
-    if not v then return end
-    local y = (v * lane.height) // 127
-    if y >= lane.height then y = lane.height - 1 end
-    if y < 0 then y = 0 end
-    local x = (lane.position - 1) % lane.width
-    local pos = y * lane.width + x + 1
-    if pos ~= lane.position then
-        lane.position = pos
-        lane.emit = true
-    end
-end
-
 local function clamp(v, lo, hi)
     if v < lo then return lo elseif v > hi then return hi else return v end
+end
+
+-- Lazy module loads: first call requires the module and re-points the stub,
+-- so every later call is a plain table field (no __index on the pulse path).
+-- ext = X/Y playhead addressing (compiled on first address-source set);
+-- ops = shred/zero/rotate; preset = copy + loadPreset; generate = gamut/euclid.
+local Generate, Ops, Ext, Preset
+local lanep                              -- forward decl (defined below)
+local function loadGenerate()
+    if not Generate then Generate = require("generate") end
+    return Generate
+end
+local function loadOps()
+    if not Ops then
+        Ops = require("ops")(M, { lanep = lanep, clamp = clamp })
+    end
+    return Ops
+end
+local function loadPresetMod()
+    if not Preset then
+        Preset = require("preset")(M, { lanep = lanep, clamp = clamp })
+    end
+    return Preset
+end
+local function loadExt()
+    if not Ext then Ext = require("ext")(M, { srcVal = sourceValue }) end
+    return Ext
+end
+
+-- applyAddressAll: lazy ext hook, cached in place on first load (the demo and
+-- step-edit paths never address, so ext.lua compiles only when an address
+-- source is actually set).
+local function applyAddressAll(l)
+    applyAddressAll = loadExt()
+    applyAddressAll(l)
 end
 
 local function emitStep(lane)
@@ -244,11 +254,10 @@ function M.onPulse()
         if sourceFired(l.advanceSource) then applyAdvance(l, "linear") end
         if sourceFired(l.xAdvanceSource) then applyAdvance(l, "x") end
         if sourceFired(l.yAdvanceSource) then applyAdvance(l, "y") end
-        if l.addressSource ~= Sources.OFF then applyAddress(l, l.addressSource) end
-        if l.xAddressSource ~= Sources.OFF then applyXAddress(l, l.xAddressSource) end
-        if l.yAddressSource ~= Sources.OFF then applyYAddress(l, l.yAddressSource) end
+        if l.addressSource ~= Sources.OFF or l.xAddressSource ~= Sources.OFF
+            or l.yAddressSource ~= Sources.OFF then applyAddressAll(l) end
         if l.emit then
-            if l.generator == 1 then Generate.step(l) end
+            if l.generator == 1 then loadGenerate().step(l) end
             emitStep(l)
         end
         if i <= Sources.LANE_COUNT then
@@ -328,7 +337,7 @@ end
 
 -- ------------------------------------------------------------ lane cfg ---
 
-local function lanep(index) return M.lanes[index] end
+lanep = function(index) return M.lanes[index] end
 
 function M.setType(lane, kind)
     local l = lanep(lane); if not l then return false end
@@ -453,182 +462,39 @@ function M.setGate(lane, step, on)
 end
 
 -- --------------------------------------------------- sequence operations ---
-
-local function forUsedSteps(lane, fn)
-    local used = Lane.limit(lane)
-    for i = 1, used do fn(i) end
-end
-
-function M.shred(lane)
-    local l = lanep(lane); if not l then return false end
-    local pos = l.position
-    if l.type == "note" then
-        l.pitch[pos] = Scales.quantize(math.random(l.minNote, l.maxNote), l.scaleMask)
-        l.velocity[pos] = math.random(1, 127)
-    elseif l.type == "mod" then
-        l.value[pos] = math.random(l.minValue, l.maxValue)
-    else
-        l.gate[pos] = math.random(0, 1)
-    end
-    return true
-end
-
-function M.shredAll(lane)
-    local l = lanep(lane); if not l then return false end
-    local saved = l.position
-    forUsedSteps(l, function(i)
-        l.position = i
-        M.shred(lane)
-    end)
-    l.position = saved
-    return true
-end
-
-function M.zero(lane)
-    local l = lanep(lane); if not l then return false end
-    local pos = l.position
-    if l.type == "note" then l.pitch[pos] = l.minNote
-    elseif l.type == "mod" then l.value[pos] = l.minValue
-    else l.gate[pos] = 0 end
-    return true
-end
-
-function M.nudge(lane)
-    local l = lanep(lane); if not l then return false end
-    local pos = l.position
-    local d = math.random(-2, 2)
-    if l.type == "note" then l.pitch[pos] = clamp(l.pitch[pos] + d, 0, 127)
-    elseif l.type == "mod" then l.value[pos] = clamp(l.value[pos] + d, 0, 127)
-    else if math.random() < 0.5 then l.gate[pos] = 0 else l.gate[pos] = 1 end end
-    return true
-end
-
-function M.rotate(lane, steps)
-    local l = lanep(lane); if not l then return false end
-    Lane.rotate(l, steps | 0)
-    return true
-end
-
-function M.offset(lane, delta)
-    local l = lanep(lane); if not l then return false end
-    forUsedSteps(l, function(i)
-        if l.type == "note" then l.pitch[i] = clamp(l.pitch[i] + delta, 0, 127)
-        elseif l.type == "mod" then l.value[i] = clamp(l.value[i] + delta, 0, 127) end
-    end)
-    return true
-end
-
-function M.ramp(lane)
-    local l = lanep(lane); if not l then return false end
-    local used = Lane.limit(l)
-    for i = 1, used do
-        local t = (i - 1) / (used - 1)
-        if l.type == "note" then
-            l.pitch[i] = clamp(math.floor(l.minNote + t * (l.maxNote - l.minNote)), 0, 127)
-        elseif l.type == "mod" then
-            l.value[i] = clamp(math.floor(l.minValue + t * (l.maxValue - l.minValue)), 0, 127)
-        end
-    end
-    return true
-end
-
-function M.hill(lane)
-    local l = lanep(lane); if not l then return false end
-    local used = Lane.limit(l)
-    for i = 1, used do
-        local t = (i - 1) / (used - 1)
-        t = 1 - math.abs(2 * t - 1)
-        if l.type == "note" then
-            l.pitch[i] = clamp(math.floor(l.minNote + t * (l.maxNote - l.minNote)), 0, 127)
-        elseif l.type == "mod" then
-            l.value[i] = clamp(math.floor(l.minValue + t * (l.maxValue - l.minValue)), 0, 127)
-        end
-    end
-    return true
-end
-
-function M.boost(lane, factor)
-    local l = lanep(lane); if not l then return false end
-    forUsedSteps(l, function(i)
-        if l.type == "note" then l.pitch[i] = clamp(math.floor(l.pitch[i] * factor), 0, 127)
-        elseif l.type == "mod" then l.value[i] = clamp(math.floor(l.value[i] * factor), 0, 127) end
-    end)
-    return true
-end
-
-function M.copy(from, to)
-    local src, dst = lanep(from), lanep(to)
-    if not src or not dst then return false end
-    local used = Lane.limit(dst)
-    for i = 1, Lane.CAP do
-        dst.pitch[i] = src.pitch[i]
-        dst.velocity[i] = src.velocity[i]
-        dst.stepLength[i] = src.stepLength[i]
-        dst.value[i] = src.value[i]
-        dst.gate[i] = src.gate[i]
-    end
-    dst.type = src.type
-    dst.scaleMask, dst.rawScaleMask, dst.root = src.scaleMask, src.rawScaleMask, src.root
-    dst.minNote, dst.maxNote = src.minNote, src.maxNote
-    dst.minValue, dst.maxValue = src.minValue, src.maxValue
-    dst.controller = src.controller
-    dst.length = src.length
-    dst.division = src.division
-    if (dst.width * dst.height) < used then dst.length = dst.width * dst.height end
-    return true
-end
+-- LAZY: the ops live in ops.lua and load on first use (via __index). The
+-- forwarders here only exist for direct (non-__index) calls, e.g. ops.lua's
+-- own loadPreset calling E.generate — after first resolution they are plain
+-- fields, so the hot path never sees the metamethod.
 
 function M.generate(lane, opts)
     local l = lanep(lane); if not l then return false end
     opts = opts or {}
+    local G = loadGenerate()
     local kind = opts.kind or "gamut"
     if kind == "euclid" or kind == "rhythm" then
-        return Generate.euclidean(l, opts)
+        return G.euclidean(l, opts)
     end
-    Generate.configure(l, opts)
-    if opts.fill ~= false then Generate.fill(l) end
+    G.configure(l, opts)
+    if opts.fill ~= false then G.fill(l) end
     l.generator = opts.live and 1 or 0
     return true
 end
 
--- ------------------------------------------------------------ presets ---
-
-function M.loadPreset(data)
-    if type(data) ~= "table" or type(data.lanes) ~= "table" then return false end
-    for i = 1, #M.lanes do
-        local p = data.lanes[i]
-        if type(p) == "table" then
-            local l = M.lanes[i]
-            if p.type then M.setType(i, p.type) end
-            if p.dims then M.setDimensions(i, p.dims) end
-            if p.length then M.setLength(i, p.length) end
-            if p.division then M.setDivision(i, p.division) end
-            if p.channel then M.setChannel(i, p.channel) end
-            if p.controller then M.setController(i, p.controller) end
-            if p.midiNote then M.setMidiNote(i, p.midiNote) end
-            if p.scaleMask then M.setScale(i, p.scaleMask, p.root or 0) end
-            if p.advanceSource then M.setAdvanceSource(i, p.advanceSource) end
-            if p.xAdvanceSource then M.setXAdvanceSource(i, p.xAdvanceSource) end
-            if p.yAdvanceSource then M.setYAdvanceSource(i, p.yAdvanceSource) end
-            if p.resetSource then M.setResetSource(i, p.resetSource) end
-            if p.randomSource then M.setRandomSource(i, p.randomSource) end
-            if p.previousSource then M.setPreviousSource(i, p.previousSource) end
-            if p.shiftSource then M.setShiftSource(i, p.shiftSource) end
-            if p.shiftAmount then M.setShiftAmount(i, p.shiftAmount) end
-            if p.addressSource then M.setAddressSource(i, p.addressSource) end
-            if p.xAddressSource then M.setXAddressSource(i, p.xAddressSource) end
-            if p.yAddressSource then M.setYAddressSource(i, p.yAddressSource) end
-            if p.minNote or p.maxNote then M.setRange(i, p.minNote or 0, p.maxNote or 127) end
-            if p.pitch then for k = 1, #p.pitch do l.pitch[k] = p.pitch[k] end end
-            if p.velocity then for k = 1, #p.velocity do l.velocity[k] = p.velocity[k] end end
-            if p.stepLength then for k = 1, #p.stepLength do l.stepLength[k] = p.stepLength[k] end end
-            if p.value then for k = 1, #p.value do l.value[k] = p.value[k] end end
-            if p.gate then for k = 1, #p.gate do l.gate[k] = p.gate[k] end end
-            if p.generate then M.generate(i, p.generate) end
+setmetatable(M, {
+    __index = function(t, k)
+        -- one round-trip: resolve through the lazy module, then cache as a
+        -- real field (later calls never touch the metamethod)
+        local fn
+        if k == "shred" or k == "zero" or k == "rotate" then
+            fn = loadOps()[k]
+        elseif k == "copy" or k == "loadPreset" then
+            fn = loadPresetMod()[k]
         end
-    end
-    return true
-end
+        if fn then t[k] = fn end
+        return fn
+    end,
+})
 
 -- ------------------------------------------------------- introspection ---
 

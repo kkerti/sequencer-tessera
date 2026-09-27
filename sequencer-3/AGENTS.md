@@ -102,13 +102,23 @@ Adapters
   and UI still to be mapped.
 - **Presets:** 24 Lua-chunk files under `presets/`, loaded on demand.
 
-## Device-code reality (revised from seq-1/2)
+## Device-code reality (measured on VSN1R)
 
-The Grid has **filesystem access**. The ~10 KB text-chunk watchdog limit applies
-to **element event scripts** (the inline scripts in a profile), **not** to Lua
-modules loaded from the filesystem. So seq-3 can be organised into real modules
-on the Grid FS instead of size-tuned bundles. Keep hot-path allocation
-discipline regardless.
+- The ~10 KB text-chunk watchdog limit applies to **element event scripts**
+  (inline profile scripts ≤ 900 chars), **not** to FS modules. FS modules are
+  plain text, compiled at load — comments are ballast; `tools/strip_lua.py`
+  strips them in the dist.
+- **RAM is the ceiling again (measured):** full GUI at setup = 183 KB →
+  module dead; eager core-only at setup = 149 KB → refused to start; lazy
+  core-only (requires nothing at setup, `midi_rx` compiles on the first MIDI
+  byte) = **150 KB runtime, runs**. The kill threshold is the load/setup
+  **peak**, so every added piece must compile lazily and be measured alone.
+- Profile generation: `tools/gen_profile.py` clones the proven 15-element
+  skeleton; event configs are compiled with `luac -p` before the profile is
+  written (a glued `endself` token once made the editor call it corrupt).
+- Verified device draw: `scr:draw_text_fast(text, x, y, size, color)` +
+  `draw_swap()` — long names in FS modules, short names (`ldaf/ldft/ldsw`)
+  in inline event scripts only.
 
 ## Proposed layout (to be built)
 
@@ -145,7 +155,11 @@ sequencer-3/
   lanes. `presets/06.lua` (live gamut + euclid). Tests: 73 checks, no-alloc
   green with a live generator on the pulse path.
 - **Later — Grid VSN1 control interface** (widget system, buttons, minimal
-  screen) against the action API.
+  screen) against the action API. **In progress:** core-only device build
+  runs at 150 KB; engine ops + generators split into lazy `ops.lua`/lazy
+  `generate` (engine `__index`, cached on first use) to bank RAM — see
+  `dist/README.md` for the measured ladder. GUI pieces (`layout_core`,
+  `widgets`, `host`) re-add one measurement at a time.
 
 ## Deferred / future
 

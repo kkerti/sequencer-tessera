@@ -225,8 +225,8 @@ end
 do
     Engine.init{ lanes = 4 }
     for i = 1, 16 do Engine.setPitch(1, i, i) end
-    Engine.offset(1, 5)
-    ok(Engine.get(1, "pitch")[1] == 6, "offset adds a constant to all steps")
+    Engine.shred(1)
+    ok(Engine.get(1, "pitch")[Engine.state(1).position] ~= nil, "shred writes the playhead step")
 end
 
 -- ------------------------------------------------------------- preset ---

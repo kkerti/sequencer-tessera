@@ -22,11 +22,18 @@ end
 -- ours are bigger, so the three-way split keeps each load step modest. These
 -- ceilings are guards against silent growth, not device truth.
 local seq3src = io.open("dist/seq3.lua"):read("*a")
+local esrc    = io.open("dist/seq3e.lua"):read("*a")
+local hsrc    = io.open("dist/seq3h.lua"):read("*a")
 local uisrc   = io.open("dist/seq3ui.lua"):read("*a")
 local xsrc    = io.open("dist/seq3x.lua"):read("*a")
 local psrc    = io.open("dist/seq3p.lua"):read("*a")
-ok(#seq3src > 0 and #uisrc > 0 and #xsrc > 0 and #psrc > 0, "all four bundles exist")
-ok(#seq3src <= 20000, "seq3.lua <= 20 KB (" .. #seq3src .. ")")
+ok(#seq3src > 0 and #esrc > 0 and #hsrc > 0 and #uisrc > 0 and #xsrc > 0 and #psrc > 0,
+   "all six bundles exist")
+-- engine.lua now has its own bundle: the module ran out of memory initialising
+-- the modules, so the PEAK single compile matters as much as the total.
+ok(#seq3src <= 9000,  "seq3.lua (sources/scales/transport/lane) <= 9 KB (" .. #seq3src .. ")")
+ok(#esrc    <= 13000, "seq3e.lua (engine) <= 13 KB (" .. #esrc .. ")")
+ok(#hsrc    <= 4000,  "seq3h.lua (headless) <= 4 KB (" .. #hsrc .. ")")
 ok(#uisrc   <= 12000, "seq3ui.lua <= 12 KB (" .. #uisrc .. ")")
 -- The device ran out of memory compiling an 11.2 KB lazy bundle once the core
 -- was resident, so each LAZY bundle is capped well under that.
@@ -36,7 +43,8 @@ ok(#psrc    <= 8000, "seq3p.lua <= 8 KB (" .. #psrc .. ")")
 ok(#seq3src + #uisrc <= 32000,
    "eager setup load (seq3 + seq3ui) <= 32 KB (" .. (#seq3src + #uisrc) .. ")")
 
-for _, b in ipairs({ { "seq3", seq3src }, { "ui", uisrc }, { "x", xsrc }, { "p", psrc } }) do
+for _, b in ipairs({ { "seq3", seq3src }, { "e", esrc }, { "h", hsrc },
+                     { "ui", uisrc }, { "x", xsrc }, { "p", psrc } }) do
     local name, src = b[1], b[2]
     ok(not src:find("collectgarbage"), name .. ": no collectgarbage")
     ok(not src:find("package%.loaded"), name .. ": no package.loaded")
@@ -50,16 +58,15 @@ end
 local REG = {}
 local xLoads, pLoads = 0, 0
 local oldreq = require
+local LAZY = { seq3e = "dist/seq3e.lua", seq3x = "dist/seq3x.lua",
+               seq3p = "dist/seq3p.lua", seq3h = "dist/seq3h.lua" }
 require = function(n)
     if REG[n] then return REG[n] end
-    if n == "seq3x" then
-        xLoads = xLoads + 1
-        REG[n] = dofile("dist/seq3x.lua")
-        return REG[n]
-    end
-    if n == "seq3p" then
-        pLoads = pLoads + 1
-        REG[n] = dofile("dist/seq3p.lua")
+    local f = LAZY[n]
+    if f then
+        if n == "seq3x" then xLoads = xLoads + 1 end
+        if n == "seq3p" then pLoads = pLoads + 1 end
+        REG[n] = dofile(f)
         return REG[n]
     end
     return oldreq(n)
@@ -68,7 +75,7 @@ end
 REG["seq3"]   = dofile("dist/seq3.lua")
 REG["seq3ui"] = dofile("dist/seq3ui.lua")
 local RX = REG.seq3ui.midi_rx
-local engine = REG.seq3.engine
+local engine = require("seq3e").engine
 ok(RX ~= nil and RX.handle ~= nil, "seq3ui exposes midi_rx")
 ok(xLoads == 0 and pLoads == 0, "requiring the eager pair pulls no lazy bundle")
 

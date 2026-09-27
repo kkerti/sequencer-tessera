@@ -103,6 +103,20 @@ Adapters
 - **Presets:** 24 Lua-chunk files under `presets/`, loaded on demand. Saving
   writes the same shape, losslessly (see `docs/ACTION_API.md` > Slots).
 
+## Bundle granularity defeats in-module laziness (measured 2026-09-27)
+
+A pre-linked bundle **runs every module body when it is required**
+(`R["screen"]=(function() ... end)()`). So `midi_rx`'s `loadSCR()` — "the screen
+compiles on the first control press" — bought nothing: `screen.lua` and
+`menu.lua` were in the same bundle as `midi_rx`, so they were paid for the
+moment anything in `seq3ui` was needed. Measured: `screen.lua` adds ~0 KB on the
+first key press because it is already resident.
+
+**Laziness is per BUNDLE, never per module.** To defer something, give it its
+own bundle. This is why `dist/` is now six bundles, and why the headless target
+(`seq3.lua` + `seq3e.lua` + `seq3h.lua`, **79.1 KB resident**) fits where the
+GUI one (**99.4 KB**) did not.
+
 ## Corrections to earlier notes (found 2026-09-27, verified against a working profile)
 
 Two claims in this file were wrong and cost a device cycle. Both are fixed in

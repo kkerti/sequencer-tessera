@@ -120,6 +120,26 @@ else:
 
 EAGER_X = "--eager-x" in sys.argv
 
+# --- HEADLESS target -------------------------------------------------------
+# No GUI at all: clock -> lanes -> MIDI out, with a console report of the lanes
+# from the timer event. screen.lua + menu.lua (8.6 KB stripped) are never
+# compiled, which is the point — the module ran out of memory initialising them.
+HEADLESS = "--headless" in sys.argv
+
+HL_SETUP = (
+    '--[[@cb]] function L()'
+    'if not RX then RX=require("seq3h").headless end '
+    'return RX '
+    'end '
+    'self.rtmrx_cb=function(self,t)L().handle(t,midi_send)end'
+)
+# The timer is the whole "show me the lanes" surface, and it keeps report()
+# off the pulse path so Engine.onPulse stays allocation-free.
+HL_TIMER = ('--[[@cb]] if RX then RX.report() end '
+            'print("seq3 mem KB: " .. collectgarbage("count"))')
+# A key press arms the sequence with no DAW attached.
+HL_KEY = "--[[@cb]] L().key()"
+
 
 def press_cb(call):
     """A control press. With a lazy setup the press is also a load trigger, so
@@ -157,6 +177,19 @@ for _k in range(0, 8):
 CB_FULL[(8, 3)] = press_cb("RX.press()")
 for _b in range(9, 13):
     CB_FULL[(_b, 3)] = press_cb(f"RX.btn({_b})")
+
+if HEADLESS:
+    SETUP = HL_SETUP
+    MEM = HL_TIMER
+    DRAW = ""                      # no GUI: the draw event does nothing
+    CB_FULL = {}
+    for _k in range(0, 8):
+        CB_FULL[(_k, 3)] = HL_KEY
+    CB_FULL[(8, 3)] = HL_KEY
+    for _b in range(9, 13):
+        CB_FULL[(_b, 3)] = HL_KEY
+    ENCODER_TURN = ('--[[@sen]] self:epmo(1)self:epv0(64)self:epmi(0)'
+                    'self:epma(127)self:epse(1)--[[@cb]] L().key()')
 
 assert len(SETUP) <= 900, f"setup event {len(SETUP)} > 900 chars"
 assert len(MEM) <= 900, f"mem event {len(MEM)} > 900 chars"
@@ -277,29 +310,35 @@ def main():
     now = iso_now()
     prof.update({
         "id": str(uuid.uuid4()),
-        "name": "seq3 core",
-        "description": ("seq-3 v11 (setup=" + SETUP_MODE
-                        + "): nothing required at setup; lazy bundles; "
-                          "slot save/load in Config."),
-        "fileName": "seq3 core.json",
+        "name": "seq3 headless" if HEADLESS else "seq3 core",
+        "description": (
+            ("seq-3 v12 HEADLESS: no GUI. Clock -> 3 lanes -> MIDI out; the "
+             "timer prints one line per lane. Upload seq3.lua + seq3e.lua + "
+             "seq3h.lua.")
+            if HEADLESS else
+            ("seq-3 v12 (setup=" + SETUP_MODE + "): nothing required at setup; "
+             "lazy bundles; slot save/load in Config.")),
+        "fileName": ("seq3 headless.json" if HEADLESS else "seq3 core.json"),
         "createdAt": now, "modifiedAt": now,
         "isEditable": True, "syncStatus": "local",
     })
 
     check_schema(prof)
     data = json.dumps(prof)
-    out = os.path.join(ROOT, "dist", "seq3 core.json")
+    name = "seq3 headless.json" if HEADLESS else "seq3 core.json"
+    out = os.path.join(ROOT, "dist", name)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w").write(data)
     print(f"wrote {out}  ({len(data)} B)")
 
     if "--install" in sys.argv:
-        dst = os.path.expanduser("~/Documents/grid-userdata/configs/seq3 core.json")
+        dst = os.path.expanduser("~/Documents/grid-userdata/configs/" + name)
         open(dst, "w").write(data)
         print(f"wrote {dst}")
 
     print(f"elements: {sorted(by)} | setup {len(SETUP)}/900 | draw {len(DRAW)}/900")
-    print(f"setup mode: {SETUP_MODE} | seq3x: {'EAGER' if EAGER_X else 'lazy'}")
+    print(f"target: {'HEADLESS (no GUI)' if HEADLESS else 'GUI'} | "
+          f"setup mode: {'headless-lazy' if HEADLESS else SETUP_MODE}")
     ticks = sum(1 for c in prof["configs"] for e in c["events"]
                 if e["event"] == 6 and e.get("config", "").strip())
     print(f"timer (ev6) events kept: {ticks} (was 14 from the seq-2 template)")

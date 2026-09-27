@@ -23,7 +23,8 @@ end
 -- demand. `loaded` records what the module actually paid for, and when.
 local loaded, order = {}, {}
 local oldreq = require
-local FILES = { seq3 = "dist/seq3.lua", seq3ui = "dist/seq3ui.lua",
+local FILES = { seq3 = "dist/seq3.lua", seq3e = "dist/seq3e.lua",
+                seq3ui = "dist/seq3ui.lua", seq3h = "dist/seq3h.lua",
                 seq3x = "dist/seq3x.lua", seq3p = "dist/seq3p.lua" }
 require = function(n)
     if loaded[n] then return loaded[n] end

@@ -1,63 +1,79 @@
 # dist/ — seq-3 on the Grid VSN1
 
-**v11: the draw API was wrong.** `draw_area_filled` does not exist on the
-device. v9 fixed the cold boot, v10 the lazy-load OOM, v11 the screen crash.
+**v12: a HEADLESS target.** No GUI at all — the smallest thing that proves the
+sequencer: sequence data loaded into the runtime, played back from MIDI clock,
+with the lanes shown as text on the console.
 
-## v11: the screen crash
-
-With v10 the chain loaded cleanly and then the screen crashed and rebooted the
-module. Cause: the device modules called **`lcd:draw_area_filled(...)` 11
-times** — a method that appears **nowhere** in seq-1's cold-boot-proven
-`dist/sequencer_ui.lua`. The real primitive is `draw_rectangle_filled`, and the
-five full-screen clears also passed `(0, 0, 320, 240)` when the framebuffer
-corners are inclusive `0..319 x 0..239` — one pixel past each edge.
-
-Both fixed. The proven set, and the only calls we now make:
+## Two targets
 
 ```
-scr:draw_rectangle_filled(x0, y0, x1, y1, {r,g,b})   -- CORNERS, not w/h
-scr:draw_text_fast(text, x, y, size, {r,g,b})
-scr:draw_swap()
+sh tools/make_dist.sh --headless --install   -> profile "seq3 headless"
+sh tools/make_dist.sh --install              -> profile "seq3 core"  (GUI)
+python3 tools/gen_profile.py --probe --install -> profile "seq3 probe"
 ```
 
-**Why 46 headless checks missed it:** the test's LCD stand-in was an `__index`
-that returned a function for *any* method name, so a nonexistent call looked
-fine. `tests/lcd_mock.lua` now whitelists the four real primitives and
-bounds-checks every coordinate — reintroducing the bug fails the suite.
+| target | upload | bytes | resident (host Lua) |
+|---|---|---|---|
+| **headless** | `seq3.lua` + `seq3e.lua` + `seq3h.lua` | **23069** | **79.1 KB** |
+| GUI | + `seq3ui.lua` + `seq3x.lua` + `seq3p.lua` | 31547 (eager three) | 99.4 KB |
 
-## Status: the cold boot is SOLVED (v9), confirmed on device
+The GUI target ran out of memory initialising its modules. `screen.lua` +
+`menu.lua` are **8.6 KB of stripped source** and the headless path never
+compiles either.
 
-v9's bare setup booted and the whole chain loaded:
+**Why the "lazy screen" never helped:** a bundle runs *every* module body when
+it is required (`R["screen"]=(function() … end)()`), so packing screen+menu
+into `seq3ui` meant they compiled as soon as anything in that bundle was
+needed — `midi_rx`'s `loadSCR()` laziness was defeated by bundle granularity.
+Measured: `screen.lua` costs ~0 KB on the first key press because it was
+already paid for. If the GUI target is revived, screen+menu need their own
+bundle.
+
+`engine.lua` also got its own bundle (`seq3e.lua`, 12.2 KB) so the largest
+single compile drops from 19.4 KB to 12.2 KB — close to seq-1's proven 10.3 KB
+maximum. The peak matters as much as the total when a compile is what fails.
+
+## The headless build
+
+Three lanes, one clock, different divisions — installed through the action API
+by `src/device/seq_data.lua` (not a preset table: applying one needs
+`preset.lua`, and the point is to compile as little as possible):
+
+| lane | type | ch | advance | steps |
+|---|---|---|---|---|
+| L1 | note | 1 | 16ths | 16 (A-minor melody) |
+| L2 | note | 2 | 8ths | 8 (bass) |
+| L3 | trig | 10 | 16ths | 16 (drum pattern) |
+
+Console output — the boot ladder once, then one line per lane on every timer
+tick:
 
 ```
-seq3: loading engine -> engine ok -> demo ok -> loading screen -> screen ok
+seq3h: engine
+seq3h: engine ok
+seq3h: sequence ok
+seq3h: running
+L1 note ch1 step 7/16 -
+L2 note ch2 step 4/8 n45
+L3 trig ch10 step 7/16 -
+seq3 mem KB: <n>
 ```
 
-The `--probe` profile also booted (blank screen + `probe alive`), so the
-element skeleton and our event wiring are both innocent. What failed next was a
-different problem:
+The lanes advance at different rates against one clock, so the step numbers
+drift apart — that is the proof they are independently sequencing.
+`report()` runs only from the timer event, never from the pulse path, so
+`Engine.onPulse` stays allocation-free (measured: **-0.12 KB drift over 500
+pulses** through the real bundles).
 
-```
-LUA not OK! error loading module 'seq3x' from file '/seq3x.lua': not enough memory
-```
+Upload the three files, load **seq3 headless**, route MIDI clock in and the
+module's MIDI out to the DAW. Press any key to arm without a DAW attached.
 
-**v10 fixes that.** `seq3x` bundled all five periphery modules, so pressing
-Shred — 843 B of code — forced an **11.2 KB** compile with the core already
-resident. It is now split by what actually triggers it:
+Verified by `tests/headless_sim.lua` (20 checks) against the real bundles: the
+sequence installs 3 lanes, clock produces notes on ch1/ch2/ch10, L1 fires more
+often than L2, note-ons are matched by note-offs, the report prints exactly one
+line per lane — and **`seq3ui` is never loaded**.
 
-| bundle | size | pulled by |
-|---|---|---|
-| `seq3x.lua` | **4902 B** | Shred / Zero / rotate, Gamut / Euclid, X-Y addressing |
-| `seq3p.lua` | **6947 B** | slot save / load, `loadPreset`, lane copy |
-
-Peak lazy compile drops 11.2 KB → 6.9 KB, and the most-used live feature needs
-only 4.9 KB. The bundle shim was also rewritten: it now resolves a missing
-module through a **name → bundle map**, so requiring `ops` compiles `seq3x` and
-nothing else. (The old shim tried each fallback in turn, so one miss could
-compile a bundle that was never needed — exactly the RAM we are trying not to
-spend.)
-
-## Why v8 died, and what v9 changed
+## Why v8 died, and what v9 changed## Why v8 died, and what v9 changed
 
 v8 required `seq3` + `seq3ui` at setup **and** ran the demo there. The measured
 ladder in `AGENTS.md` already said this cannot work:

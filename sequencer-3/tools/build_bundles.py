@@ -37,7 +37,19 @@ CORE = [
     ("scales",    "src/core/scales.lua"),
     ("transport", "src/core/transport.lua"),
     ("lane",      "src/core/lane.lua"),
+]
+# engine.lua alone is the single biggest chunk, so it gets its own bundle: the
+# module ran out of memory initialising the modules, and the peak matters as
+# much as the total. seq-1's largest chunk was 10.3 KB; this keeps ours near it.
+ENGINE = [
     ("engine",    "src/core/engine.lua"),
+]
+# HEADLESS: no GUI at all. clock -> lanes -> MIDI out + a console report.
+# screen.lua + menu.lua are 8.6 KB of stripped source and are never compiled
+# on this path.
+HEADLESS = [
+    ("seq_data",  "src/device/seq_data.lua"),
+    ("headless",  "src/device/headless.lua"),
 ]
 UI = [
     ("device_boot", "src/device/device_boot.lua"),
@@ -59,10 +71,15 @@ PERSIST = [
 
 BUNDLES = [
     ("seq3.lua",   CORE),
+    ("seq3e.lua",  ENGINE),
+    ("seq3h.lua",  HEADLESS),
     ("seq3ui.lua", UI),
     ("seq3x.lua",  OPS),
     ("seq3p.lua",  PERSIST),
 ]
+
+# The HEADLESS target uploads only these three.
+HEADLESS_SET = ("seq3.lua", "seq3e.lua", "seq3h.lua")
 
 # module name -> the bundle that holds it. The shim uses this to resolve a
 # cross-bundle require DIRECTLY, so requiring "ops" pulls seq3x and nothing
@@ -150,7 +167,12 @@ def build(name, modules):
     return len(data)
 
 if __name__ == "__main__":
-    total = 0
+    sizes = {}
     for name, mods in BUNDLES:
-        total += build(name, mods)
-    print(f"4 bundles, {total} B total")
+        sizes[name] = build(name, mods)
+    print()
+    hl = sum(sizes[n] for n in HEADLESS_SET)
+    gui = sum(sizes[n] for n in ("seq3.lua", "seq3e.lua", "seq3ui.lua"))
+    print(f"HEADLESS upload ({' + '.join(HEADLESS_SET)}) = {hl} B")
+    print(f"GUI upload (seq3.lua + seq3e.lua + seq3ui.lua) = {gui} B")
+    print(f"largest single chunk = {max(sizes.values())} B (seq-1's proven max: 10300 B)")

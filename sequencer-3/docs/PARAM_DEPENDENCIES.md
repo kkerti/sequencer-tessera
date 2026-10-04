@@ -15,18 +15,20 @@ exist.
 | `dims` | used steps | Advance | XAdvance / YAdvance | Previous | Length | Shift |
 |---|---|---|---|---|---|---|
 | `16x1` | 16 | ✓ | — | ✓ | ✓ | ✓ |
-| `8x2`  | 16 | — | ✓ / ✓ | — | — | ✓ |
-| `5x3`  | 15 | — | ✓ / ✓ | — | — | ✓ |
-| `4x3`  | 12 | — | ✓ / ✓ | — | — | ✓ |
-| `4x4`  | 16 | — | ✓ / ✓ | — | — | ✓ |
+| `8x2`  | 16 | ✓ | ✓ / ✓ | ✓ | — | ✓ |
+| `5x3`  | 15 | ✓ | ✓ / ✓ | ✓ | — | ✓ |
+| `4x3`  | 12 | ✓ | ✓ / ✓ | ✓ | — | ✓ |
+| `4x4`  | 16 | ✓ | ✓ / ✓ | ✓ | — | ✓ |
 
 Index mapping is row-major: `index = y * width + x` (0-based), stored linearly
 in the 16-slot arrays. Unused slots (e.g. `5x3` slot 16) are ignored.
 
 Notes:
 
-- `16x1` is the default and the only mode with **Previous** and a free sequence
-  **length** (1..16).
+- `16x1` is the default and the only mode with a free sequence **length**
+  (1..16).
+- On a matrix, **Advance** / **Previous** still step linearly through the
+  cells (row-major), mixed with X/Y: e.g. X on a lane, Advance on 1/4.
 - Multi-dim modes derive their length from `dims` (fixed `width * height`); no
   separate length setting.
 - **X and Y wrap independently**: X advance wraps within the row, Y advance
@@ -35,7 +37,8 @@ Notes:
   X (and the single/previous advance) and Y count on separate counters, so a
   divided Y never eats X's counts.
 - On the device's lane GUI the Focus rows follow this table: a 16x1 lane shows
-  `adv`, `len` and `prev`; a matrix lane shows `xadv` and `yadv` instead.
+  `adv`, `len` and `prev`; a matrix lane shows `xadv` and `yadv` first, then
+  `adv` and `prev` (no `len`).
 
 ## 2. Lane type
 
@@ -72,8 +75,8 @@ Notes:
   underlying arrays but only the relevant fields are read/written.
 - `channel` is common to all types.
 - Source routing (advance, xAdvance, yAdvance, reset, random, previous, shift)
-  is common to all types and all `dims` (with the single-advance/`previous`
-  exceptions for `16x1`).
+  is common to all types and all `dims`. On `16x1`, xAdvance is the same as
+  advance and yAdvance does nothing.
 
 ## 4. Deferred / not-yet-applicable
 

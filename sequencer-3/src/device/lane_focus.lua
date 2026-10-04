@@ -51,7 +51,8 @@ return function(S, tool)
     local F = {}
 
     -- The selected lane's rows, most-played first; rebuilt when the lane, its
-    -- type or its dims change. 16x1 has adv/len/prev, a matrix has xadv/yadv.
+    -- type or its dims change. 16x1 has adv/len, a matrix xadv/yadv up front
+    -- and adv later: the engine runs a matrix's linear advance too.
     local ROWS, nrows = {}, 0
     local function add(k) nrows = nrows + 1; ROWS[nrows] = k end
     function F.build()
@@ -62,7 +63,8 @@ return function(S, tool)
         add(line and "adv" or "xadv"); add(line and "len" or "yadv")
         if note then add("scale"); add("root"); add("lo"); add("hi") else add("note") end
         add("type"); add("dims"); add("ch")
-        if line then add("prev") end
+        if not line then add("adv") end
+        add("prev")
         add("rst"); add("rnd"); add("shft"); add("amt")
         for i = nrows + 1, #ROWS do ROWS[i] = nil end
         S.cursor = clamp(S.cursor, 1, nrows)

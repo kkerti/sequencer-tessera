@@ -132,8 +132,8 @@ ok(E.lanes[1].dims == "4x4", "dims row cycles to 4x4")
 frame()
 ok(#lcd.errors == 0, "4x4 Focus grid stays in bounds: " .. tostring(lcd.errors[1]))
 f = frame()
-ok(row("xadv") and row("yadv") and not row("adv") and not row("len") and not row("prev"),
-   "a matrix lane shows X/Y advance, not adv/len/prev")
+ok(row("xadv") and row("yadv") and row("adv") and row("prev") and not row("len"),
+   "a matrix lane shows X/Y advance plus adv/prev (the engine runs them), not len")
 S.cursor = row("dims"); S.press(); S.turn(1); S.press()
 ok(E.lanes[1].dims == "16x1", "dims row cycles back to 16x1")
 

@@ -53,7 +53,8 @@ add("step"); add(note and "pitch" or "gate"); add("vel"); add("dur"); add("div")
 add(line and "adv" or "xadv"); add(line and "len" or "yadv")
 if note then add("scale"); add("root"); add("lo"); add("hi") else add("note") end
 add("type"); add("dims"); add("ch")
-if line then add("prev") end
+if not line then add("adv") end
+add("prev")
 add("rst"); add("rnd"); add("shft"); add("amt")
 for i = nrows + 1, #ROWS do ROWS[i] = nil end
 S.cursor = clamp(S.cursor, 1, nrows)

@@ -8,8 +8,6 @@ local Sources = require("sources")
 
 local M = {}
 
-M.PPQN = 24
-
 function M.new()
     return { running = false, pulse = 0 }
 end

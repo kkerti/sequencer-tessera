@@ -37,23 +37,20 @@ end
 
 -- Step-array defaults, from Lane.new. An array is written only when it carries
 -- the lane's own data or deviates from these, so files stay small.
-local DEFAULT = { pitch = 60, velocity = 100, stepLength = 6, value = 0, gate = 0 }
+local DEFAULT = { pitch = 60, velocity = 100, stepLength = 6, gate = 0 }
 
 -- Which arrays a lane type actually plays. Others are written only if dirty,
 -- so switching a lane's type doesn't silently drop the data behind it.
 local OWNED = {
     note = { pitch = true, velocity = true, stepLength = true },
-    mod  = { value = true },
     trig = { gate = true },
-    gate = { gate = true },
 }
 
-local ARRAY_ORDER = { "pitch", "velocity", "stepLength", "value", "gate" }
+local ARRAY_ORDER = { "pitch", "velocity", "stepLength", "gate" }
 
 local SOURCE_FIELDS = {
     "advanceSource", "xAdvanceSource", "yAdvanceSource",
     "resetSource", "randomSource", "previousSource", "shiftSource",
-    "addressSource", "xAddressSource", "yAddressSource",
 }
 
 local function isDirty(arr, default)
@@ -84,12 +81,10 @@ local function dump(out)
         out:write("            type = \"", l.type, "\", channel = ", l.channel,
                   ", dims = \"", l.dims, "\", length = ", l.length,
                   ", division = ", l.division, ",\n")
-        out:write("            controller = ", l.controller,
-                  ", midiNote = ", l.midiNote,
+        out:write("            midiNote = ", l.midiNote,
                   ", scaleMask = ", l.rawScaleMask,
                   ", root = ", l.root, ",\n")
-        out:write("            minNote = ", l.minNote, ", maxNote = ", l.maxNote,
-                  ", minValue = ", l.minValue, ", maxValue = ", l.maxValue, ",\n")
+        out:write("            minNote = ", l.minNote, ", maxNote = ", l.maxNote, ",\n")
 
         -- Sources: names, and only the ones that are actually routed.
         for k = 1, #SOURCE_FIELDS do
@@ -108,18 +103,6 @@ local function dump(out)
             if owned[name] or isDirty(l[name], DEFAULT[name]) then
                 writeArray(out, name, l[name])
             end
-        end
-
-        -- A live generator is restored with fill = false: the steps written
-        -- above are authoritative, and `seed` carries the RNG state so a live
-        -- lane continues its sequence rather than restarting it.
-        if l.generator == 1 then
-            out:write("            generate = { kind = \"gamut\", base = ", l.genBase,
-                      ", spread = ", l.genSpread, ", downUp = ", l.genDownUp, ",\n",
-                      "                         velSpread = ", l.genVelSpread,
-                      ", gateSpread = ", l.genGateSpread,
-                      ", seed = ", l.rng, ",\n",
-                      "                         live = true, fill = false },\n")
         end
 
         out:write("        },\n")
@@ -150,21 +133,5 @@ end
 
 function M.saveSlot(slot) return M.save(M.slotPath(slot)) end
 function M.loadSlot(slot) return M.load(M.slotPath(slot)) end
-
--- Host-side convenience: the same chunk as a string. Not reachable from the
--- device paths above (this is the only place table.concat appears).
-function M.serialize()
-    local buf = { n = 0 }
-    function buf:write(...)
-        local n = self.n
-        for i = 1, select("#", ...) do
-            n = n + 1
-            self[n] = tostring((select(i, ...)))
-        end
-        self.n = n
-    end
-    dump(buf)
-    return table.concat(buf, "", 1, buf.n)
-end
 
 return M

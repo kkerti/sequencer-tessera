@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={device_boot="seq3ui",engine="seq3e",ext="seq3x",generate="seq3x",headless="seq3h",menu="seq3ui",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3p",screen="seq3ui",seq_data="seq3h"}
+local B={device_boot="seq3ui",edit="seq3x",engine="seq3e",headless="seq3h",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",screen="seq3s",seq_data="seq3h",source_names="seq3p"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -20,12 +20,6 @@ M.TRANSPORT_HALF      = 2
 M.TRANSPORT_QUARTER   = 3
 M.TRANSPORT_EIGHTH    = 4
 M.TRANSPORT_SIXTEENTH = 5
-M.EXTERNAL_FIRST      = 6
-M.EXTERNAL_LAST       = 13
-M.EXTERNAL_COUNT      = 8
-M.LANE_FIRST          = 14
-M.LANE_LAST           = 17
-M.LANE_COUNT          = 4
 M.TRANSPORT_INTERVAL = {
 [M.TRANSPORT_WHOLE]     = 96,
 [M.TRANSPORT_HALF]      = 48,
@@ -33,42 +27,14 @@ M.TRANSPORT_INTERVAL = {
 [M.TRANSPORT_EIGHTH]    = 12,
 [M.TRANSPORT_SIXTEENTH] = 6,
 }
-local NAMES = {
-["off"]                 = M.OFF,
-["transport.whole"]     = M.TRANSPORT_WHOLE,
-["transport.half"]      = M.TRANSPORT_HALF,
-["transport.quarter"]   = M.TRANSPORT_QUARTER,
-["transport.eighth"]    = M.TRANSPORT_EIGHTH,
-["transport.sixteenth"] = M.TRANSPORT_SIXTEENTH,
-}
-for i = 0, M.EXTERNAL_COUNT - 1 do
-NAMES["external." .. i] = M.EXTERNAL_FIRST + i
-end
-for i = 0, M.LANE_COUNT - 1 do
-NAMES["lane." .. (i + 1)] = M.LANE_FIRST + i
-end
 function M.parse(value, default)
 if type(value) == "number" then return value end
-local v = NAMES[value]
+local v = require("source_names").names[value]
 if v == nil then return default or M.OFF end
 return v
 end
-local REVERSE
 function M.name(src)
-if not REVERSE then
-REVERSE = {}
-for k, v in pairs(NAMES) do REVERSE[v] = k end
-end
-return REVERSE[src] or "off"
-end
-function M.isTransport(src)
-return src >= M.TRANSPORT_WHOLE and src <= M.TRANSPORT_SIXTEENTH
-end
-function M.isExternal(src)
-return src >= M.EXTERNAL_FIRST and src <= M.EXTERNAL_LAST
-end
-function M.isLane(src)
-return src >= M.LANE_FIRST and src <= M.LANE_LAST
+return require("source_names").reverse[src] or "off"
 end
 return M
 
@@ -76,38 +42,12 @@ end)()
 R["scales"]=(function()
 
 local M = {}
-M.SCALES = {
-{ name = "off",        mask = 0x000 },
-{ name = "major",      mask = 0xAB5 },
-{ name = "minor",      mask = 0x5AD },
-{ name = "harm min",   mask = 0x9AD },
-{ name = "dorian",     mask = 0x6AD },
-{ name = "phrygian",   mask = 0x5AB },
-{ name = "mixolydian", mask = 0x6B5 },
-{ name = "min pent",   mask = 0x4A9 },
-}
 M.MAJOR = 0xAB5
 M.MINOR = 0x5AD
 function M.rotate(mask, root)
 root = (root or 0) % 12
 if root == 0 then return mask & 0xFFF end
 return ((mask << root) | (mask >> (12 - root))) & 0xFFF
-end
-function M.step(pitch, mask, d)
-if mask == 0 then
-local r = pitch + d
-if r < 0 then return 0 elseif r > 127 then return 127 else return r end
-end
-local p = M.quantize(pitch, mask)
-local dir = (d >= 0) and 1 or -1
-for _ = 1, (d >= 0 and d or -d) do
-local q = p + dir
-while q >= 0 and q <= 127 and ((mask >> (q % 12)) & 1) == 0 do
-q = q + dir
-end
-if q < 0 then return 0 elseif q > 127 then return 127 else p = q end
-end
-return p
 end
 function M.quantize(p, mask)
 if mask == 0 then return p end
@@ -143,7 +83,6 @@ R["transport"]=(function()
 
 local Sources = require("sources")
 local M = {}
-M.PPQN = 24
 function M.new()
 return { running = false, pulse = 0 }
 end
@@ -183,18 +122,15 @@ local DIMS = {
 ["4x3"]  = { width = 4,  height = 3 },
 ["4x4"]  = { width = 4,  height = 4 },
 }
-M.DIMS = DIMS
-function M.isValidDims(name) return DIMS[name] ~= nil end
 function M.new(kind)
 local l = {
 type = kind or "note",
 dims = "16x1", width = 16, height = 1,
 length = 16, division = 1, divCount = 0,
-position = 1, emit = false, pendingReset = false, fired = false,
-channel = 1, controller = 1, midiNote = 60,
+position = 1, emit = false, pendingReset = false,
+channel = 1, midiNote = 60,
 scaleMask = 0xAB5, rawScaleMask = 0xAB5, root = 0,
 minNote = 0, maxNote = 127,
-minValue = 0, maxValue = 127,
 advanceSource = Sources.OFF,
 xAdvanceSource = Sources.OFF,
 yAdvanceSource = Sources.OFF,
@@ -202,20 +138,13 @@ resetSource = Sources.OFF,
 randomSource = Sources.OFF,
 previousSource = Sources.OFF,
 shiftSource = Sources.OFF, shiftAmount = 1,
-addressSource = Sources.OFF,
-xAddressSource = Sources.OFF,
-yAddressSource = Sources.OFF,
-activeNote = nil, noteOffIn = 0, sustain = false,
-generator = 0,
-genBase = 60, genSpread = 12, genDownUp = 64,
-genVelSpread = 0, genGateSpread = 0, rng = 1,
-pitch = {}, velocity = {}, stepLength = {}, value = {}, gate = {},
+activeNote = nil, noteOffIn = 0,
+pitch = {}, velocity = {}, stepLength = {}, gate = {},
 }
 for i = 1, M.CAP do
 l.pitch[i] = 60
 l.velocity[i] = 100
 l.stepLength[i] = 6
-l.value[i] = 0
 l.gate[i] = 0
 end
 return l
@@ -224,9 +153,6 @@ function M.usedSteps(lane) return lane.width * lane.height end
 function M.limit(lane)
 if lane.height == 1 then return lane.length end
 return lane.width * lane.height
-end
-function M.index(lane, x, y)
-return y * lane.width + x + 1
 end
 function M.setPosition(lane, p)
 local limit = M.limit(lane)
@@ -288,12 +214,10 @@ function M.rotate(lane, amount)
 local used = M.limit(lane)
 amount = amount % used
 if amount == 0 then return end
-if lane.type == "note" then
-rotateOne(lane.pitch, used, amount)
 rotateOne(lane.velocity, used, amount)
 rotateOne(lane.stepLength, used, amount)
-elseif lane.type == "mod" then
-rotateOne(lane.value, used, amount)
+if lane.type == "note" then
+rotateOne(lane.pitch, used, amount)
 else
 rotateOne(lane.gate, used, amount)
 end

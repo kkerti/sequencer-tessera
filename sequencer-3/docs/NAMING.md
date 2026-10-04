@@ -24,12 +24,10 @@ language: `shred`, `zero`, `nudge`, `rotate`, `ramp`, `hill`.
 
 ## Source vocabulary
 
-Sources have two kinds:
-
-- **trigger source** — fires on an event. Used by advance / xAdvance / yAdvance
-  / reset / random / previous / shift.
-- **value source** — carries a value. Used by address / xAddress / yAddress, and
-  later by parameter modulation (deferred).
+Every source is a **trigger source**: it fires on a transport tap. Used by
+advance / xAdvance / yAdvance / reset / random / previous / shift. (Value
+sources, `external.N` and `lane.N` were cut for device RAM in 2026-10; they
+are in git history.)
 
 | Public string | Kind | Meaning |
 |---|---|---|
@@ -39,12 +37,6 @@ Sources have two kinds:
 | `"transport.quarter"` | trigger | quarter note |
 | `"transport.eighth"` | trigger | eighth note |
 | `"transport.sixteenth"` | trigger | sixteenth note |
-| `"external.0"` … `"external.7"` | trigger / value | MIDI-in line |
-| `"lane.1"` … `"lane.4"` | trigger / value | another lane's pulse / value |
-
-A source may serve both roles where sensible: `external.N` can be thresholded
-into a trigger or read as a value; `lane.N` can pulse or be read as its current
-value.
 
 ## Internal enum map
 
@@ -59,17 +51,14 @@ allowed **here only**; this table is the translation.
 | `SRC_TRANSPORT_QUARTER` | `transport.quarter` |
 | `SRC_TRANSPORT_EIGHTH` | `transport.eighth` |
 | `SRC_TRANSPORT_SIXTEENTH` | `transport.sixteenth` |
-| `SRC_EXTERNAL_0` … `SRC_EXTERNAL_7` | `external.0` … `external.7` |
-| `SRC_LANE_1` … `SRC_LANE_4` | `lane.1` … `lane.4` |
 
-Numeric values are assigned when `transport.lua` is written; keep this table in
-sync.
+Numeric values live in `src/core/sources.lua` (0..5); the strings in
+`src/core/source_names.lua`, which loads lazily. Keep all three in sync.
 
 ## Abbreviation lookup
 
 | Abbreviation | Expansion | Where it is allowed |
 |---|---|---|
-| `EXT` | external | Prose only ("external/`EXT` source"). Public string is `external.N`. |
 | `BPM` | beats per minute | Public API (`setBPM`) — an acronym, not a shortening. |
 
 Avoid in public names: `chan` (use channel), `div` (division), `cc`

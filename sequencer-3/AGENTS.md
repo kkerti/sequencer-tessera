@@ -92,14 +92,14 @@ Adapters
 - **Output:** a Note lane is monophonic (retrigger) with a fixed preallocated
   note-off scheduler. MPE is an output-layer flag: one member channel per lane.
   Polyphony is deferred; FH-2 plus FHX expanders are the eventual path.
-- **Lane semantics:** Mod emits CC on advance; Trig emits a short note pulse on
-  active steps; Gate holds a note across active runs.
-- **MIDI in:** exposed only as routable sources — trigger sources
-  (advance/reset/random/previous/shift) and value sources (addressing). No
-  MD2-style editor mappings and no Program Change preset loading. Parameter
-  modulation by a value source is a separate, deferred decision.
-- **Gamut** is a generator over Note/Trig lanes, not a new lane type. Parameters
-  and UI still to be mapped.
+- **Lane types (cut 2026-10-04):** Note and Trig only. Trig plays `midiNote` on
+  active steps for the step's `stepLength` (long = a gate). Mod and Gate were
+  folded in; modulation is a chromatic Note lane that an FH-2 turns into CV.
+- **Sources (cut 2026-10-04):** transport taps only. Lane->lane routing,
+  external MIDI sources (`external.N`), value addressing and the Mac
+  `io/midi_in` mapping were cut for device RAM; they are in git history.
+- **Random generation (cut 2026-10-04):** Shred (one step) and `randomize`
+  (every step, key 3) replace the Gamut / Euclid / live generators.
 - **Presets:** 24 Lua-chunk files under `presets/`, loaded on demand. Saving
   writes the same shape, losslessly (see `docs/ACTION_API.md` > Slots).
 
@@ -265,6 +265,31 @@ Euclid, live generation, preset 06. Tests: 73 checks.
   defers it to the first control press instead; `--setup=eager` restores v8).
   See `dist/README.md` for the bisection ladder.
 
+## App start compiles only what start needs (v14, 2026-10-04)
+
+Start (first MIDI byte or key) compiles `seq3` + `seq3e` + `seq3ui` =
+midi_rx + demo, at most one bundle per callback (staged `L()`, the timer
+finishes a started load). The screen (`seq3s`) compiles on the first control
+press. The setters (`edit.lua`, in `seq3x`) compile on the first edit. Device
+start code must therefore never call an `Engine.set*`: write lane fields
+directly (`device_boot.demo`, `seq_data.apply`). `tests/boot_sim.lua` runs
+the real profile scripts from the JSON and pins all of this.
+
+## Feature cut, measured in the wasm (2026-10-04)
+
+The text GUI died partway through its boot on the device. Features were cut in
+value order, each measured with `grid-wasm/seq3mem.mjs` (the real bundles,
+streamed into grid-wasm stage by stage). Engine stage 92.3 -> 83.8 KB; text
+GUI after key+draw 116.0 -> 106.1 KB; headless after 96 pulses 108.8 -> 97.3
+KB. The full text-GUI ladder (boot, key, draw, Shred, Random, 96 pulses) now
+passes in the wasm. Only the save stage still fails there. Table and
+calibration in `dist/README.md` > v13.
+
+**Use the wasm ladder before every device upload.** Its PASS is strong
+evidence; its FAIL proves nothing (the VM has at least ~20 KB less than the
+device). Its real ceiling is ~117 KB, not the ~130 KB where "Out of memory"
+first prints: read the `free` stage.
+
 ## Measured RAM: seq-3 vs seq-1 (host Lua, ratios not device truth)
 
 | | seq-1 (4 trk x 64 steps) | seq-3 (4 lanes x 16 steps) |
@@ -277,11 +302,15 @@ seq-3 is ~2.5x seq-1's core RAM while storing 4x fewer steps, and the cost is
 **code, not data**: `engine.lua` alone is 30.9 KB of the 55.1 KB. Levers, in
 value order:
 
-1. **28 one-line `M.set*` functions in `engine.lua`** at ~435 B each
-   (measured) ~= 12 KB. A table-driven dispatcher over a field/clamp table
-   would reclaim most of it. `M.set(lane, field, v)` already exists.
-2. **Debug info is 21% of module cost** (10.5 KB on the 5 core modules): a win
-   only if the device can load stripped bytecode rather than text.
+1. ~~28 one-line `M.set*` functions ≈ 12 KB~~ — **done, and it was
+   overestimated**: collapsing 17 of them into loop-built closures (one shared
+   prototype each group) saved **3.3 KB** (engine 32.3 -> 29.1 KB resident).
+   Tiny functions are cheap; the engine's cost is spread across 39 protos,
+   1.3 k instructions and 316 constants with no single hotspot.
+2. **RAM tracks shipped source at ~2.5x** for every module. The only real
+   levers are shipping less code (e.g. the text GUI, `--gui=text`: resident
+   ~85 KB after the screen loads vs ~95 KB for the colour GUI) or stripped
+   bytecode (debug info is ~1/3 of module cost) if the device can load it.
 3. Lane data is already cheap; cutting features to save step storage would be
    aimed at the wrong 12.5 KB.
 

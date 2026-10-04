@@ -12,7 +12,7 @@ local M = {}
 M.page = "globals"
 
 local NOTE_NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
-local TYPES = { "note", "mod", "trig", "gate" }
+local TYPES = { "note", "trig" }
 local DIMS  = { "16x1", "8x2", "5x3", "4x3", "4x4" }
 local WHITE = { 235, 235, 235 }
 local GREY  = { 150, 150, 160 }

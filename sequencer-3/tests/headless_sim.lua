@@ -17,7 +17,7 @@ end
 
 local FILES = {
     seq3 = "dist/seq3.lua", seq3e = "dist/seq3e.lua", seq3h = "dist/seq3h.lua",
-    seq3ui = "dist/seq3ui.lua", seq3x = "dist/seq3x.lua", seq3p = "dist/seq3p.lua",
+    seq3ui = "dist/seq3ui.lua", seq3x = "dist/seq3x.lua", seq3p = "dist/seq3p.lua", seq3l = "dist/seq3l.lua",
 }
 local loaded, order = {}, {}
 local oldreq = require

@@ -89,14 +89,21 @@ if not any(a.startswith("--setup=") for a in sys.argv):
 assert SETUP_MODE in ("none", "press", "eager"), f"bad --setup={SETUP_MODE}"
 
 # The lazy loader, defined (not run) at setup. Global so every event can call
-# it. Requiring seq3ui pulls seq3 through its own shim, so one call is enough.
+# it. STAGED (v13): each call compiles at most ONE bundle and returns nil until
+# the chain is complete, so no single event callback has to compile the whole
+# start chain (seq3 + seq3e + seq3ui, ~15 KB of source) at once:
+#   call 1 -> seq3 (core)   call 2 -> seq3e (engine)   call 3 -> seq3ui + demo
+# The screen (seq3s) is not part of start at all: midi_rx compiles it on the
+# first control press after the chain is up. LS counts stages; it is nil until
+# a MIDI byte or key press calls L(), which is what lets the timer finish a
+# started load without ever starting one during cold boot.
 LOADER = (
     'function L()'
-    'if not RX then'
-    ' UI=require("seq3ui")'
-    ' RX=UI.midi_rx'
-    ' RX.ensure()'
-    'end '
+    'if RX then return RX end '
+    'LS=(LS or 0)+1 '
+    'if LS==1 then print("seq3: start 1/3 core") require("seq3") '
+    'elseif LS==2 then print("seq3: start 2/3 engine") require("seq3e") '
+    'else print("seq3: start 3/3 midi") UI=require("seq3ui") RX=UI.midi_rx RX.ensure() end '
     'return RX '
     'end '
 )
@@ -116,7 +123,7 @@ elif SETUP_MODE == "press":
 else:
     # Default: the first MIDI byte loads the chain.
     SETUP = ('--[[@cb]] ' + LOADER
-             + 'self.rtmrx_cb=function(self,t)L().handle(t,midi_send)end')
+             + 'self.rtmrx_cb=function(self,t)local r=L() if r then r.handle(t,midi_send)end end')
 
 EAGER_X = "--eager-x" in sys.argv
 
@@ -153,6 +160,12 @@ def press_cb(call):
 # Reading collectgarbage("count") is passive (seq-2's poison was
 # collectgarbage("collect") and package.loaded manipulation, not the count).
 MEM = '--[[@cb]] print("seq3 mem KB: " .. collectgarbage("count"))'
+# GUI (non-eager): the timer also advances a load that a MIDI byte or a key
+# press STARTED (LS set). LS is nil through cold boot, so the timer can never
+# be the one to start compiling.
+if SETUP_MODE != "eager":
+    MEM = ('--[[@cb]] if LS and not RX then L() end '
+           'print("seq3 mem KB: " .. collectgarbage("count"))')
 
 # --- element 13, event 8: screen draw (<= 900 chars) ------------------------
 # The adapter (inside the pre-linked bundle) draws the live view when dirty.

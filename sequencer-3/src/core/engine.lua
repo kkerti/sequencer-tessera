@@ -13,26 +13,18 @@ local Scales    = require("scales")
 local Lane      = require("lane")
 local Transport = require("transport")
 
--- generate.lua and ops.lua load LAZILY (see loadGenerate/loadOps below): the
--- pulse path needs only Generate.step, so the modules compile on first use —
--- each resident module costs device RAM (see dist/README.md measurements).
+-- ops.lua and preset.lua load LAZILY (see loadOps/loadPresetMod below): the
+-- pulse path needs neither, so they compile on first use — each resident
+-- module costs device RAM (see dist/README.md measurements).
 
 local M = {}
 
 local OUT_CAP = 64
 
--- A Mod lane counts as "firing" at or above this value, so it can drive
--- another lane's trigger source (MD2's Out-threshold behaviour).
-local MOD_FIRE_THRESHOLD = 64
-
 M.lanes = {}
 M.out = { n = 0, typ = {}, pitch = {}, velocity = {}, channel = {} }
 M.transport = Transport.new()
-M.externalTrigger = {}
-M.externalValue = {}
-M.laneFired = {}
 M.running = false
-M.suppressFire = false
 
 -- ---------------------------------------------------------------- init ---
 
@@ -53,14 +45,8 @@ function M.init(opts)
         M.out.velocity[i] = 0
         M.out.channel[i] = 0
     end
-    for i = 1, Sources.EXTERNAL_COUNT do
-        M.externalTrigger[i] = false
-        M.externalValue[i] = nil   -- unset until a CC arrives, so it never pins
-    end
-    for i = 1, Sources.LANE_COUNT do M.laneFired[i] = false end
     M.transport = Transport.new()
     M.running = false
-    M.suppressFire = false
     return M
 end
 
@@ -78,29 +64,10 @@ end
 
 -- ------------------------------------------------------------- sources ---
 
+-- Every source is a transport tap (or OFF): lane->lane routing and external
+-- MIDI sources were cut for device RAM (MIDI-to-CV routing is the FH-2's job).
 local function sourceFired(src)
-    if src == Sources.OFF then return false end
-    if Sources.isTransport(src) then
-        return Transport.tapFired(M.transport, src)
-    elseif Sources.isExternal(src) then
-        return M.externalTrigger[src - Sources.EXTERNAL_FIRST + 1] == true
-    elseif Sources.isLane(src) then
-        return M.laneFired[src - Sources.LANE_FIRST + 1] == true
-    end
-    return false
-end
-
-local function sourceValue(src)
-    if Sources.isExternal(src) then
-        return M.externalValue[src - Sources.EXTERNAL_FIRST + 1]
-    elseif Sources.isLane(src) then
-        local l = M.lanes[src - Sources.LANE_FIRST + 1]
-        if not l then return nil end
-        if l.type == "note" then return l.pitch[l.position]
-        elseif l.type == "mod" then return l.value[l.position]
-        else return l.gate[l.position] * 127 end
-    end
-    return nil
+    return src ~= Sources.OFF and Transport.tapFired(M.transport, src)
 end
 
 -- ------------------------------------------------------------ setpulse ---
@@ -122,38 +89,26 @@ local function applyAdvance(lane, kind)
     else Lane.advanceForward(lane) end
 end
 
-local function applyAddress(lane, src)
-    local v = sourceValue(src)
-    if not v then return end
-    local used = Lane.usedSteps(lane)
-    local pos = (v * used) // 127 + 1
-    if pos > used then pos = used end
-    if pos < 1 then pos = 1 end
-    if pos ~= lane.position then
-        lane.position = pos
-        lane.emit = true
-    end
-end
-
 local function clamp(v, lo, hi)
     if v < lo then return lo elseif v > hi then return hi else return v end
 end
 
 -- Lazy module loads: first call requires the module and re-points the stub,
 -- so every later call is a plain table field (no __index on the pulse path).
--- ext = X/Y playhead addressing (compiled on first address-source set);
--- ops = shred/zero/rotate; preset = copy + loadPreset; generate = gamut/euclid.
-local Generate, Ops, Ext, Preset
+-- ops = shred/randomize/zero/rotate; preset = copy + loadPreset.
+local Ops, Preset, Edit
 local lanep                              -- forward decl (defined below)
-local function loadGenerate()
-    if not Generate then Generate = require("generate") end
-    return Generate
-end
 local function loadOps()
     if not Ops then
         Ops = require("ops")(M, { lanep = lanep, clamp = clamp })
     end
     return Ops
+end
+local function loadEdit()
+    if not Edit then
+        Edit = require("edit")(M, { lanep = lanep, clamp = clamp })
+    end
+    return Edit
 end
 local function loadPresetMod()
     if not Preset then
@@ -161,59 +116,23 @@ local function loadPresetMod()
     end
     return Preset
 end
-local function loadExt()
-    if not Ext then Ext = require("ext")(M, { srcVal = sourceValue }) end
-    return Ext
-end
-
--- applyAddressAll: lazy ext hook, cached in place on first load (the demo and
--- step-edit paths never address, so ext.lua compiles only when an address
--- source is actually set).
-local function applyAddressAll(l)
-    applyAddressAll = loadExt()
-    applyAddressAll(l)
-end
-
+-- Two lane types. A Note lane plays its quantized pitch; a Trig lane plays
+-- midiNote on active steps. Both use the step's velocity and hold for its
+-- stepLength (a long Trig step is a gate). Mod and Gate lanes were folded in
+-- for device RAM: CV/CC conversion is the FH-2's job downstream.
 local function emitStep(lane)
     local pos = lane.position
-    lane.fired = false
+    local p = lane.midiNote
     if lane.type == "note" then
-        if lane.activeNote then
-            addEvent(0, lane.activeNote, 0, lane.channel)
-            lane.activeNote = nil
-        end
-        local p = Scales.quantize(lane.pitch[pos], lane.scaleMask)
-        p = clamp(p, lane.minNote, lane.maxNote)
+        p = clamp(Scales.quantize(lane.pitch[pos], lane.scaleMask), lane.minNote, lane.maxNote)
+    elseif lane.gate[pos] ~= 1 then
+        p = nil
+    end
+    if p then
+        if lane.activeNote then addEvent(0, lane.activeNote, 0, lane.channel) end
         addEvent(1, p, lane.velocity[pos], lane.channel)
         lane.activeNote = p
         lane.noteOffIn = lane.stepLength[pos]
-        lane.sustain = false
-        lane.fired = true
-    elseif lane.type == "mod" then
-        local v = clamp(lane.value[pos], lane.minValue, lane.maxValue)
-        addEvent(2, lane.controller or 0, v, lane.channel)
-        lane.fired = v >= MOD_FIRE_THRESHOLD
-    elseif lane.type == "trig" then
-        if lane.gate[pos] == 1 then
-            addEvent(1, lane.midiNote, 100, lane.channel)
-            lane.activeNote = lane.midiNote
-            lane.noteOffIn = 1
-            lane.sustain = false
-            lane.fired = true
-        end
-    elseif lane.type == "gate" then
-        if lane.gate[pos] == 1 then
-            if not lane.activeNote then
-                addEvent(1, lane.midiNote, 100, lane.channel)
-                lane.activeNote = lane.midiNote
-                lane.sustain = true
-                lane.fired = true
-            end
-        elseif lane.activeNote then
-            addEvent(0, lane.activeNote, 0, lane.channel)
-            lane.activeNote = nil
-            lane.sustain = false
-        end
     end
     lane.emit = false
 end
@@ -228,7 +147,7 @@ function M.onPulse()
     -- release expired note-offs first, so step lengths are honoured
     for i = 1, n do
         local l = lanes[i]
-        if l.activeNote and not l.sustain then
+        if l.activeNote then
             l.noteOffIn = l.noteOffIn - 1
             if l.noteOffIn <= 0 then
                 addEvent(0, l.activeNote, 0, l.channel)
@@ -254,27 +173,14 @@ function M.onPulse()
         if sourceFired(l.advanceSource) then applyAdvance(l, "linear") end
         if sourceFired(l.xAdvanceSource) then applyAdvance(l, "x") end
         if sourceFired(l.yAdvanceSource) then applyAdvance(l, "y") end
-        if l.addressSource ~= Sources.OFF or l.xAddressSource ~= Sources.OFF
-            or l.yAddressSource ~= Sources.OFF then applyAddressAll(l) end
-        if l.emit then
-            if l.generator == 1 then loadGenerate().step(l) end
-            emitStep(l)
-        end
-        if i <= Sources.LANE_COUNT then
-            M.laneFired[i] = (not M.suppressFire) and l.fired or false
-        end
+        if l.emit then emitStep(l) end
     end
-    M.suppressFire = false
-
-    for i = 1, Sources.EXTERNAL_COUNT do M.externalTrigger[i] = false end
 
     return M.out
 end
 
-function M.onStart()
+local function rewind()
     M.out.n = 0
-    M.running = true
-    Transport.start(M.transport)
     for i = 1, #M.lanes do
         local l = M.lanes[i]
         l.position = 1
@@ -282,8 +188,13 @@ function M.onStart()
         l.pendingReset = false
         l.emit = true
     end
-    for i = 1, Sources.LANE_COUNT do M.laneFired[i] = false end
-    M.suppressFire = true
+    return M.out
+end
+
+function M.onStart()
+    rewind()
+    M.running = true
+    Transport.start(M.transport)
     return M.out
 end
 
@@ -304,192 +215,34 @@ end
 
 -- --------------------------------------------------------- aliases/API ---
 
--- Action-API names (docs/ACTION_API.md).
-function M.start() return M.onStart() end
-function M.stop()  return M.onStop() end
-function M.tick()  return M.onPulse() end
-
-function M.reset()
-    M.out.n = 0
-    for i = 1, #M.lanes do
-        local l = M.lanes[i]
-        l.position = 1
-        l.divCount = 0
-        l.pendingReset = false
-        l.emit = true
-    end
-    return M.out
-end
-
--- --------------------------------------------------------- external in ---
-
-function M.triggerExternal(index)   -- 1-based
-    if index >= 1 and index <= Sources.EXTERNAL_COUNT then
-        M.externalTrigger[index] = true
-    end
-end
-
-function M.setExternalValue(index, value)
-    if index >= 1 and index <= Sources.EXTERNAL_COUNT then
-        M.externalValue[index] = clamp(value, 0, 127)
-    end
-end
+-- Action-API names (docs/ACTION_API.md): plain aliases, no extra functions.
+M.start, M.stop, M.tick, M.reset = M.onStart, M.onStop, M.onPulse, rewind
 
 -- ------------------------------------------------------------ lane cfg ---
 
 lanep = function(index) return M.lanes[index] end
 
-function M.setType(lane, kind)
-    local l = lanep(lane); if not l then return false end
-    l.type = kind or "note"
-    return true
-end
-
-function M.setDimensions(lane, name)
-    local l = lanep(lane); if not l then return false end
-    return Lane.setDims(l, name)
-end
-
-function M.setLength(lane, n)
-    local l = lanep(lane); if not l then return false end
-    if l.height ~= 1 then return false end
-    l.length = clamp(n, 1, Lane.CAP)
-    if l.position > l.length then l.position = 1 end
-    return true
-end
-
-function M.setDivision(lane, n)
-    local l = lanep(lane); if not l then return false end
-    l.division = clamp(n, 1, 16)
-    return true
-end
-
-function M.setChannel(lane, channel)
-    local l = lanep(lane); if not l then return false end
-    l.channel = clamp(channel, 1, 16)
-    return true
-end
-
-function M.setController(lane, cc)
-    local l = lanep(lane); if not l then return false end
-    l.controller = clamp(cc, 0, 127)
-    return true
-end
-
-function M.setMidiNote(lane, note)
-    local l = lanep(lane); if not l then return false end
-    l.midiNote = clamp(note, 0, 127)
-    return true
-end
-
-function M.setScale(lane, mask, root)
-    local l = lanep(lane); if not l then return false end
-    l.rawScaleMask = mask or 0
-    l.root = (root or 0) % 12
-    l.scaleMask = Scales.rotate(l.rawScaleMask, l.root)
-    return true
-end
-
-function M.setRange(lane, min, max)
-    local l = lanep(lane); if not l then return false end
-    if l.type == "mod" then
-        l.minValue = clamp(min, 0, 127); l.maxValue = clamp(max, 0, 127)
-    else
-        l.minNote = clamp(min, 0, 127); l.maxNote = clamp(max, 0, 127)
-    end
-    return true
-end
-
-local function setSource(lane, field, value)
-    local l = lanep(lane); if not l then return false end
-    l[field] = Sources.parse(value)
-    return true
-end
-
-function M.setAdvanceSource(lane, src) return setSource(lane, "advanceSource", src) end
-function M.setXAdvanceSource(lane, src) return setSource(lane, "xAdvanceSource", src) end
-function M.setYAdvanceSource(lane, src) return setSource(lane, "yAdvanceSource", src) end
-function M.setResetSource(lane, src) return setSource(lane, "resetSource", src) end
-function M.setRandomSource(lane, src) return setSource(lane, "randomSource", src) end
-function M.setPreviousSource(lane, src) return setSource(lane, "previousSource", src) end
-function M.setShiftSource(lane, src) return setSource(lane, "shiftSource", src) end
-function M.setAddressSource(lane, src) return setSource(lane, "addressSource", src) end
-function M.setXAddressSource(lane, src) return setSource(lane, "xAddressSource", src) end
-function M.setYAddressSource(lane, src) return setSource(lane, "yAddressSource", src) end
-
-function M.setShiftAmount(lane, steps)
-    local l = lanep(lane); if not l then return false end
-    l.shiftAmount = steps | 0
-    return true
-end
-
-function M.setPosition(lane, step)
-    local l = lanep(lane); if not l then return false end
-    Lane.setPosition(l, step)
-    return true
-end
-
--- --------------------------------------------------------- step edits ---
-
-function M.setPitch(lane, step, note)
-    local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
-    l.pitch[step] = clamp(note, 0, 127)
-    return true
-end
-
-function M.setVelocity(lane, step, v)
-    local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
-    l.velocity[step] = clamp(v, 1, 127)
-    return true
-end
-
-function M.setStepLength(lane, step, ticks)
-    local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
-    l.stepLength[step] = math.max(1, ticks | 0)
-    return true
-end
-
-function M.setValue(lane, step, v)
-    local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
-    l.value[step] = clamp(v, 0, 127)
-    return true
-end
-
-function M.setGate(lane, step, on)
-    local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
-    l.gate[step] = (on == false or on == 0 or on == nil) and 0 or 1
-    return true
-end
+-- The setters (setType, setPitch, set*Source, ...) live in edit.lua, LAZY in
+-- the editing bundle: app start never calls one (the device demo writes lane
+-- fields directly), so it never compiles them. Any missing `set*` key
+-- resolves through __index below and is cached as a plain field.
 
 -- --------------------------------------------------- sequence operations ---
--- LAZY: the ops live in ops.lua and load on first use (via __index). The
--- forwarders here only exist for direct (non-__index) calls, e.g. ops.lua's
--- own loadPreset calling E.generate — after first resolution they are plain
--- fields, so the hot path never sees the metamethod.
-
-function M.generate(lane, opts)
-    local l = lanep(lane); if not l then return false end
-    opts = opts or {}
-    local G = loadGenerate()
-    local kind = opts.kind or "gamut"
-    if kind == "euclid" or kind == "rhythm" then
-        return G.euclidean(l, opts)
-    end
-    G.configure(l, opts)
-    if opts.fill ~= false then G.fill(l) end
-    l.generator = opts.live and 1 or 0
-    return true
-end
+-- LAZY: the ops live in ops.lua / preset.lua and load on first use (via
+-- __index). After first resolution they are plain fields, so the hot path
+-- never sees the metamethod.
 
 setmetatable(M, {
     __index = function(t, k)
         -- one round-trip: resolve through the lazy module, then cache as a
         -- real field (later calls never touch the metamethod)
         local fn
-        if k == "shred" or k == "zero" or k == "rotate" then
+        if k == "shred" or k == "randomize" or k == "zero" or k == "rotate" then
             fn = loadOps()[k]
         elseif k == "copy" or k == "loadPreset" then
             fn = loadPresetMod()[k]
+        elseif type(k) == "string" and k:sub(1, 3) == "set" then
+            fn = loadEdit()[k]
         end
         if fn then t[k] = fn end
         return fn
@@ -510,6 +263,5 @@ function M.set(lane, field, value)
 end
 
 function M.state(lane) return lanep(lane) end
-function M.dump() return M.lanes, M.out end
 
 return M

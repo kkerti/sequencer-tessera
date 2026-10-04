@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={device_boot="seq3ui",engine="seq3e",headless="seq3h",lane="seq3",menu="seq3ui",midi_rx="seq3ui",persist="seq3p",preset="seq3p",scales="seq3",screen="seq3ui",seq_data="seq3h",sources="seq3",transport="seq3"}
+local B={device_boot="seq3ui",engine="seq3e",headless="seq3h",lane="seq3",midi_rx="seq3ui",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -11,30 +11,120 @@ local function require(n)
  end
  error('seq3 module not found: '..tostring(n))
 end
+R["edit"]=(function()
+
+local Sources = require("sources")
+local Scales  = require("scales")
+local Lane    = require("lane")
+return function(E, tool)
+local lanep, clamp = tool.lanep, tool.clamp
+local M = {}
+function M.setType(lane, kind)
+local l = lanep(lane); if not l then return false end
+l.type = (kind == "trig" or kind == "gate") and "trig" or "note"
+return true
+end
+function M.setDimensions(lane, name)
+local l = lanep(lane); if not l then return false end
+return Lane.setDims(l, name)
+end
+function M.setLength(lane, n)
+local l = lanep(lane); if not l then return false end
+if l.height ~= 1 then return false end
+l.length = clamp(n, 1, Lane.CAP)
+if l.position > l.length then l.position = 1 end
+return true
+end
+for name, f in pairs{ Division = { "division", 1, 16 }, Channel = { "channel", 1, 16 },
+MidiNote = { "midiNote", 0, 127 } } do
+local field, lo, hi = f[1], f[2], f[3]
+M["set" .. name] = function(lane, v)
+local l = lanep(lane); if not l then return false end
+l[field] = clamp(v, lo, hi)
+return true
+end
+end
+function M.setScale(lane, mask, root)
+local l = lanep(lane); if not l then return false end
+l.rawScaleMask = mask or 0
+l.root = (root or 0) % 12
+l.scaleMask = Scales.rotate(l.rawScaleMask, l.root)
+return true
+end
+function M.setRange(lane, min, max)
+local l = lanep(lane); if not l then return false end
+l.minNote = clamp(min, 0, 127); l.maxNote = clamp(max, 0, 127)
+return true
+end
+for _, name in ipairs{ "Advance", "XAdvance", "YAdvance", "Reset", "Random",
+"Previous", "Shift" } do
+local field = name:sub(1, 1):lower() .. name:sub(2) .. "Source"
+M["set" .. name .. "Source"] = function(lane, src)
+local l = lanep(lane); if not l then return false end
+l[field] = Sources.parse(src)
+return true
+end
+end
+function M.setShiftAmount(lane, steps)
+local l = lanep(lane); if not l then return false end
+l.shiftAmount = steps | 0
+return true
+end
+function M.setPosition(lane, step)
+local l = lanep(lane); if not l then return false end
+Lane.setPosition(l, step)
+return true
+end
+for name, f in pairs{ Pitch = { "pitch", 0, 127 }, Velocity = { "velocity", 1, 127 } } do
+local field, lo, hi = f[1], f[2], f[3]
+M["set" .. name] = function(lane, step, v)
+local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
+l[field][step] = clamp(v, lo, hi)
+return true
+end
+end
+function M.setStepLength(lane, step, ticks)
+local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
+l.stepLength[step] = math.max(1, ticks | 0)
+return true
+end
+function M.setGate(lane, step, on)
+local l = lanep(lane); if not l or step < 1 or step > Lane.CAP then return false end
+l.gate[step] = (on == false or on == 0 or on == nil) and 0 or 1
+return true
+end
+return M
+end
+
+end)()
 R["ops"]=(function()
 
 local Lane = require("lane")
 return function(E, tool)
 local lanep = tool.lanep
 local M = {}
-function M.shred(lane)
-local l = lanep(lane); if not l then return false end
-local pos = l.position
+local function shredAt(l, pos)
 if l.type == "note" then
 l.pitch[pos] = tool.clamp(math.random(l.minNote, l.maxNote), 0, 127)
 l.velocity[pos] = math.random(1, 127)
-elseif l.type == "mod" then
-l.value[pos] = math.random(l.minValue, l.maxValue)
 else
 l.gate[pos] = math.random(0, 1)
 end
+end
+function M.shred(lane)
+local l = lanep(lane); if not l then return false end
+shredAt(l, l.position)
+return true
+end
+function M.randomize(lane)
+local l = lanep(lane); if not l then return false end
+for pos = 1, Lane.limit(l) do shredAt(l, pos) end
 return true
 end
 function M.zero(lane)
 local l = lanep(lane); if not l then return false end
 local pos = l.position
 if l.type == "note" then l.pitch[pos] = l.minNote
-elseif l.type == "mod" then l.value[pos] = l.minValue
 else l.gate[pos] = 0 end
 return true
 end
@@ -44,130 +134,6 @@ Lane.rotate(l, steps | 0)
 return true
 end
 return M
-end
-
-end)()
-R["generate"]=(function()
-
-local Scales = require("scales")
-local M = {}
-local RNG_MOD = 2147483647
-function M.seed(lane, seed)
-local s = (seed or 1) % RNG_MOD
-if s <= 0 then s = 1 end
-lane.rng = s
-end
-function M.configure(lane, opts)
-opts = opts or {}
-lane.genBase = opts.base or 60
-lane.genSpread = opts.spread or 12
-lane.genDownUp = opts.downUp or 64
-lane.genVelSpread = opts.velSpread or 0
-lane.genGateSpread = opts.gateSpread or 0
-M.seed(lane, opts.seed or 1)
-end
-local function nextInt(lane, lo, hi)
-lane.rng = (lane.rng * 1103515245 + 12345) % RNG_MOD
-local span = hi - lo + 1
-local v = lo + math.floor((lane.rng / RNG_MOD) * span)
-if v > hi then v = hi end
-return v
-end
-local function clamp(v, lo, hi)
-if v < lo then return lo elseif v > hi then return hi else return v end
-end
-function M.step(lane, pos)
-pos = pos or lane.position
-if lane.type == "note" then
-local up = math.floor(lane.genSpread * lane.genDownUp / 127 + 0.5)
-local down = lane.genSpread - up
-local off = nextInt(lane, -down, up)
-lane.pitch[pos] = clamp(Scales.quantize(lane.genBase + off, lane.scaleMask),
-lane.minNote, lane.maxNote)
-if lane.genVelSpread > 0 then
-lane.velocity[pos] = clamp(100 + nextInt(lane, -lane.genVelSpread, lane.genVelSpread), 1, 127)
-end
-if lane.genGateSpread > 0 then
-lane.stepLength[pos] = math.max(1, 6 + nextInt(lane, -lane.genGateSpread, lane.genGateSpread))
-end
-elseif lane.type == "mod" then
-local mid = (lane.minValue + lane.maxValue) // 2
-lane.value[pos] = clamp(mid + nextInt(lane, -lane.genSpread, lane.genSpread), 0, 127)
-else
-local density = (lane.genSpread > 0 and lane.genSpread <= 100) and lane.genSpread or 50
-lane.gate[pos] = (nextInt(lane, 0, 99) < density) and 1 or 0
-end
-end
-local function usedSteps(lane)
-if lane.height == 1 then return lane.length end
-return lane.width * lane.height
-end
-function M.fill(lane)
-local used = usedSteps(lane)
-for i = 1, used do M.step(lane, i) end
-end
-function M.euclidean(lane, opts)
-opts = opts or {}
-local used = usedSteps(lane)
-local hits = opts.hits or math.max(1, used // 4)
-if hits > used then hits = used end
-local rotate = opts.rotate or 0
-for i = 1, used do
-local idx = ((i - 1) + rotate) % used
-lane.gate[i] = (((idx * hits) % used) < hits) and 1 or 0
-end
-return true
-end
-return M
-
-end)()
-R["ext"]=(function()
-
-return function(E, tool)
-local srcVal = tool.srcVal
-local function applyAddress(lane, src)
-local v = srcVal(src)
-if not v then return end
-local used = lane.width * lane.height
-local pos = (v * used) // 127 + 1
-if pos > used then pos = used end
-if pos < 1 then pos = 1 end
-if pos ~= lane.position then
-lane.position = pos
-lane.emit = true
-end
-end
-local function applyXAddress(lane, src)
-local v = srcVal(src)
-if not v then return end
-local x = (v * lane.width) // 127
-if x >= lane.width then x = lane.width - 1 end
-if x < 0 then x = 0 end
-local y = (lane.position - 1) // lane.width
-local pos = y * lane.width + x + 1
-if pos ~= lane.position then
-lane.position = pos
-lane.emit = true
-end
-end
-local function applyYAddress(lane, src)
-local v = srcVal(src)
-if not v then return end
-local y = (v * lane.height) // 127
-if y >= lane.height then y = lane.height - 1 end
-if y < 0 then y = 0 end
-local x = (lane.position - 1) % lane.width
-local pos = y * lane.width + x + 1
-if pos ~= lane.position then
-lane.position = pos
-lane.emit = true
-end
-end
-return function(l)
-if l.addressSource ~= 0 then applyAddress(l, l.addressSource) end
-if l.xAddressSource ~= 0 then applyXAddress(l, l.xAddressSource) end
-if l.yAddressSource ~= 0 then applyYAddress(l, l.yAddressSource) end
-end
 end
 
 end)()

@@ -25,6 +25,7 @@ local seq3src = io.open("dist/seq3.lua"):read("*a")
 local esrc    = io.open("dist/seq3e.lua"):read("*a")
 local hsrc    = io.open("dist/seq3h.lua"):read("*a")
 local uisrc   = io.open("dist/seq3ui.lua"):read("*a")
+local ssrc    = io.open("dist/seq3s.lua"):read("*a")
 local xsrc    = io.open("dist/seq3x.lua"):read("*a")
 local psrc    = io.open("dist/seq3p.lua"):read("*a")
 ok(#seq3src > 0 and #esrc > 0 and #hsrc > 0 and #uisrc > 0 and #xsrc > 0 and #psrc > 0,
@@ -34,7 +35,9 @@ ok(#seq3src > 0 and #esrc > 0 and #hsrc > 0 and #uisrc > 0 and #xsrc > 0 and #ps
 ok(#seq3src <= 9000,  "seq3.lua (sources/scales/transport/lane) <= 9 KB (" .. #seq3src .. ")")
 ok(#esrc    <= 13000, "seq3e.lua (engine) <= 13 KB (" .. #esrc .. ")")
 ok(#hsrc    <= 4000,  "seq3h.lua (headless) <= 4 KB (" .. #hsrc .. ")")
-ok(#uisrc   <= 12000, "seq3ui.lua <= 12 KB (" .. #uisrc .. ")")
+ok(#uisrc   <= 4000,  "seq3ui.lua (start: midi_rx + demo, no screen) <= 4 KB (" .. #uisrc .. ")")
+ok(#ssrc    <= 9000,  "seq3s.lua (screen) <= 9 KB (" .. #ssrc .. ")")
+ok(not uisrc:find('R%["screen"%]'), "the screen is NOT in the start bundle seq3ui")
 -- The device ran out of memory compiling an 11.2 KB lazy bundle once the core
 -- was resident, so each LAZY bundle is capped well under that.
 ok(#xsrc    <= 7000, "seq3x.lua <= 7 KB (" .. #xsrc .. ")")
@@ -44,7 +47,7 @@ ok(#seq3src + #uisrc <= 32000,
    "eager setup load (seq3 + seq3ui) <= 32 KB (" .. (#seq3src + #uisrc) .. ")")
 
 for _, b in ipairs({ { "seq3", seq3src }, { "e", esrc }, { "h", hsrc },
-                     { "ui", uisrc }, { "x", xsrc }, { "p", psrc } }) do
+                     { "ui", uisrc }, { "s", ssrc }, { "x", xsrc }, { "p", psrc } }) do
     local name, src = b[1], b[2]
     ok(not src:find("collectgarbage"), name .. ": no collectgarbage")
     ok(not src:find("package%.loaded"), name .. ": no package.loaded")
@@ -56,16 +59,18 @@ end
 -- name, so the hook below models exactly that: seq3x is compiled only if and
 -- when something asks for it.
 local REG = {}
-local xLoads, pLoads = 0, 0
+local xLoads, pLoads, lLoads = 0, 0, 0
 local oldreq = require
 local LAZY = { seq3e = "dist/seq3e.lua", seq3x = "dist/seq3x.lua",
-               seq3p = "dist/seq3p.lua", seq3h = "dist/seq3h.lua" }
+               seq3p = "dist/seq3p.lua", seq3h = "dist/seq3h.lua",
+               seq3l = "dist/seq3l.lua", seq3s = "dist/seq3s.lua" }
 require = function(n)
     if REG[n] then return REG[n] end
     local f = LAZY[n]
     if f then
         if n == "seq3x" then xLoads = xLoads + 1 end
         if n == "seq3p" then pLoads = pLoads + 1 end
+        if n == "seq3l" then lLoads = lLoads + 1 end
         REG[n] = dofile(f)
         return REG[n]
     end
@@ -103,13 +108,18 @@ ok(xLoads == 0 and pLoads == 0, "clock + notes pull no lazy bundle")
 -- A permissive mock is what let draw_area_filled(0,0,320,240) reach hardware.
 local LcdMock = dofile("tests/lcd_mock.lua")
 local lcd = LcdMock.new()
-RX.key(1) RX.press() RX.turn(1) RX.btn(10) RX.key(0) RX.turn(1) RX.press() RX.key(1) RX.btn(9)
+RX.key(1) RX.btn(10) RX.turn(1) RX.btn(9) RX.ui(lcd)
+-- (the colour GUI may already edit while navigating; the text GUI does not)
+ok(pLoads == 0, "screen + navigation pull no persist bundle")
+-- editing a value goes through the setters, which live in the editing bundle
+RX.press() RX.turn(1) RX.press() RX.key(0) RX.key(1)
 RX.ui(lcd)
+ok(xLoads == 1 and pLoads == 0, "the first edit pulls the editing bundle seq3x, nothing else")
 ok(lcd.calls > 20, "controls + draw run (" .. lcd.calls .. " lcd calls)")
 ok(#lcd.errors == 0, "Overview/Focus/Config draw only with real, in-bounds LCD calls"
    .. (#lcd.errors > 0 and (" -- first: " .. lcd.errors[1]) or ""))
 RX.handle(0xF8, midi_send)
-ok(xLoads == 0 and pLoads == 0, "nav + draw pull no lazy bundle (cold path clean)")
+ok(pLoads == 0, "nav + edit + draw never pull the persist bundle")
 
 -- 6. lazy periphery resolves on the first action that needs it
 engine.shred(1)
@@ -117,10 +127,8 @@ ok(xLoads == 1, "first shred pulls seq3x exactly once")
 -- The whole point of the split: Shred must NOT drag in the persist bundle.
 ok(pLoads == 0, "shred does NOT pull seq3p (split by trigger holds)")
 ok(rawget(engine, "shred") ~= nil, "ops resolves via seq3x")
-engine.generate(1, { kind = "euclid", hits = 4 })
-local gates = 0
-for i = 1, 16 do gates = gates + engine.state(1).gate[i] end
-ok(gates == 4, "generate resolves via seq3x (euclid hits " .. gates .. ")")
+ok(engine.randomize(1) and rawget(engine, "randomize") ~= nil,
+   "randomize resolves via seq3x")
 ok(xLoads == 1, "seq3x is loaded once and cached")
 
 -- 6b. every screen drawn through the strict LCD (Overview / Focus / Config)
@@ -152,10 +160,12 @@ do
     engine.setType(2, "trig")
     for i = 1, 16 do engine.setGate(2, i, i % 2) end
     ok(Persist.saveSlot(7), "saveSlot writes through the bundle")
+    ok(lLoads == 0, "save does NOT pull the load bundle seq3l")
 
     engine.setPitch(1, 1, 60)
     for i = 1, 16 do engine.setGate(2, i, 0) end
     ok(Persist.loadSlot(7), "loadSlot reads through the bundle")
+    ok(lLoads == 1, "load pulls seq3l exactly once")
     ok(engine.state(1).pitch[1] == 71, "recalled pitch (got " .. engine.state(1).pitch[1] .. ")")
     local g = 0
     for i = 1, 16 do g = g + engine.state(2).gate[i] end

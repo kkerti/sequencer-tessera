@@ -17,20 +17,16 @@ local DIMS = {
     ["4x3"]  = { width = 4,  height = 3 },
     ["4x4"]  = { width = 4,  height = 4 },
 }
-M.DIMS = DIMS
-
-function M.isValidDims(name) return DIMS[name] ~= nil end
 
 function M.new(kind)
     local l = {
         type = kind or "note",
         dims = "16x1", width = 16, height = 1,
         length = 16, division = 1, divCount = 0,
-        position = 1, emit = false, pendingReset = false, fired = false,
-        channel = 1, controller = 1, midiNote = 60,
+        position = 1, emit = false, pendingReset = false,
+        channel = 1, midiNote = 60,
         scaleMask = 0xAB5, rawScaleMask = 0xAB5, root = 0,
         minNote = 0, maxNote = 127,
-        minValue = 0, maxValue = 127,
         advanceSource = Sources.OFF,
         xAdvanceSource = Sources.OFF,
         yAdvanceSource = Sources.OFF,
@@ -38,20 +34,13 @@ function M.new(kind)
         randomSource = Sources.OFF,
         previousSource = Sources.OFF,
         shiftSource = Sources.OFF, shiftAmount = 1,
-        addressSource = Sources.OFF,
-        xAddressSource = Sources.OFF,
-        yAddressSource = Sources.OFF,
-        activeNote = nil, noteOffIn = 0, sustain = false,
-        generator = 0,
-        genBase = 60, genSpread = 12, genDownUp = 64,
-        genVelSpread = 0, genGateSpread = 0, rng = 1,
-        pitch = {}, velocity = {}, stepLength = {}, value = {}, gate = {},
+        activeNote = nil, noteOffIn = 0,
+        pitch = {}, velocity = {}, stepLength = {}, gate = {},
     }
     for i = 1, M.CAP do
         l.pitch[i] = 60
         l.velocity[i] = 100
         l.stepLength[i] = 6
-        l.value[i] = 0
         l.gate[i] = 0
     end
     return l
@@ -62,11 +51,6 @@ function M.usedSteps(lane) return lane.width * lane.height end
 function M.limit(lane)
     if lane.height == 1 then return lane.length end
     return lane.width * lane.height
-end
-
--- 1-based linear index for a 0-based (x, y).
-function M.index(lane, x, y)
-    return y * lane.width + x + 1
 end
 
 function M.setPosition(lane, p)
@@ -138,12 +122,10 @@ function M.rotate(lane, amount)
     local used = M.limit(lane)
     amount = amount % used
     if amount == 0 then return end
+    rotateOne(lane.velocity, used, amount)
+    rotateOne(lane.stepLength, used, amount)
     if lane.type == "note" then
         rotateOne(lane.pitch, used, amount)
-        rotateOne(lane.velocity, used, amount)
-        rotateOne(lane.stepLength, used, amount)
-    elseif lane.type == "mod" then
-        rotateOne(lane.value, used, amount)
     else
         rotateOne(lane.gate, used, amount)
     end

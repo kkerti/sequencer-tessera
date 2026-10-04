@@ -72,7 +72,6 @@ end
 
 -- What a lane is sounding right now, as text.
 local function playing(l)
-    if l.type == "mod" then return "cc" .. l.controller .. "=" .. l.value[l.position] end
     if not l.activeNote then return "-" end
     return "n" .. l.activeNote
 end

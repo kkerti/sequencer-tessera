@@ -1,7 +1,8 @@
 -- sources.lua — source enums and string parsing.
 --
--- Sources drive a lane's advance/reset/random/previous/shift (trigger sources)
--- or address its playhead (value sources). The public vocabulary is readable
+-- Sources drive a lane's advance/reset/random/previous/shift. Every source is
+-- a transport tap or OFF: lane->lane routing, external MIDI sources and value
+-- addressing were cut for device RAM. The public vocabulary is readable
 -- strings (see docs/NAMING.md); the engine stores small integers. Parsing
 -- happens only at the API boundary, never on the pulse path.
 
@@ -13,12 +14,6 @@ M.TRANSPORT_HALF      = 2
 M.TRANSPORT_QUARTER   = 3
 M.TRANSPORT_EIGHTH    = 4
 M.TRANSPORT_SIXTEENTH = 5
-M.EXTERNAL_FIRST      = 6          -- +0 .. +7
-M.EXTERNAL_LAST       = 13
-M.EXTERNAL_COUNT      = 8
-M.LANE_FIRST          = 14         -- +0 .. +3
-M.LANE_LAST           = 17
-M.LANE_COUNT          = 4
 
 -- Pulse interval per transport tap at 24 PPQN in 4/4.
 M.TRANSPORT_INTERVAL = {
@@ -29,50 +24,18 @@ M.TRANSPORT_INTERVAL = {
     [M.TRANSPORT_SIXTEENTH] = 6,
 }
 
-local NAMES = {
-    ["off"]                 = M.OFF,
-    ["transport.whole"]     = M.TRANSPORT_WHOLE,
-    ["transport.half"]      = M.TRANSPORT_HALF,
-    ["transport.quarter"]   = M.TRANSPORT_QUARTER,
-    ["transport.eighth"]    = M.TRANSPORT_EIGHTH,
-    ["transport.sixteenth"] = M.TRANSPORT_SIXTEENTH,
-}
-for i = 0, M.EXTERNAL_COUNT - 1 do
-    NAMES["external." .. i] = M.EXTERNAL_FIRST + i
-end
-for i = 0, M.LANE_COUNT - 1 do
-    NAMES["lane." .. (i + 1)] = M.LANE_FIRST + i
-end
-
+-- Strings live in source_names.lua (lazy, the persist bundle on device):
+-- the device passes numeric sources, so the name table is never built there.
 function M.parse(value, default)
     if type(value) == "number" then return value end
-    local v = NAMES[value]
+    local v = require("source_names").names[value]
     if v == nil then return default or M.OFF end
     return v
 end
 
--- Reverse lookup for persist/GUI display: enum -> the public string. The
--- reverse table is built on first call only, so the device never pays for it
--- unless something actually asks for a name.
-local REVERSE
+-- Reverse lookup for persist/GUI display: enum -> the public string.
 function M.name(src)
-    if not REVERSE then
-        REVERSE = {}
-        for k, v in pairs(NAMES) do REVERSE[v] = k end
-    end
-    return REVERSE[src] or "off"
-end
-
-function M.isTransport(src)
-    return src >= M.TRANSPORT_WHOLE and src <= M.TRANSPORT_SIXTEENTH
-end
-
-function M.isExternal(src)
-    return src >= M.EXTERNAL_FIRST and src <= M.EXTERNAL_LAST
-end
-
-function M.isLane(src)
-    return src >= M.LANE_FIRST and src <= M.LANE_LAST
+    return require("source_names").reverse[src] or "off"
 end
 
 return M

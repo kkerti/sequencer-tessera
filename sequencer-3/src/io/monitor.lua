@@ -20,7 +20,6 @@ M.inPlace = true      -- redraw the same four lines (ANSI cursor-up)
 M.every = 1           -- redraw at most every N pulses
 
 local NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
-local RAMP = { "_", ".", "-", "=", "^" }
 
 local drawn = false
 local pulses = 0
@@ -50,12 +49,8 @@ local function grid(l)
     local cells = {}
     for i = 1, used do
         local c
-        if l.type == "trig" or l.type == "gate" then
+        if l.type == "trig" then
             c = (l.gate[i] == 1) and "#" or "."
-        elseif l.type == "mod" then
-            local v = l.value[i]
-            if v < 0 then v = 0 elseif v > 127 then v = 127 end
-            c = RAMP[(v * (#RAMP - 1)) // 127 + 1]
         else
             c = "."
         end
@@ -70,17 +65,13 @@ end
 
 -- What this lane is sounding right now.
 local function playing(l)
-    if l.type == "mod" then
-        return string.format("cc%-3d = %-3d", l.controller, l.value[l.position])
-    end
     if not l.activeNote then return "--" end
     if l.type == "note" then
         return string.format("%-4s(%3d) v%-3d len%d",
             noteName(l.activeNote), l.activeNote,
             l.velocity[l.position], l.stepLength[l.position])
     end
-    return string.format("%-4s(%3d)%s", noteName(l.activeNote), l.activeNote,
-        l.sustain and " hold" or "")
+    return string.format("%-4s(%3d)", noteName(l.activeNote), l.activeNote)
 end
 
 function M.line(i, l)

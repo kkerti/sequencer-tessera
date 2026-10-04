@@ -26,8 +26,7 @@ S.editing = false
 S.dirtyFlag = true                        -- first draw always paints
 
 local NOTE_NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
-local TYPE_COLORS = { note = { 90, 170, 255 }, mod = { 90, 220, 120 },
-    trig = { 255, 180, 90 }, gate = { 255, 110, 110 } }
+local TYPE_COLORS = { note = { 90, 170, 255 }, trig = { 255, 180, 90 } }
 local BG = { 12, 12, 16 }
 local DIM = { 64, 64, 74 }
 local WHITE = { 235, 235, 235 }
@@ -47,7 +46,6 @@ end
 
 local function stripValue(l, s)
     if l.type == "note" then return l.pitch[s] end
-    if l.type == "mod" then return l.value[s] end
     return l.gate[s]
 end
 
@@ -60,7 +58,7 @@ local function cell(lcd, x, y, w, h, l, step, selStep)
     local color = TYPE_COLORS[l.type]
     lcd:draw_rectangle_filled(x, y, x + w, y + h, DIM)
     local v = stripValue(l, step)
-    if l.type == "note" or l.type == "mod" then
+    if l.type == "note" then
         local fh = math.floor(v / 127 * h)
         if fh > 0 then lcd:draw_rectangle_filled(x, y + h - fh, x + w, y + h, color) end
     elseif v == 1 then
@@ -100,7 +98,6 @@ local function readout(l)
             return NOTE_NAMES[(p % 12) + 1] .. (math.floor(p / 12) - 1)
         elseif S.param == 2 then return "V" .. l.velocity[s]
         else return l.stepLength[s] .. "t" end
-    elseif l.type == "mod" then return tostring(l.value[s])
     else return (l.gate[s] == 1) and "ON" or "OFF" end
 end
 
@@ -147,8 +144,6 @@ local function editFocused(d)
         if S.param == 1 then Engine.setPitch(lane, step, l.pitch[step] + d)
         elseif S.param == 2 then Engine.setVelocity(lane, step, l.velocity[step] + d * 2)
         else Engine.setStepLength(lane, step, l.stepLength[step] + d * 6) end
-    elseif l.type == "mod" then
-        Engine.setValue(lane, step, l.value[step] + d * 2)
     else
         Engine.setGate(lane, step, (l.gate[step] + 1) % 2)
     end
@@ -179,6 +174,7 @@ function S.key(i)
         S.screen = (S.screen == "overview") and "focus" or "overview"; S.touch()
     elseif i == 4 then move(-1)
     elseif i == 5 then move(1)
+    elseif i == 3 then Engine.randomize(S.selLane); S.touch()
     elseif i == 6 then Engine.zero(S.selLane); S.touch()
     elseif i == 7 then Engine.shred(S.selLane); S.touch() end
 end

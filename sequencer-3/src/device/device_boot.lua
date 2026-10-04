@@ -7,32 +7,28 @@
 -- manipulation, no text formatting).
 
 local Engine = require("engine")
+local Lane   = require("lane")
 
 local M = {}
 
--- One pulse from any source (MIDI clock via midi_rx, or a test hook). The GUI
--- host (when it returns) will replace this indirection.
-function M.pulse()
-    Engine.onPulse()
-end
-
--- Demo pattern, filled through the action API: 1 note melody + 2 trig, both
--- advancing on the transport quarter. TWO LANES at boot (4-lane init costs
--- ~6 KB of step arrays; lanes 3/4 can be added from the menu later). Starts
--- running; Ableton start/stop overrides.
+-- Demo pattern: 1 note melody + 1 trig lane, both advancing on the transport
+-- quarter. TWO LANES at boot (4-lane init costs ~6 KB of step arrays). Lane
+-- fields are written DIRECTLY, not through the setters: the setters live in
+-- the lazy editing bundle (edit.lua), and app start must not compile it.
+-- Starts running; Ableton start/stop overrides.
 function M.demo()
     Engine.init{ lanes = 2, channel = 1 }
-    local melody = { 60, 62, 64, 67, 69, 67, 64, 62, 60, 64, 67, 72, 71, 67, 64, 60 }
-    for i = 1, 16 do
-        Engine.setPitch(1, i, melody[i])
-        Engine.setVelocity(1, i, 70 + (i % 4) * 15)
-        Engine.setStepLength(1, i, 6)
-    end
     local QUARTER = 3                        -- Sources transport tap
-    Engine.setAdvanceSource(1, QUARTER)
-    Engine.setType(2, "trig"); Engine.setDimensions(2, "4x4"); Engine.setDivision(2, 4)
-    Engine.setAdvanceSource(2, QUARTER)
-    for i = 1, 16 do Engine.setGate(2, i, (i * 7) % 3 ~= 0 and 1 or 0) end
+    local melody = { 60, 62, 64, 67, 69, 67, 64, 62, 60, 64, 67, 72, 71, 67, 64, 60 }
+    local a, b = Engine.lanes[1], Engine.lanes[2]
+    for i = 1, 16 do
+        a.pitch[i] = melody[i]
+        a.velocity[i] = 70 + (i % 4) * 15
+        b.gate[i] = (i * 7) % 3 ~= 0 and 1 or 0
+    end
+    a.advanceSource = QUARTER
+    b.type = "trig"; b.division = 4; b.advanceSource = QUARTER
+    Lane.setDims(b, "4x4")
     Engine.onStart()
 end
 

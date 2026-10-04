@@ -65,27 +65,37 @@ end
 
 -- Plain status view for the draw event: clear + one line per lane.
 -- Does NOT ensure(): before the first key press this must stay free.
+-- Repaints only when something changed (the draw event fires every frame;
+-- a full clear + text each frame made the idle screen blink and churned
+-- strings for nothing). sig is the last painted state, -1 = never painted.
+local sig = -1
 function M.status(lcd)
-    if not Engine then
-        lcd:draw_rectangle_filled(0, 0, 319, 239, { 12, 12, 16 })
-        lcd:draw_text_fast("seq3: press a key to load", 8, 110, 16, { 120, 220, 255 })
-        lcd:draw_swap()
-        return
+    local s = 0
+    if Engine then
+        s = Engine.running and 1 or 2
+        for i = 1, #Engine.lanes do s = s * 17 + Engine.lanes[i].position end
     end
+    if s == sig then return end
+    sig = s
     lcd:draw_rectangle_filled(0, 0, 319, 239, { 12, 12, 16 })
-    for i = 1, #Engine.lanes do
-        local l = Engine.lanes[i]
-        lcd:draw_text_fast(i .. " " .. l.type .. " " .. l.position,
-            8, 8 + (i - 1) * 24, 16, { 120, 220, 255 })
+    if not Engine then
+        lcd:draw_text_fast("seq3: press a key to load", 8, 110, 16, { 120, 220, 255 })
+    else
+        for i = 1, #Engine.lanes do
+            local l = Engine.lanes[i]
+            lcd:draw_text_fast(i .. " " .. l.type .. " " .. l.position,
+                8, 8 + (i - 1) * 24, 16, { 120, 220, 255 })
+        end
+        lcd:draw_text_fast("press a key for the screen", 8, 200, 16, { 120, 120, 140 })
     end
     lcd:draw_swap()
 end
 
 -- ------------------------------------------------------------- screen ---
 -- LAZY GUI: the full screen loads on the first control press (NOT at boot or
--- draw), so idle runtime stays at the core-only budget. SCR is cached; SCRn
--- counts draw frames. key/btn/turn/press forward into screen.lua, which also
--- receives the playhead pushes via tick().
+-- draw), so idle runtime stays at the core-only budget. It is its own bundle
+-- (seq3s): when it shared seq3ui, requiring midi_rx compiled it at start.
+-- SCR is cached. key/btn/turn/press forward into the screen module.
 
 local SCR
 

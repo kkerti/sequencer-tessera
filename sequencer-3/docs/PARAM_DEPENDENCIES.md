@@ -12,13 +12,13 @@ Legend: `—` = not available, `✓` = available.
 A lane's `dims` sets the number of used steps and which navigation settings
 exist.
 
-| `dims` | used steps | Advance | XAdvance / YAdvance | Previous | Address | XAddress / YAddress | Length | Shift |
-|---|---|---|---|---|---|---|---|---|
-| `16x1` | 16 | ✓ | — | ✓ | ✓ | — | ✓ | ✓ |
-| `8x2`  | 16 | — | ✓ / ✓ | — | — | ✓ / ✓ | — | ✓ |
-| `5x3`  | 15 | — | ✓ / ✓ | — | — | ✓ / ✓ | — | ✓ |
-| `4x3`  | 12 | — | ✓ / ✓ | — | — | ✓ / ✓ | — | ✓ |
-| `4x4`  | 16 | — | ✓ / ✓ | — | — | ✓ / ✓ | — | ✓ |
+| `dims` | used steps | Advance | XAdvance / YAdvance | Previous | Length | Shift |
+|---|---|---|---|---|---|---|
+| `16x1` | 16 | ✓ | — | ✓ | ✓ | ✓ |
+| `8x2`  | 16 | — | ✓ / ✓ | — | — | ✓ |
+| `5x3`  | 15 | — | ✓ / ✓ | — | — | ✓ |
+| `4x3`  | 12 | — | ✓ / ✓ | — | — | ✓ |
+| `4x4`  | 16 | — | ✓ / ✓ | — | — | ✓ |
 
 Index mapping is row-major: `index = y * width + x` (0-based), stored linearly
 in the 16-slot arrays. Unused slots (e.g. `5x3` slot 16) are ignored.
@@ -32,60 +32,51 @@ Notes:
 - **X and Y wrap independently**: X advance wraps within the row, Y advance
   wraps within the column.
 - **Division** applies to all advance sources and is available in every mode.
-- **Address** uses a *value source* (`external.N` or `lane.N`); a
-  `transport.*` source is not meaningful for addressing.
 
 ## 2. Lane type
 
 Which per-step fields and per-lane settings apply to each type.
 
-| Setting | Note | Mod | Trig | Gate |
-|---|---|---|---|---|
-| `pitch[16]` (0..127) | ✓ | — | — | — |
-| `velocity[16]` (1..127) | ✓ | — | — | — |
-| `stepLength[16]` (ticks) | ✓ | — | — | — |
-| `value[16]` (0..127) | — | ✓ | — | — |
-| `gate[16]` (0/1) | — | — | ✓ | ✓ |
-| `scaleMask` + `root` | ✓ | — | — | — |
-| `minNote` / `maxNote` | ✓ | — | — | — |
-| `minValue` / `maxValue` | — | ✓ | — | — |
-| `controller` (output CC number) | — | ✓ | — | — |
-| `channel` (MIDI channel) | ✓ | ✓ | ✓ | ✓ |
-| MIDI note number | — | — | ✓ | ✓ |
-| MIDI note length | ✓ | — | ✓ | — |
-| `mode` (edit/hold/time/toggle) | ✓ | — | — | — |
-| advance / reset / random / previous / shift sources | ✓ | ✓ | ✓ | ✓ |
-| address value sources | ✓ | ✓ | ✓ | ✓ |
-| `division` | ✓ | ✓ | ✓ | ✓ |
+| Setting | Note | Trig |
+|---|---|---|
+| `pitch[16]` (0..127) | ✓ | — |
+| `gate[16]` (0/1) | — | ✓ |
+| `velocity[16]` (1..127) | ✓ | ✓ |
+| `stepLength[16]` (ticks) | ✓ | ✓ |
+| `scaleMask` + `root` | ✓ | — |
+| `minNote` / `maxNote` | ✓ | — |
+| `channel` (MIDI channel) | ✓ | ✓ |
+| `midiNote` (the Trig's note) | — | ✓ |
+| advance / reset / random / previous / shift sources | ✓ | ✓ |
+| `division` | ✓ | ✓ |
 
 Notes:
 
 - **Note** is the only melodic/quantized type; everything scale-related lives
   here.
-- **Mod** output is a raw value (CC), so it uses `minValue`/`maxValue`, not notes
-  or a scale.
-- **Trig** vs **Gate** differ only in output timing: Trig = short pulse on an
-  active step; Gate = held note across a run of active steps. Their storage is
-  identical.
+- **Trig** plays `midiNote` on active steps for the step's `stepLength`: a
+  short length is a trigger, a long one is a gate.
+- **Mod** and **Gate** were folded into Note and Trig for device RAM
+  (2026-10). Modulation is a chromatic Note lane (`scaleMask = 0`) whose
+  pitches an FH-2 converts to CV. `setType("mod"/"gate")` maps to note/trig.
 - `Qtiz` is intentionally absent (dropped; needs CV inputs).
 
 ## 3. Cross-type rules
 
-- A lane is **monophonic**: exactly one note/CC value is emitted per active step.
+- A lane is **monophonic**: exactly one note is emitted per active step.
 - Only one lane **type** exists per lane at a time; changing type keeps the
   underlying arrays but only the relevant fields are read/written.
 - `channel` is common to all types.
 - Source routing (advance, xAdvance, yAdvance, reset, random, previous, shift)
-  is common to all types and all `dims` (with the single-advance/single-address
-  /`previous` exceptions for `16x1`).
+  is common to all types and all `dims` (with the single-advance/`previous`
+  exceptions for `16x1`).
 
 ## 4. Deferred / not-yet-applicable
 
 | Feature | Blocked on |
 |---|---|
 | Parameter modulation (value source -> division/length/scale/root/range) | Deferred decision; not in the v1 API. |
-| 14-bit CC | Mod lane stays 7-bit for now. |
-| Slew (smooth Mod/Note transitions) | Not in v1. |
+| Slew (smooth Note transitions) | Not in v1. |
 | Microtonal scales (`Equal`, `Ratio`) | Dropped for now (12-TET only). |
 | `Symmet` scale editor | Deferred. |
 | MPE expression targets (bend, aftertouch) | Output-layer flag; per-lane expression source TBD. |

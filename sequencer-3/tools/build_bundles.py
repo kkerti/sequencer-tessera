@@ -8,8 +8,11 @@ registry shim (require resolves inside the bundle; no FS module load at
 runtime, no per-file boot cost).
 
   dist/seq3.lua       core chain: sources, scales, lane, transport, engine
-  dist/seq3ui.lua     boot + midi_rx + screen + menu (needs seq3)
-  dist/seq3x.lua      lazy periphery: generate, ext, ops, preset, persist
+  dist/seq3ui.lua     boot + midi_rx (what app start compiles, with seq3/seq3e)
+  dist/seq3s.lua      the screen (text or colour), on the first control press
+  dist/seq3x.lua      lazy editing: setters + shred / randomize / zero / rotate
+  dist/seq3p.lua      lazy save: source names, persist
+  dist/seq3l.lua      lazy load: preset (loadPreset / copy)
 
 The profile's setup requires seq3 then seq3ui and fills the demo — mirroring
 seq-2's working setup (14.8 KB eager) — with grxm/rtmrx armed at setup.
@@ -51,22 +54,38 @@ HEADLESS = [
     ("seq_data",  "src/device/seq_data.lua"),
     ("headless",  "src/device/headless.lua"),
 ]
+# What app START compiles: the MIDI receiver + the demo, nothing else. The
+# screen used to live here too, and a bundle runs every module body when it is
+# required, so the first MIDI byte compiled the whole GUI as well. Now start
+# costs the same as the headless target and the screen is its own bundle.
 UI = [
     ("device_boot", "src/device/device_boot.lua"),
     ("midi_rx",     "src/device/midi_rx.lua"),
+]
+# The screen: compiled on the first CONTROL PRESS (midi_rx.loadSCR), never at
+# start. --gui=text: the text-only key/value page replaces screen + menu,
+# bundled under the name "screen" so midi_rx and the profile are unchanged.
+SCREEN = [
     ("screen",      "src/device/screen.lua"),
     ("menu",        "src/device/menu.lua"),
 ]
-# Live performance ops: Shred / Zero / rotate, Gamut / Euclid, X-Y addressing.
+if "--gui=text" in sys.argv:
+    SCREEN = [("screen", "src/device/text_screen.lua")]
+# Editing: the engine's setters (edit) + Shred / Random / Zero / rotate (ops).
+# Compiled on the first edit or performance op, never at app start.
 OPS = [
+    ("edit",      "src/core/edit.lua"),
     ("ops",       "src/core/ops.lua"),
-    ("generate",  "src/core/generate.lua"),
-    ("ext",       "src/core/ext.lua"),
 ]
-# Save / load / copy. Only the Config slot items and loadPreset need these.
+# Save / load, split by trigger like OPS: with the text GUI resident the wasm
+# harness could not compile the 6.1 KB combined bundle. Save compiles only
+# seq3p (persist + source names); a load or loadPreset also pulls seq3l.
 PERSIST = [
-    ("preset",    "src/core/preset.lua"),
+    ("source_names", "src/core/source_names.lua"),
     ("persist",   "src/core/persist.lua"),
+]
+LOAD = [
+    ("preset",    "src/core/preset.lua"),
 ]
 
 BUNDLES = [
@@ -74,8 +93,10 @@ BUNDLES = [
     ("seq3e.lua",  ENGINE),
     ("seq3h.lua",  HEADLESS),
     ("seq3ui.lua", UI),
+    ("seq3s.lua",  SCREEN),
     ("seq3x.lua",  OPS),
     ("seq3p.lua",  PERSIST),
+    ("seq3l.lua",  LOAD),
 ]
 
 # The HEADLESS target uploads only these three.
@@ -173,6 +194,7 @@ if __name__ == "__main__":
     print()
     hl = sum(sizes[n] for n in HEADLESS_SET)
     gui = sum(sizes[n] for n in ("seq3.lua", "seq3e.lua", "seq3ui.lua"))
+    scr = sizes["seq3s.lua"]
     print(f"HEADLESS upload ({' + '.join(HEADLESS_SET)}) = {hl} B")
-    print(f"GUI upload (seq3.lua + seq3e.lua + seq3ui.lua) = {gui} B")
+    print(f"GUI start (seq3.lua + seq3e.lua + seq3ui.lua) = {gui} B; screen (seq3s.lua) = {scr} B on first press")
     print(f"largest single chunk = {max(sizes.values())} B (seq-1's proven max: 10300 B)")

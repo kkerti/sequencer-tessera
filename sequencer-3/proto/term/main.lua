@@ -9,7 +9,6 @@
 -- Stdin protocol (one per line, from bridge.py or typed into its terminal):
 --   CLK | START | STOP | QUIT
 --   LOAD <slot> | SAVE <slot>                  (presets/NN.lua)
---   NOTE <note> <vel> <ch> | CC <cc> <val> <ch>   (mapped by io/midi_in)
 --
 -- Flags: --bpm <n> internal clock | --preset <n> load slot at boot
 --        --monitor four-line lane view on stderr | --pulses <n> exit after n
@@ -18,7 +17,6 @@ package.path = "src/core/?.lua;src/?.lua;" .. package.path
 
 local Engine  = require("engine")
 local Stdio   = require("io.stdio")
-local MidiIn  = require("io.midi_in")
 local Persist = require("persist")
 local Monitor = require("io.monitor")
 
@@ -104,8 +102,6 @@ else
             doSave(tonumber(line:match("%d+")))
         elseif line:match("^LOAD%s+%d+") then
             doLoad(tonumber(line:match("%d+")))
-        elseif line:sub(1, 5) == "NOTE " or line:sub(1, 3) == "CC " then
-            MidiIn.handle(line)
         elseif line == "QUIT" then
             break
         end

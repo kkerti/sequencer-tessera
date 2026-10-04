@@ -11,7 +11,6 @@ local Lane      = require("lane")
 local Transport = require("transport")
 local Sources   = require("sources")
 local Persist   = require("persist")
-local MidiIn    = require("io.midi_in")
 
 local pass, fail = 0, 0
 local function ok(cond, msg)
@@ -37,8 +36,6 @@ ok(Scales.quantize(61, Scales.MAJOR) == 60, "C# snaps down to C in C major")
 ok(Scales.quantize(62, Scales.MAJOR) == 62, "in-scale note passes through")
 ok(Scales.quantize(66, Scales.MAJOR) == 65, "F# snaps down to F in C major")
 ok(Scales.rotate(Scales.MAJOR, 2) == 0xAD6, "major rotated up 2 == D major mask")
-ok(Scales.step(60, Scales.MAJOR, 2) == 64, "two scale degrees up from C == E")
-ok(Scales.step(60, Scales.MAJOR, -1) == 59, "one degree down from C == B")
 ok(Scales.quantize(60, 0) == 60, "mask 0 is chromatic")
 
 -- -------------------------------------------------------------- lane ---
@@ -46,12 +43,10 @@ ok(Scales.quantize(60, 0) == 60, "mask 0 is chromatic")
 do
     local l = Lane.new("note")
     ok(#l.pitch == 16 and #l.velocity == 16 and #l.stepLength == 16, "note lane has 16-slot arrays")
-    local g = Lane.new("gate")
-    ok(#g.gate == 16, "gate lane has a 16-slot gate array")
+    local g = Lane.new("trig")
+    ok(#g.gate == 16, "trig lane has a 16-slot gate array")
 
     Lane.setDims(l, "4x4")
-    ok(Lane.index(l, 0, 0) == 1 and Lane.index(l, 3, 0) == 4, "4x4 row-major index (row 0)")
-    ok(Lane.index(l, 0, 1) == 5 and Lane.index(l, 3, 3) == 16, "4x4 row-major index (rows 1,3)")
 
     Lane.setPosition(l, 4)   -- x=3, y=0
     Lane.advanceX(l)
@@ -91,40 +86,46 @@ local function freshLane(kind)
     Engine.setChannel(1, 1)
     Engine.setScale(1, Scales.MAJOR, 0)
     Engine.setDivision(1, 1)
-    Engine.setAdvanceSource(1, "external.0")
+    Engine.setAdvanceSource(1, "off")
     Engine.onStart()
     Engine.onPulse()   -- flush the step-1 emit from onStart
 end
 
+-- Clocked lane 1: advances on every 16th. step() runs pulses up to and
+-- including the next 16th tap (6 pulses), so Engine.out is that pulse's.
+local function clocked(kind)
+    freshLane(kind)
+    Engine.setAdvanceSource(1, "transport.sixteenth")
+end
+local function step()
+    repeat Engine.onPulse() until Transport.fired(Engine.transport, 6)
+end
+
 do
-    freshLane("note")
+    clocked("note")
     Engine.setPitch(1, 2, 64)
-    Engine.triggerExternal(1)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 2, "external trigger advances to step 2")
+    step()
+    ok(Engine.state(1).position == 2, "the 16th tap advances to step 2")
     ok(hasEvent(Engine.out, 1, 64), "step 2 emits its note (64)")
 end
 
 do
-    freshLane("note")
+    clocked("note")
     Engine.setDivision(1, 2)
     Engine.setPitch(1, 2, 64)
-    Engine.triggerExternal(1); Engine.onPulse()
+    step()
     ok(Engine.state(1).position == 1, "division 2 ignores first advance")
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(1).position == 2, "division 2 advances on second trigger")
+    step()
+    ok(Engine.state(1).position == 2, "division 2 advances on second tap")
 end
 
 do
-    freshLane("note")
-    Engine.setResetSource(1, "external.1")
-    Engine.triggerExternal(1); Engine.onPulse()   -- step 2
-    Engine.triggerExternal(1); Engine.onPulse()   -- step 3
-    ok(Engine.state(1).position == 3, "advanced to step 3")
-    Engine.triggerExternal(2); Engine.onPulse()   -- reset pending, no advance
-    ok(Engine.state(1).position == 3, "reset is deferred until an advance")
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(1).position == 1, "next advance honours the reset (step 1)")
+    clocked("note")
+    Engine.setResetSource(1, "transport.quarter")
+    step(); step(); step()                        -- pulses 6/12/18: step 4
+    ok(Engine.state(1).position == 4, "advanced to step 4")
+    step()                                        -- pulse 24: reset + advance
+    ok(Engine.state(1).position == 1, "the advance on the reset tap lands on step 1")
 end
 
 do
@@ -137,10 +138,10 @@ do
 end
 
 do
-    freshLane("note")
+    clocked("note")
     Engine.setPitch(1, 2, 64)
-    Engine.triggerExternal(1)
-    Engine.onPulse()
+    Engine.setStepLength(1, 1, 24)                -- still sounding at the advance
+    step()
     ok(Engine.out.n == 2 and Engine.out.typ[1] == 0 and Engine.out.typ[2] == 1,
        "mono lane retriggers: off then on")
 end
@@ -161,45 +162,32 @@ end
 do
     freshLane("trig")
     Engine.setMidiNote(1, 40)
-    Engine.setGate(1, 1, 1)
+    Engine.setGate(1, 1, 1); Engine.setStepLength(1, 1, 1); Engine.setVelocity(1, 1, 77)
     Engine.setPosition(1, 1)
     Engine.onPulse()
     ok(hasEvent(Engine.out, 1, 40), "trig lane fires on an active step")
+    ok(Engine.out.velocity[Engine.out.n] == 77, "trig uses the step's velocity")
     Engine.onPulse()
-    ok(hasEvent(Engine.out, 0, 40), "trig pulse releases after one pulse")
+    ok(hasEvent(Engine.out, 0, 40), "a 1-tick trig releases after one pulse")
 end
 
 do
-    freshLane("gate")
+    freshLane("trig")
     Engine.setMidiNote(1, 41)
-    Engine.setGate(1, 1, 1); Engine.setGate(1, 2, 1); Engine.setGate(1, 3, 0)
+    Engine.setGate(1, 1, 1); Engine.setStepLength(1, 1, 24)
     Engine.setPosition(1, 1); Engine.onPulse()
-    Engine.setPosition(1, 2); Engine.onPulse()
-    ok(not hasEvent(Engine.out, 0, 41), "gate holds across active steps")
-    Engine.setPosition(1, 3); Engine.onPulse()
-    ok(hasEvent(Engine.out, 0, 41), "gate releases on the first inactive step")
+    local held = true
+    for _ = 1, 23 do Engine.onPulse(); if hasEvent(Engine.out, 0, 41) then held = false end end
+    ok(held, "a long trig step holds like a gate")
+    Engine.onPulse()
+    ok(hasEvent(Engine.out, 0, 41), "the long trig releases at its step length")
 end
 
 do
-    freshLane("mod")
-    Engine.setController(1, 74)
-    Engine.setValue(1, 1, 99)
-    Engine.setPosition(1, 1); Engine.onPulse()
-    ok(Engine.out.n == 1 and Engine.out.typ[1] == 2
-       and Engine.out.pitch[1] == 74 and Engine.out.velocity[1] == 99,
-       "mod lane emits CC 74 = 99")
-end
-
-do
-    freshLane("note")
-    Engine.setAdvanceSource(1, "off")
-    Engine.setAddressSource(1, "external.0")
-    Engine.setExternalValue(1, 127)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 16, "address value 127 -> last step")
-    Engine.setExternalValue(1, 0)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 1, "address value 0 -> step 1")
+    Engine.init{ lanes = 4 }
+    Engine.setType(1, "mod"); Engine.setType(2, "gate")
+    ok(Engine.get(1, "type") == "note" and Engine.get(2, "type") == "trig",
+       "old mod/gate types load as note/trig")
 end
 
 -- --------------------------------------------------- engine: API ---
@@ -254,33 +242,32 @@ do
         Engine.setChannel(1, 5); Engine.setDivision(1, 2)
         Engine.setXAdvanceSource(1, "transport.sixteenth")
         Engine.setYAdvanceSource(1, "transport.quarter")
-        Engine.setResetSource(1, "external.0")
-        Engine.setShiftSource(1, "lane.3"); Engine.setShiftAmount(1, 3)
+        Engine.setResetSource(1, "transport.whole")
+        Engine.setShiftSource(1, "transport.half"); Engine.setShiftAmount(1, 3)
         for k = 1, 16 do
             Engine.setPitch(1, k, 40 + k * 2)
             Engine.setVelocity(1, k, 30 + k * 3)
             Engine.setStepLength(1, k, 1 + k)
         end
-        Engine.setType(2, "mod"); Engine.setController(2, 74)
+        Engine.setType(2, "note"); Engine.setScale(2, 0, 0)
         Engine.setRange(2, 20, 110)
         Engine.setAdvanceSource(2, "transport.eighth")
-        Engine.setAddressSource(2, "external.3")
-        for k = 1, 16 do Engine.setValue(2, k, k * 7) end
+        for k = 1, 16 do Engine.setPitch(2, k, k * 7) end
         Engine.setType(3, "trig"); Engine.setDimensions(3, "8x2")
         Engine.setMidiNote(3, 38); Engine.setChannel(3, 10)
         Engine.setAdvanceSource(3, "transport.sixteenth")
-        Engine.generate(3, { kind = "euclid", hits = 5, rotate = 2 })
-        Engine.setType(4, "gate"); Engine.setLength(4, 12)
-        Engine.setMidiNote(4, 45); Engine.setPreviousSource(4, "lane.1")
-        Engine.generate(4, { kind = "gamut", base = 64, spread = 40, downUp = 90,
-                            velSpread = 12, gateSpread = 3, seed = 77, live = true })
+        for k = 1, 16 do Engine.setGate(3, k, (k * 5) % 16 < 5 and 1 or 0) end
+        Engine.setType(4, "trig"); Engine.setLength(4, 12)
+        for k = 1, 12 do Engine.setStepLength(4, k, k * 2) end
+        Engine.setMidiNote(4, 45); Engine.setPreviousSource(4, "transport.quarter")
+        for k = 1, 12 do Engine.setGate(4, k, k % 3 == 0 and 0 or 1) end
     end
 
     -- Saved settings only: playback state and derived fields are excluded.
     local SKIP = { position=1, emit=1, pendingReset=1, fired=1, divCount=1,
-                   activeNote=1, noteOffIn=1, sustain=1, width=1, height=1,
+                   activeNote=1, noteOffIn=1, width=1, height=1,
                    scaleMask=1 }
-    local ARRAYS = { pitch=1, velocity=1, stepLength=1, value=1, gate=1 }
+    local ARRAYS = { pitch=1, velocity=1, stepLength=1, gate=1 }
 
     local function snapshot()
         local snap = {}
@@ -303,7 +290,7 @@ do
     end
 
     configure()
-    -- Run the live generator so rng sits mid-sequence, not at its seed.
+    -- Play for a while: playback state must not leak into the save.
     Engine.onStart()
     for _ = 1, 200 do Engine.onPulse() end
     Engine.onStop()
@@ -344,9 +331,8 @@ do
        "round-trip rebuilds dims-derived width/height")
     ok(Engine.get(1, "scaleMask") == Scales.rotate(0x5AD, 9),
        "round-trip rebuilds the rotated scale mask")
-    ok(Engine.get(4, "generator") == 1, "round-trip keeps a live generator on")
-    ok(Engine.get(2, "minValue") == 20 and Engine.get(2, "maxValue") == 110,
-       "round-trip keeps a Mod lane's own value range")
+    ok(Engine.get(2, "minNote") == 20 and Engine.get(2, "maxNote") == 110,
+       "round-trip keeps a lane's note range")
 
     -- A saved slot is a valid preset chunk: it reloads over a running engine.
     local reload = Persist.load(tmp)
@@ -362,32 +348,14 @@ do
     Engine.setType(1, "note")
     Engine.setDimensions(1, "4x4")
     Engine.setAdvanceSource(1, "off")
-    Engine.setXAdvanceSource(1, "external.0")
-    Engine.setYAdvanceSource(1, "external.1")
+    Engine.setXAdvanceSource(1, "transport.sixteenth")
+    Engine.setYAdvanceSource(1, "transport.quarter")
     Engine.onStart(); Engine.onPulse()
     Engine.setPosition(1, 1)
-    Engine.triggerExternal(1); Engine.onPulse()
+    step()                                        -- pulse 6: X only
     ok(Engine.state(1).position == 2, "X advance moves along the row")
-    Engine.triggerExternal(2); Engine.onPulse()
-    ok(Engine.state(1).position == 6, "Y advance moves down the column")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    for i = 2, 4 do Engine.setType(i, "trig") end
-    Engine.setType(1, "note")
-    Engine.setDimensions(1, "4x4")
-    Engine.setAdvanceSource(1, "off")
-    Engine.setXAddressSource(1, "external.0")
-    Engine.setYAddressSource(1, "external.1")
-    Engine.onStart(); Engine.onPulse()
-    Engine.setExternalValue(1, 127)
-    Engine.setExternalValue(2, 0)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 4, "X address 127 -> x = 3")
-    Engine.setExternalValue(2, 127)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 16, "Y address 127 -> y = 3")
+    step(); step(); step()                        -- pulse 24: X wraps, then Y
+    ok(Engine.state(1).position == 5, "X wraps in the row and Y moves down a row")
 end
 
 do
@@ -396,50 +364,12 @@ do
     Engine.setType(1, "note")
     for i = 1, 16 do Engine.setPitch(1, i, i) end
     Engine.setAdvanceSource(1, "off")
-    Engine.setShiftSource(1, "external.0")
+    Engine.setShiftSource(1, "transport.sixteenth")
     Engine.setShiftAmount(1, 1)
     Engine.onStart(); Engine.onPulse()
-    Engine.triggerExternal(1); Engine.onPulse()
+    step()
     ok(Engine.get(1, "pitch")[1] == 16 and Engine.get(1, "pitch")[2] == 1,
        "shift source rotates the step values")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    Engine.setType(1, "note"); Engine.setChannel(1, 1)
-    Engine.setType(2, "note"); Engine.setChannel(2, 2)
-    Engine.setType(3, "trig"); Engine.setType(4, "trig")
-    Engine.setAdvanceSource(1, "external.0")
-    Engine.setAdvanceSource(2, "lane.1")
-    Engine.setPitch(1, 2, 72); Engine.setPitch(2, 2, 48)
-    Engine.onStart(); Engine.onPulse()
-    ok(Engine.state(2).position == 1, "start does not cascade lane.1 into lane 2")
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(1).position == 2, "lane 1 advanced by external")
-    ok(Engine.state(2).position == 2, "lane 2 advanced by lane.1 on the same pulse")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    for i = 2, 4 do Engine.setType(i, "trig") end
-    Engine.setType(1, "note")
-    Engine.setAdvanceSource(1, "external.0")
-    Engine.onStart(); Engine.onPulse()
-    MidiIn.noteOn(36, 100)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 2, "MIDI note 36 maps to external.0 (advance)")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    for i = 2, 4 do Engine.setType(i, "trig") end
-    Engine.setType(1, "note")
-    Engine.setAdvanceSource(1, "off")
-    Engine.setAddressSource(1, "external.0")
-    Engine.onStart(); Engine.onPulse()
-    MidiIn.controlChange(20, 127)
-    Engine.onPulse()
-    ok(Engine.state(1).position == 16, "MIDI CC 20 maps to an address value")
 end
 
 do
@@ -458,59 +388,11 @@ end
 
 do
     Engine.init{ lanes = 4 }
-    Engine.setType(1, "trig"); Engine.setMidiNote(1, 36)
-    Engine.setType(2, "note"); Engine.setChannel(2, 2)
-    Engine.setType(3, "trig"); Engine.setType(4, "trig")
-    Engine.setGate(1, 1, 1); Engine.setGate(1, 2, 0); Engine.setGate(1, 3, 1)
-    Engine.setAdvanceSource(1, "external.0")
-    Engine.setAdvanceSource(2, "lane.1")
-    Engine.onStart(); Engine.onPulse()
-    ok(Engine.state(2).position == 1, "lane.1 does not cascade at start")
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(2).position == 1, "trig lane with gate off does not fire lane.1")
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(2).position == 2, "trig lane fires lane.1 on an active step")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    Engine.setType(1, "mod"); Engine.setType(2, "note"); Engine.setChannel(2, 2)
-    Engine.setType(3, "trig"); Engine.setType(4, "trig")
-    Engine.setValue(1, 1, 100); Engine.setValue(1, 2, 10); Engine.setValue(1, 3, 100)
-    Engine.setAdvanceSource(1, "external.0")
-    Engine.setAdvanceSource(2, "lane.1")
-    Engine.onStart(); Engine.onPulse()
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(2).position == 1, "mod lane below threshold does not fire")
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(2).position == 2, "mod lane above threshold fires")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    Engine.setType(1, "gate"); Engine.setMidiNote(1, 40)
-    Engine.setType(2, "note"); Engine.setChannel(2, 2)
-    Engine.setType(3, "trig"); Engine.setType(4, "trig")
-    Engine.setGate(1, 1, 1); Engine.setGate(1, 2, 1)
-    Engine.setGate(1, 3, 0); Engine.setGate(1, 4, 1)
-    Engine.setAdvanceSource(1, "external.0")
-    Engine.setAdvanceSource(2, "lane.1")
-    Engine.onStart(); Engine.onPulse()
-    Engine.triggerExternal(1); Engine.onPulse()
-    ok(Engine.state(2).position == 1, "held gate does not re-fire on the next step")
-    Engine.triggerExternal(1); Engine.onPulse()   -- gate low
-    Engine.triggerExternal(1); Engine.onPulse()   -- gate high again
-    ok(Engine.state(2).position == 2, "gate fires lane.1 on a rising edge")
-end
-
-do
-    Engine.init{ lanes = 4 }
     Engine.setType(1, "note"); Engine.setChannel(1, 1)
     Engine.setType(2, "trig"); Engine.setMidiNote(2, 38); Engine.setChannel(2, 2)
-    Engine.setType(3, "mod"); Engine.setController(3, 74); Engine.setChannel(3, 3)
+    Engine.setType(3, "note"); Engine.setChannel(3, 3)
     Engine.setType(4, "trig")
     Engine.setGate(2, 1, 1)
-    Engine.setValue(3, 1, 90)
     for i = 1, 4 do Engine.setAdvanceSource(i, "off") end
     Engine.onStart(); Engine.onPulse()
     local sawNote, sawTrig, sawCC = false, false, false
@@ -518,75 +400,44 @@ do
         local t, ch = Engine.out.typ[i], Engine.out.channel[i]
         if t == 1 and ch == 1 then sawNote = true end
         if t == 1 and ch == 2 then sawTrig = true end
-        if t == 2 and ch == 3 then sawCC = true end
+        if t == 1 and ch == 3 then sawCC = true end
     end
-    ok(sawNote and sawTrig and sawCC, "four lanes emit together (note + trig + CC)")
+    ok(sawNote and sawTrig and sawCC, "lanes emit together on their own channels")
 end
 
--- ------------------------------------------------- engine: M4 gen ---
+-- ------------------------------------------------------ random fill ---
 
 do
     Engine.init{ lanes = 4 }
     Engine.setType(1, "note"); Engine.setScale(1, Scales.MAJOR, 0)
-    Engine.generate(1, { kind = "gamut", base = 60, spread = 12, downUp = 64, seed = 42 })
-    local first = {}
-    for i = 1, 16 do first[i] = Engine.get(1, "pitch")[i] end
-    Engine.generate(1, { kind = "gamut", base = 60, spread = 12, downUp = 64, seed = 42 })
-    local same, inScale, inRange = true, true, true
-    local mask = Engine.get(1, "scaleMask")
+    Engine.setRange(1, 48, 72)
+    math.randomseed(42)
+    ok(Engine.randomize(1), "randomize fills a note lane")
+    local inRange, distinct, seen = true, 0, {}
     for i = 1, 16 do
         local p = Engine.get(1, "pitch")[i]
-        if p ~= first[i] then same = false end
-        if ((mask >> (p % 12)) & 1) == 0 then inScale = false end
         if p < 48 or p > 72 then inRange = false end
+        if not seen[p] then seen[p] = true; distinct = distinct + 1 end
     end
-    ok(same, "gamut generator is deterministic for a seed")
-    ok(inScale, "gamut pitches are quantized to the scale")
-    ok(inRange, "gamut pitches stay within base +/- spread")
+    ok(inRange, "random pitches stay inside the lane's note range")
+    ok(distinct > 4, "random fill varies across steps (" .. distinct .. " distinct)")
+    Engine.setPosition(1, 1); Engine.onStart(); Engine.onPulse()
+    local p = Engine.out.pitch[Engine.out.n]
+    ok(((Engine.get(1, "scaleMask") >> (p % 12)) & 1) == 1, "random notes play quantized to the scale")
 end
 
 do
     Engine.init{ lanes = 4 }
-    Engine.setType(1, "trig")
-    Engine.generate(1, { kind = "euclid", hits = 3 })
-    local count = 0
-    for i = 1, 16 do count = count + Engine.get(1, "gate")[i] end
-    ok(count == 3, "euclidean generator places exactly `hits` onsets")
-end
-
-do
-    local G = require("generate")
-    local l = Lane.new("note")
-    G.configure(l, { seed = 5, base = 60, spread = 12 })
-    G.step(l, 1)
-    local a = l.pitch[1]
-    G.configure(l, { seed = 5, base = 60, spread = 12 })
-    G.step(l, 1)
-    ok(l.pitch[1] == a, "Generate.step is deterministic")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    Engine.setType(1, "note"); Engine.setScale(1, Scales.MAJOR, 0)
-    Engine.setAdvanceSource(1, "external.0")
-    Engine.generate(1, { kind = "gamut", base = 60, spread = 12, seed = 7, live = true })
-    ok(Engine.get(1, "generator") == 1, "live gamut generator is enabled")
-    Engine.onStart(); Engine.onPulse()
-    Engine.triggerExternal(1); Engine.onPulse()
-    local mask = Engine.get(1, "scaleMask")
-    local p = Engine.get(1, "pitch")[Engine.state(1).position]
-    ok(((mask >> (p % 12)) & 1) == 1, "live-generated step is in scale")
-end
-
-do
-    Engine.init{ lanes = 4 }
-    Engine.loadPreset{ lanes = { {
-        type = "note", scaleMask = Scales.MAJOR, root = 0,
-        generate = { kind = "gamut", seed = 3, spread = 12 },
-    } } }
-    local mask = Engine.get(1, "scaleMask")
-    local p = Engine.get(1, "pitch")[1]
-    ok(((mask >> (p % 12)) & 1) == 1, "preset generate fills in-scale pitches")
+    Engine.setType(1, "trig"); Engine.setDimensions(1, "4x3")
+    math.randomseed(7)
+    Engine.randomize(1)
+    local hits, outside = 0, 0
+    for i = 1, 16 do
+        local g = Engine.get(1, "gate")[i]
+        if i <= 12 then hits = hits + g elseif g ~= 0 then outside = outside + 1 end
+    end
+    ok(hits > 0 and hits < 12, "random trig fill sets some gates, not all")
+    ok(outside == 0, "random fill touches only the lane's used steps")
 end
 
 -- --------------------------------------------------------- no-alloc ---
@@ -598,7 +449,6 @@ do
         Engine.setAdvanceSource(i, "transport.sixteenth")
         for k = 1, 16 do Engine.setPitch(i, k, 60 + k) end
     end
-    Engine.generate(1, { kind = "gamut", seed = 1, spread = 12, live = true })
     Engine.onStart()
     for _ = 1, 2000 do Engine.onPulse() end
     collectgarbage("collect"); collectgarbage("collect")

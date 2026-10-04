@@ -1,16 +1,17 @@
--- seq_data.lua — the sequence the headless build plays. Data + the action-API
--- calls that install it, and nothing else.
+-- seq_data.lua — the sequence the headless build plays. Data + the lane-field
+-- writes that install it, and nothing else.
 --
--- Deliberately NOT a preset table: applying one needs preset.lua (loadPreset),
--- and the whole point of the headless build is to load as little code as
--- possible. These are plain Engine.* calls, the same action API the Mac
--- harness and the GUI use.
+-- Deliberately NOT a preset table (applying one needs preset.lua) and NOT the
+-- setters (they live in the lazy editing bundle, edit.lua): the whole point of
+-- the headless build is to compile as little code as possible.
 --
 -- THREE lanes, different divisions, so the console report visibly shows them
 -- advancing at different rates against one clock:
 --   L1  note  ch1   16ths      melody, 16 steps
 --   L2  note  ch2   8ths       bass, 8 steps
 --   L3  trig  ch10  16ths      drum pattern, 16 steps
+
+local Scales = require("scales")
 
 local M = {}
 
@@ -24,35 +25,31 @@ local EIGHTH    = 4        -- Sources.TRANSPORT_EIGHTH
 
 function M.apply(Engine)
     Engine.init{ lanes = 3, channel = 1 }
+    local a, b, c = Engine.lanes[1], Engine.lanes[2], Engine.lanes[3]
 
     -- L1 — melody, A minor, one step per 16th.
-    Engine.setType(1, "note")
-    Engine.setChannel(1, 1)
-    Engine.setScale(1, 0x5AD, 9)
-    Engine.setAdvanceSource(1, SIXTEENTH)
+    a.channel = 1
+    a.rawScaleMask, a.root = 0x5AD, 9
+    a.scaleMask = Scales.rotate(0x5AD, 9)
+    a.advanceSource = SIXTEENTH
     for i = 1, 16 do
-        Engine.setPitch(1, i, MELODY[i])
-        Engine.setVelocity(1, i, 90)
-        Engine.setStepLength(1, i, 4)
+        a.pitch[i] = MELODY[i]; a.velocity[i] = 90; a.stepLength[i] = 4
     end
 
     -- L2 — bass, 8 steps, one step per 8th.
-    Engine.setType(2, "note")
-    Engine.setChannel(2, 2)
-    Engine.setLength(2, 8)
-    Engine.setAdvanceSource(2, EIGHTH)
+    b.channel = 2
+    b.length = 8
+    b.advanceSource = EIGHTH
     for i = 1, 8 do
-        Engine.setPitch(2, i, BASS[i])
-        Engine.setVelocity(2, i, 105)
-        Engine.setStepLength(2, i, 10)
+        b.pitch[i] = BASS[i]; b.velocity[i] = 105; b.stepLength[i] = 10
     end
 
     -- L3 — drum trigs on ch10, one step per 16th.
-    Engine.setType(3, "trig")
-    Engine.setChannel(3, 10)
-    Engine.setMidiNote(3, 36)
-    Engine.setAdvanceSource(3, SIXTEENTH)
-    for i = 1, 16 do Engine.setGate(3, i, DRUM[i]) end
+    c.type = "trig"
+    c.channel = 10
+    c.midiNote = 36
+    c.advanceSource = SIXTEENTH
+    for i = 1, 16 do c.gate[i] = DRUM[i] end
 
     return true
 end

@@ -9,17 +9,10 @@
 
 local M = {}
 
--- name, 12-bit mask (LSB = pitch class 0 = C).
-M.SCALES = {
-    { name = "off",        mask = 0x000 }, -- chromatic
-    { name = "major",      mask = 0xAB5 }, -- {0,2,4,5,7,9,11}
-    { name = "minor",      mask = 0x5AD }, -- {0,2,3,5,7,8,10}
-    { name = "harm min",   mask = 0x9AD }, -- {0,2,3,5,7,8,11}
-    { name = "dorian",     mask = 0x6AD }, -- {0,2,3,5,7,9,10}
-    { name = "phrygian",   mask = 0x5AB }, -- {0,1,3,5,7,8,10}
-    { name = "mixolydian", mask = 0x6B5 }, -- {0,2,4,5,7,9,10}
-    { name = "min pent",   mask = 0x4A9 }, -- {0,3,5,7,10}
-}
+-- Common masks (LSB = pitch class 0 = C), for presets and hand edits; no
+-- table of them ships, nothing on the device reads one:
+--   off 0x000 · major 0xAB5 · minor 0x5AD · harm min 0x9AD · dorian 0x6AD
+--   phrygian 0x5AB · mixolydian 0x6B5 · min pent 0x4A9
 
 M.MAJOR = 0xAB5
 M.MINOR = 0x5AD
@@ -29,25 +22,6 @@ function M.rotate(mask, root)
     root = (root or 0) % 12
     if root == 0 then return mask & 0xFFF end
     return ((mask << root) | (mask >> (12 - root))) & 0xFFF
-end
-
--- Move `d` scale DEGREES from `pitch` along `mask` (d may be negative). With
--- mask 0 (chromatic) a degree is a semitone. Result clamped 0..127.
-function M.step(pitch, mask, d)
-    if mask == 0 then
-        local r = pitch + d
-        if r < 0 then return 0 elseif r > 127 then return 127 else return r end
-    end
-    local p = M.quantize(pitch, mask)
-    local dir = (d >= 0) and 1 or -1
-    for _ = 1, (d >= 0 and d or -d) do
-        local q = p + dir
-        while q >= 0 and q <= 127 and ((mask >> (q % 12)) & 1) == 0 do
-            q = q + dir
-        end
-        if q < 0 then return 0 elseif q > 127 then return 127 else p = q end
-    end
-    return p
 end
 
 function M.quantize(p, mask)

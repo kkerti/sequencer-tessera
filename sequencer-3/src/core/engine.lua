@@ -25,6 +25,8 @@ M.lanes = {}
 M.out = { n = 0, typ = {}, pitch = {}, velocity = {}, channel = {} }
 M.transport = Transport.new()
 M.running = false
+M.fired = {}               -- per lane: emitted a note this pulse (a trigger)
+M.suppressFire = false
 
 -- ---------------------------------------------------------------- init ---
 
@@ -37,7 +39,9 @@ function M.init(opts)
         local l = Lane.new(kind)
         l.channel = baseChannel + i - 1
         M.lanes[i] = l
+        M.fired[i] = false
     end
+    for i = count + 1, #M.fired do M.fired[i] = false end
     M.out.n = 0
     for i = 1, OUT_CAP do
         M.out.typ[i] = 0
@@ -64,9 +68,11 @@ end
 
 -- ------------------------------------------------------------- sources ---
 
--- Every source is a transport tap (or OFF): lane->lane routing and external
--- MIDI sources were cut for device RAM (MIDI-to-CV routing is the FH-2's job).
+-- A source is a transport tap, another lane firing (LANE_FIRST + n - 1), or
+-- OFF. External MIDI sources were cut for device RAM.
+local LANE_FIRST = Sources.LANE_FIRST
 local function sourceFired(src)
+    if src >= LANE_FIRST then return M.fired[src - LANE_FIRST + 1] == true end
     return src ~= Sources.OFF and Transport.tapFired(M.transport, src)
 end
 
@@ -75,16 +81,22 @@ end
 local function applyAdvance(lane, kind)
     if lane.pendingReset then
         lane.position = 1
-        lane.divCount = 0
+        lane.divCount, lane.yDivCount = 0, 0
         lane.pendingReset = false
         lane.emit = true
         return
+    end
+    -- Y divides on its own counter, so X and Y never eat each other's counts.
+    if kind == "y" then
+        lane.yDivCount = lane.yDivCount + 1
+        if lane.yDivCount < lane.division then return end
+        lane.yDivCount = 0
+        return Lane.advanceY(lane)
     end
     lane.divCount = lane.divCount + 1
     if lane.divCount < lane.division then return end
     lane.divCount = 0
     if kind == "x" then Lane.advanceX(lane)
-    elseif kind == "y" then Lane.advanceY(lane)
     elseif kind == "back" then Lane.advanceBackward(lane)
     else Lane.advanceForward(lane) end
 end
@@ -120,7 +132,7 @@ end
 -- midiNote on active steps. Both use the step's velocity and hold for its
 -- stepLength (a long Trig step is a gate). Mod and Gate lanes were folded in
 -- for device RAM: CV/CC conversion is the FH-2's job downstream.
-local function emitStep(lane)
+local function emitStep(lane, i)
     local pos = lane.position
     local p = lane.midiNote
     if lane.type == "note" then
@@ -133,6 +145,9 @@ local function emitStep(lane)
         addEvent(1, p, lane.velocity[pos], lane.channel)
         lane.activeNote = p
         lane.noteOffIn = lane.stepLength[pos]
+        -- a sounding step is a trigger for lanes routed from this one; not
+        -- on the first pulse after start (every lane emits step 1 there)
+        M.fired[i] = not M.suppressFire
     end
     lane.emit = false
 end
@@ -151,7 +166,7 @@ function M.onPulse()
             l.noteOffIn = l.noteOffIn - 1
             if l.noteOffIn <= 0 then
                 addEvent(0, l.activeNote, 0, l.channel)
-                l.activeNote = nil
+                l.activeNote = false
             end
         end
     end
@@ -166,6 +181,7 @@ function M.onPulse()
     -- either way.
     for i = 1, n do
         local l = lanes[i]
+        M.fired[i] = false
         if sourceFired(l.resetSource) then l.pendingReset = true end
         if sourceFired(l.randomSource) then Lane.randomizePosition(l) end
         if sourceFired(l.shiftSource) then Lane.rotate(l, l.shiftAmount) end
@@ -173,8 +189,9 @@ function M.onPulse()
         if sourceFired(l.advanceSource) then applyAdvance(l, "linear") end
         if sourceFired(l.xAdvanceSource) then applyAdvance(l, "x") end
         if sourceFired(l.yAdvanceSource) then applyAdvance(l, "y") end
-        if l.emit then emitStep(l) end
+        if l.emit then emitStep(l, i) end
     end
+    M.suppressFire = false
 
     return M.out
 end
@@ -184,10 +201,12 @@ local function rewind()
     for i = 1, #M.lanes do
         local l = M.lanes[i]
         l.position = 1
-        l.divCount = 0
+        l.divCount, l.yDivCount = 0, 0
         l.pendingReset = false
         l.emit = true
+        M.fired[i] = false
     end
+    M.suppressFire = true
     return M.out
 end
 
@@ -206,7 +225,7 @@ function M.onStop()
         local l = M.lanes[i]
         if l.activeNote then
             addEvent(0, l.activeNote, 0, l.channel)
-            l.activeNote = nil
+            l.activeNote = false
         end
         l.emit = false
     end

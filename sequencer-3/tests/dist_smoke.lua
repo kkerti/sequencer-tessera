@@ -63,7 +63,8 @@ local xLoads, pLoads, lLoads = 0, 0, 0
 local oldreq = require
 local LAZY = { seq3e = "dist/seq3e.lua", seq3x = "dist/seq3x.lua",
                seq3p = "dist/seq3p.lua", seq3h = "dist/seq3h.lua",
-               seq3l = "dist/seq3l.lua", seq3s = "dist/seq3s.lua" }
+               seq3l = "dist/seq3l.lua", seq3s = "dist/seq3s.lua",
+               seq3f = "dist/seq3f.lua" }
 require = function(n)
     if REG[n] then return REG[n] end
     local f = LAZY[n]

@@ -32,6 +32,10 @@ Notes:
 - **X and Y wrap independently**: X advance wraps within the row, Y advance
   wraps within the column.
 - **Division** applies to all advance sources and is available in every mode.
+  X (and the single/previous advance) and Y count on separate counters, so a
+  divided Y never eats X's counts.
+- On the device's lane GUI the Focus rows follow this table: a 16x1 lane shows
+  `adv`, `len` and `prev`; a matrix lane shows `xadv` and `yadv` instead.
 
 ## 2. Lane type
 
@@ -44,7 +48,7 @@ Which per-step fields and per-lane settings apply to each type.
 | `velocity[16]` (1..127) | ✓ | ✓ |
 | `stepLength[16]` (ticks) | ✓ | ✓ |
 | `scaleMask` + `root` | ✓ | — |
-| `minNote` / `maxNote` | ✓ | — |
+| `minNote` / `maxNote` (also the Shred / Random range) | ✓ | — |
 | `channel` (MIDI channel) | ✓ | ✓ |
 | `midiNote` (the Trig's note) | — | ✓ |
 | advance / reset / random / previous / shift sources | ✓ | ✓ |
@@ -75,7 +79,7 @@ Notes:
 
 | Feature | Blocked on |
 |---|---|
-| Parameter modulation (value source -> division/length/scale/root/range) | Deferred decision; not in the v1 API. |
+| Parameter modulation (value source -> division/length/scale/root/range) | Deferred decision; not in the v1 API. Lane -> lane *trigger* routing (`lane.N`) is in. |
 | Slew (smooth Note transitions) | Not in v1. |
 | Microtonal scales (`Equal`, `Ratio`) | Dropped for now (12-TET only). |
 | `Symmet` scale editor | Deferred. |

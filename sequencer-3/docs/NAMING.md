@@ -24,10 +24,11 @@ language: `shred`, `zero`, `nudge`, `rotate`, `ramp`, `hill`.
 
 ## Source vocabulary
 
-Every source is a **trigger source**: it fires on a transport tap. Used by
-advance / xAdvance / yAdvance / reset / random / previous / shift. (Value
-sources, `external.N` and `lane.N` were cut for device RAM in 2026-10; they
-are in git history.)
+Every source is a **trigger source**: it fires on a transport tap or when
+another lane plays a note. Used by advance / xAdvance / yAdvance / reset /
+random / previous / shift. (Value sources and `external.N` were cut for device
+RAM in 2026-10; they are in git history. `lane.N` came back on 2026-10-04: it
+is what makes `division` and X/Y matrix navigation musically useful.)
 
 | Public string | Kind | Meaning |
 |---|---|---|
@@ -37,6 +38,12 @@ are in git history.)
 | `"transport.quarter"` | trigger | quarter note |
 | `"transport.eighth"` | trigger | eighth note |
 | `"transport.sixteenth"` | trigger | sixteenth note |
+| `"transport.quarterTriplet"` | trigger | quarter triplet (16 pulses) |
+| `"transport.eighthTriplet"` | trigger | eighth triplet (8 pulses) |
+| `"transport.sixteenthTriplet"` | trigger | sixteenth triplet (4 pulses) |
+| `"transport.dottedQuarter"` | trigger | dotted quarter (36 pulses) |
+| `"transport.dottedEighth"` | trigger | dotted eighth (18 pulses) |
+| `"lane.1"` .. `"lane.4"` | trigger | that lane played a note this pulse (a Note lane on every step, a Trig lane on active steps). Lane k drives lane j > k on the same pulse; j < k lands one pulse (1/24 beat) later. |
 
 ## Internal enum map
 
@@ -51,8 +58,11 @@ allowed **here only**; this table is the translation.
 | `SRC_TRANSPORT_QUARTER` | `transport.quarter` |
 | `SRC_TRANSPORT_EIGHTH` | `transport.eighth` |
 | `SRC_TRANSPORT_SIXTEENTH` | `transport.sixteenth` |
+| 6..8 | `transport.quarterTriplet` / `eighthTriplet` / `sixteenthTriplet` |
+| 9..10 | `transport.dottedQuarter` / `dottedEighth` |
+| `LANE_FIRST` + n - 1 (11..14) | `lane.n` |
 
-Numeric values live in `src/core/sources.lua` (0..5); the strings in
+Numeric values live in `src/core/sources.lua` (0..14); the strings in
 `src/core/source_names.lua`, which loads lazily. Keep all three in sync.
 
 ## Abbreviation lookup

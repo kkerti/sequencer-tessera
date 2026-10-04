@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",midi_rx="seq3ui",ops="seq3x",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",sources="seq3",transport="seq3"}
+local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",lane_focus="seq3f",midi_rx="seq3ui",ops="seq3x",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",sources="seq3",transport="seq3"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -15,8 +15,10 @@ R["source_names"]=(function()
 
 local Sources = require("sources")
 local NAMES = { ["off"] = Sources.OFF }
-local taps = { "whole", "half", "quarter", "eighth", "sixteenth" }
+local taps = { "whole", "half", "quarter", "eighth", "sixteenth",
+"quarterTriplet", "eighthTriplet", "sixteenthTriplet", "dottedQuarter", "dottedEighth" }
 for i = 1, #taps do NAMES["transport." .. taps[i]] = Sources.TRANSPORT_WHOLE + i - 1 end
+for i = 1, 4 do NAMES["lane." .. i] = Sources.LANE_FIRST + i - 1 end
 local REVERSE = {}
 for k, v in pairs(NAMES) do REVERSE[v] = k end
 return { names = NAMES, reverse = REVERSE }

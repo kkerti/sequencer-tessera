@@ -18,11 +18,15 @@ local DIMS = {
     ["4x4"]  = { width = 4,  height = 4 },
 }
 
+-- A lane is exactly 32 fields, all present from here: past 32 the hash part
+-- doubles (~750 B a lane), and a key inserted at runtime into a full part
+-- rehashes, i.e. allocates on the pulse path. So activeNote is false, never
+-- nil, and lane fire flags live in engine.fired.
 function M.new(kind)
     local l = {
         type = kind or "note",
         dims = "16x1", width = 16, height = 1,
-        length = 16, division = 1, divCount = 0,
+        length = 16, division = 1, divCount = 0, yDivCount = 0,
         position = 1, emit = false, pendingReset = false,
         channel = 1, midiNote = 60,
         scaleMask = 0xAB5, rawScaleMask = 0xAB5, root = 0,
@@ -34,7 +38,7 @@ function M.new(kind)
         randomSource = Sources.OFF,
         previousSource = Sources.OFF,
         shiftSource = Sources.OFF, shiftAmount = 1,
-        activeNote = nil, noteOffIn = 0,
+        activeNote = false, noteOffIn = 0,
         pitch = {}, velocity = {}, stepLength = {}, gate = {},
     }
     for i = 1, M.CAP do

@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",headless="seq3h",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",screen="seq3s",seq_data="seq3h",source_names="seq3p"}
+local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",headless="seq3h",lane_focus="seq3f",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",screen="seq3s",seq_data="seq3h",source_names="seq3p"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -20,13 +20,8 @@ M.TRANSPORT_HALF      = 2
 M.TRANSPORT_QUARTER   = 3
 M.TRANSPORT_EIGHTH    = 4
 M.TRANSPORT_SIXTEENTH = 5
-M.TRANSPORT_INTERVAL = {
-[M.TRANSPORT_WHOLE]     = 96,
-[M.TRANSPORT_HALF]      = 48,
-[M.TRANSPORT_QUARTER]   = 24,
-[M.TRANSPORT_EIGHTH]    = 12,
-[M.TRANSPORT_SIXTEENTH] = 6,
-}
+M.LANE_FIRST = 11
+M.TRANSPORT_INTERVAL = { 96, 48, 24, 12, 6, 16, 8, 4, 36, 18 }
 function M.parse(value, default)
 if type(value) == "number" then return value end
 local v = require("source_names").names[value]
@@ -126,7 +121,7 @@ function M.new(kind)
 local l = {
 type = kind or "note",
 dims = "16x1", width = 16, height = 1,
-length = 16, division = 1, divCount = 0,
+length = 16, division = 1, divCount = 0, yDivCount = 0,
 position = 1, emit = false, pendingReset = false,
 channel = 1, midiNote = 60,
 scaleMask = 0xAB5, rawScaleMask = 0xAB5, root = 0,
@@ -138,7 +133,7 @@ resetSource = Sources.OFF,
 randomSource = Sources.OFF,
 previousSource = Sources.OFF,
 shiftSource = Sources.OFF, shiftAmount = 1,
-activeNote = nil, noteOffIn = 0,
+activeNote = false, noteOffIn = 0,
 pitch = {}, velocity = {}, stepLength = {}, gate = {},
 }
 for i = 1, M.CAP do

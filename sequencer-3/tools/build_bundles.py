@@ -73,8 +73,13 @@ if "--gui=text" in sys.argv:
     SCREEN = [("screen", "src/device/text_screen.lua")]
 # --gui=lanes: Overview (all lane strips) + Focus (one lane's grid + the text
 # screen's key/value rows) in one module, same name, same profile.
+# The Focus rows (every lane setting, paged) are their own bundle, seq3f,
+# compiled on the first Focus entry: one ~10 KB screen bundle was too big a
+# compile peak on its own.
+FOCUS = []
 if "--gui=lanes" in sys.argv:
     SCREEN = [("screen", "src/device/lane_screen.lua")]
+    FOCUS = [("lane_focus", "src/device/lane_focus.lua")]
 # Performance ops: Shred / Random / Zero / rotate. Compiled on the first one.
 OPS = [
     ("ops",       "src/core/ops.lua"),
@@ -99,6 +104,7 @@ BUNDLES = [
     ("seq3h.lua",  HEADLESS),
     ("seq3ui.lua", UI),
     ("seq3s.lua",  SCREEN),
+    ("seq3f.lua",  FOCUS),
     ("seq3x.lua",  OPS),
     ("seq3p.lua",  PERSIST),
     ("seq3l.lua",  LOAD),
@@ -195,6 +201,10 @@ def build(name, modules):
 if __name__ == "__main__":
     sizes = {}
     for name, mods in BUNDLES:
+        if not mods:                      # e.g. seq3f outside --gui=lanes
+            stale = os.path.join(OUT, name)
+            if os.path.exists(stale): os.remove(stale)
+            continue
         sizes[name] = build(name, mods)
     print()
     hl = sum(sizes[n] for n in HEADLESS_SET)

@@ -11,6 +11,7 @@
 #   dist/seq3ui.lua   GUI start: device_boot/midi_rx (no screen)
 #   dist/seq3s.lua    GUI screen: screen+menu, or text_screen (--gui=text);
 #                     compiled on the first control press, never at start
+#   dist/seq3f.lua    --gui=lanes only: the Focus rows, on the first Focus
 #   dist/seq3x.lua    LAZY ops: shred/randomize/zero/rotate
 #   dist/seq3p.lua    LAZY save: persist + source names
 #   dist/seq3l.lua    LAZY load: setters (edit) + preset (loadPreset / copy)
@@ -28,8 +29,9 @@ set -e
 cd "$(dirname "$0")/.."
 
 python3 tools/build_bundles.py "$@"
+FOCUS=""; [ -f dist/seq3f.lua ] && FOCUS=dist/seq3f.lua
 luac -p dist/seq3.lua dist/seq3e.lua dist/seq3h.lua dist/seq3ui.lua dist/seq3s.lua \
-        dist/seq3x.lua dist/seq3p.lua dist/seq3l.lua
+        dist/seq3x.lua dist/seq3p.lua dist/seq3l.lua $FOCUS
 
 python3 tools/gen_profile.py "$@"
 
@@ -53,8 +55,8 @@ case "$*" in
     ls -la dist/seq3.lua dist/seq3e.lua dist/seq3h.lua "dist/seq3 headless.json"
     ;;
 *)
-    echo "GUI — upload these seven, then load the 'seq3 core' profile:"
+    echo "GUI — upload these files, then load the 'seq3 core' profile:"
     ls -la dist/seq3.lua dist/seq3e.lua dist/seq3ui.lua dist/seq3s.lua dist/seq3x.lua \
-           dist/seq3p.lua dist/seq3l.lua "dist/seq3 core.json"
+           dist/seq3p.lua dist/seq3l.lua $FOCUS "dist/seq3 core.json"
     ;;
 esac

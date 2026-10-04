@@ -19,26 +19,21 @@
 --   (run/save/load/draw fire directly); turn changes it while editing,
 --   otherwise selects the lane.
 --   Focus: keys 4/5 prev/next step; encoder turn moves the row cursor;
---   press toggles edit; turn changes the value while editing.
+--   press toggles edit; turn changes the value while editing. The rows
+--   (every lane setting, paged) live in lane_focus.lua, bundle seq3f, which
+--   compiles on the first Focus entry.
 --
 -- Device rules: no string.format, no collectgarbage, no package.loaded.
 
 local RX     = require("midi_rx")
 RX.ensure()                               -- chain + demo if no clock byte yet
 local Engine = require("engine")
-local Lane   = require("lane")
 
 local S = { focus = false, selLane = 1, selStep = 1, cursor = 1, editing = false,
     gcur = 1, gedit = false, slot = 1, status = "-", dirtyFlag = true, partial = true }
 local lastPos = { 0, 0, 0, 0 }
 local Persist                             -- lazy: persist on first save/load
 
-local NOTE_NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
-local TYPES = { "note", "trig" }
-local DIMS  = { "16x1", "8x2", "5x3", "4x3", "4x4" }
-local HEAD = 5                            -- lane rows before the step rows
-local STEP_ROWS = { note = { "pitch", "vel", "len" }, trig = { "gate", "vel", "len" } }
-local FIRST = { "type", "dims", "div", "ch", "step" }
 local GEN   = { "run", "slot", "save", "load", "draw" }   -- Overview settings
 local BG, WELL = { 0, 0, 0 }, { 40, 40, 48 }
 local WHITE, GREY = { 235, 235, 235 }, { 120, 120, 130 }
@@ -55,36 +50,17 @@ local function clamp(v, lo, hi)
     if v < lo then return lo elseif v > hi then return hi end return v
 end
 
--- ------------------------------------------------------------ rows ---
-
-local function rowKey(i)
-    local steps = STEP_ROWS[lane().type]
-    if i <= HEAD then return FIRST[i] end
-    i = i - HEAD
-    return steps[i]
+local F                                   -- lazy: Focus rows (seq3f)
+local function focus()
+    if not F then F = require("lane_focus")(S, { lane = lane, used = used, clamp = clamp }) end
+    return F
 end
 
-local function rowCount() return HEAD + #STEP_ROWS[lane().type] end
-
-local function cycle(list, v, d)
-    local idx = 1
-    for i = 1, #list do if list[i] == v then idx = i end end
-    return list[((idx - 1 + d) % #list) + 1]
-end
-
-local function value(k)
-    local l, s = lane(), S.selStep
-    if k == "type" or k == "dims" then return l[k] end
-    if k == "div" then return l.division end
-    if k == "ch" then return l.channel end
-    if k == "step" then return s .. "/" .. used(l) end
-    if k == "pitch" then
-        local p = l.pitch[s]
-        return NOTE_NAMES[(p % 12) + 1] .. (p // 12 - 1)
-    end
-    if k == "vel" then return l.velocity[s] end
-    if k == "len" then return l.stepLength[s] .. "t" end
-    return l.gate[s] == 1 and "on" or "off"   -- gate
+-- After a lane change or a load: re-clamp the step, rebuild the rows.
+local function reclamp()
+    if F then F.build() end
+    S.selStep = clamp(S.selStep, 1, used(lane()))
+    S.dirtyFlag = true
 end
 
 -- General (Overview) settings.
@@ -103,25 +79,6 @@ local function persist()
     return Persist
 end
 
-local function apply(k, d)
-    local n, l, s = S.selLane, lane(), S.selStep
-    -- Lane fields are written DIRECTLY, clamped here: the engine's setters
-    -- live in a lazy bundle, and editing must not compile one.
-    if k == "type" then l.type = cycle(TYPES, l.type, d)
-    elseif k == "dims" then Lane.setDims(l, cycle(DIMS, l.dims, d))
-    elseif k == "div" then l.division = clamp(l.division + d, 1, 16)
-    elseif k == "ch" then l.channel = clamp(l.channel + d, 1, 16)
-    elseif k == "step" then S.selStep = ((s - 1 + d) % used(l)) + 1
-    elseif k == "pitch" then l.pitch[s] = clamp(l.pitch[s] + d, 0, 127)
-    elseif k == "vel" then l.velocity[s] = clamp(l.velocity[s] + d * 2, 1, 127)
-    elseif k == "len" then l.stepLength[s] = clamp(l.stepLength[s] + d, 1, 96)
-    elseif k == "gate" then l.gate[s] = 1 - l.gate[s]
-    end
-    S.selStep = clamp(S.selStep, 1, used(lane()))
-    S.cursor = clamp(S.cursor, 1, rowCount())
-    S.dirtyFlag = true
-end
-
 local function gapply(k, d)
     if k == "run" then
         if Engine.running then Engine.onStop() else Engine.onStart() end
@@ -130,8 +87,7 @@ local function gapply(k, d)
     elseif k == "load" then S.status = persist().loadSlot(S.slot) and "ok" or "er"
     elseif k == "draw" then S.partial = not S.partial
     end
-    S.selStep = clamp(S.selStep, 1, used(lane()))   -- a load may shrink a lane
-    S.dirtyFlag = true
+    reclamp()                             -- a load may change type / dims
 end
 
 function S.touch() S.dirtyFlag = true end
@@ -212,14 +168,7 @@ end
 local function drawFocus(lcd)
     local l = lane()
     for s = 1, l.width * l.height do cell(lcd, S.selLane, l, s, true) end
-    for i = 1, rowCount() do
-        local sel = i == S.cursor
-        local k = rowKey(i)
-        local x, y = (i <= 4) and 4 or 164, 122 + ((i - 1) % 4) * 19
-        -- one string per row, <= 11 glyphs: a 160 px column at ~14 px a glyph
-        lcd:draw_text_fast((sel and (S.editing and ">" or "-") or " ") .. k .. " " .. value(k),
-            x, y, 16, sel and WHITE or GREY)
-    end
+    focus().rows(lcd, WHITE, GREY)
 end
 
 function S.draw(lcd)
@@ -256,12 +205,9 @@ function S.turn(d)
     if not S.focus then
         if S.gedit then gapply(GEN[S.gcur], d); return end
         S.selLane = ((S.selLane - 1 + d) % #Engine.lanes) + 1
-        apply("", 0)
-    elseif S.editing then
-        apply(rowKey(S.cursor), d)
+        reclamp()
     else
-        S.cursor = ((S.cursor - 1 + d) % rowCount()) + 1
-        S.dirtyFlag = true
+        focus().turn(d)
     end
 end
 
@@ -274,7 +220,7 @@ end
 
 -- Keys 4/5: prev/next STEP in Focus, prev/next general SETTING in Overview.
 local function prevNext(d)
-    if S.focus then apply("step", d); return end
+    if S.focus then focus().edit("step", d); return end
     S.gcur = ((S.gcur - 1 + d) % #GEN) + 1
     S.gedit = false
     S.dirtyFlag = true
@@ -283,7 +229,9 @@ end
 function S.key(i)
     if i == 0 then gapply("run", 1)
     elseif i == 1 then
-        S.focus = not S.focus; S.editing = false; S.gedit = false; S.dirtyFlag = true
+        S.focus = not S.focus; S.editing = false; S.gedit = false
+        if S.focus then focus() end
+        reclamp()
     elseif i == 4 then prevNext(-1)
     elseif i == 5 then prevNext(1)
     elseif i == 3 then Engine.randomize(S.selLane); S.dirtyFlag = true
@@ -294,7 +242,7 @@ end
 function S.btn(i)
     if i >= 9 and i - 8 <= #Engine.lanes then
         S.selLane = i - 8
-        apply("", 0)                      -- re-clamp step + cursor, redraw
+        reclamp()                         -- re-clamp step + rows, redraw
     end
 end
 

@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",lane="seq3",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",source_names="seq3p",sources="seq3",transport="seq3"}
+local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",lane="seq3",lane_focus="seq3f",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",source_names="seq3p",sources="seq3",transport="seq3"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end

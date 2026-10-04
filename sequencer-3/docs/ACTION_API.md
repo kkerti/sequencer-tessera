@@ -10,7 +10,7 @@ enums only internally.
 ## Conventions
 
 - `lane` is **1-based** (1..4). `step` is **1-based** (1..16).
-- Sources are strings (`"off"` or a `transport.*` tap) or their enum numbers;
+- Sources are strings (`"off"`, a `transport.*` tap or `lane.N`) or their enum numbers;
   see `docs/NAMING.md`.
 - Types: `"note" | "trig"`. Mod and Gate were folded in for device RAM (2026-10):
   a Trig step with a long `stepLength` is a gate, and modulation is a chromatic
@@ -123,11 +123,12 @@ slot can be saved or recalled mid-session.
 ## Cut for device RAM (2026-10)
 
 Removed to make the text GUI fit the VSN1 (measured in `dist/README.md`):
-lane->lane routing (`lane.N` sources), external MIDI sources (`external.N`,
+external MIDI sources (`external.N`,
 `triggerExternal`, `setExternalValue`, the Mac `io/midi_in` mapping), value
 addressing (`setAddressSource` / X / Y), the Mod and Gate lane types, and the
 Gamut / Euclid / live generators (`generate`; `randomize` replaces them). All of
-it is in git history before the cut.
+it is in git history before the cut. Lane->lane trigger routing (`lane.N`)
+was restored on 2026-10-04 (see `docs/NAMING.md`).
 
 ## Deliberately not here yet
 

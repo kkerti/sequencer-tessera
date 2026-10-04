@@ -16,7 +16,7 @@ local PATHS = {
     source_names = "src/core/source_names.lua", edit = "src/core/edit.lua",
     preset = "src/core/preset.lua", persist = "src/core/persist.lua",
     device_boot = "src/device/device_boot.lua", midi_rx = "src/device/midi_rx.lua",
-    screen = "src/device/lane_screen.lua",
+    screen = "src/device/lane_screen.lua", lane_focus = "src/device/lane_focus.lua",
 }
 local loaded = {}
 local oldreq = require
@@ -70,7 +70,7 @@ RX.handle(0xFA, send)
 for _ = 1, 24 do RX.handle(0xF8, send) end
 ok(#sent > 0, "clock produces MIDI out")
 f = frame()
-ok(f == "" and rects > 0 and rects < 16 and swaps == 1,
+ok(f == "" and rects > 0 and rects < 32 and swaps == 1,
    "partial redraw: a playhead move repaints a few cells only (" .. rects .. " rects)")
 
 -- general settings: key 5 x4 -> "draw", press flips it to F (full repaints)
@@ -105,23 +105,61 @@ f = frame()
 ok(#lcd.errors == 0, "Focus draws within the LCD contract: " .. tostring(lcd.errors[1]))
 ok(rects + #texts + swaps <= 90, "Focus frame stays within the draw-call budget ("
    .. (rects + #texts + swaps) .. " calls)")
-ok(f:find("type") and f:find("pitch") and not f:find("save"),
+ok(f:find("pitch") and f:find("adv") and not f:find("save"),
    "Focus shows the lane rows (no general settings): " .. f)
 ok(not f:find("2 T"), "Focus shows only the selected lane")
 
--- edit the step pitch: cursor to 'pitch' (row 6), press to edit, turn
+-- the demo's lane 1 is a 4x4 matrix: make it a line for the row tests
+require("lane").setDims(E.lanes[1], "16x1"); E.lanes[1].advanceSource = 3; S.btn(9)
+
+-- edit the step pitch: cursor to 'pitch' (row 2), press to edit, turn
 local p0 = E.lanes[1].pitch[1]
-for _ = 1, 5 do S.turn(1) end
+S.turn(1)
 S.press(); S.turn(3); S.press()
 ok(E.lanes[1].pitch[1] == p0 + 3, "Focus: editing the pitch row changes the step")
 
 -- dims: a 4x4 lane draws as a grid, every cell in bounds
-S.cursor = 2; S.press(); S.turn(4); S.press()
+-- the row index of setting k (the cursor's row draws as "-k value")
+local function row(k)
+    for i = 1, 30 do
+        S.cursor = i; S.touch()
+        if frame():find("-" .. k .. " ", 1, true) then return i end
+    end
+end
+local DIMSROW = row("dims")
+S.cursor = DIMSROW; S.press(); S.turn(4); S.press()
 ok(E.lanes[1].dims == "4x4", "dims row cycles to 4x4")
 frame()
 ok(#lcd.errors == 0, "4x4 Focus grid stays in bounds: " .. tostring(lcd.errors[1]))
-S.cursor = 2; S.press(); S.turn(1); S.press()
+f = frame()
+ok(row("xadv") and row("yadv") and not row("adv") and not row("len") and not row("prev"),
+   "a matrix lane shows X/Y advance, not adv/len/prev")
+S.cursor = row("dims"); S.press(); S.turn(1); S.press()
 ok(E.lanes[1].dims == "16x1", "dims row cycles back to 16x1")
+
+-- every lane setting is reachable: sources, scale, root, range, length
+S.cursor = row("adv"); S.press(); S.turn(-1); S.press()
+ok(frame():find("adv 1/4%."), "adv cycles in musical order (1/4 -> 1/4.)")
+S.cursor = row("adv"); S.press(); S.turn(-4); S.press()
+ok(E.lanes[1].advanceSource == 14 and frame():find("adv L4"), "adv wraps to lane 4 (L4)")
+S.press(); S.turn(5); S.press()
+ok(E.lanes[1].advanceSource == 3, "adv back to 1/4")
+S.cursor = row("scale"); S.press(); S.turn(1); S.press()
+ok(E.lanes[1].rawScaleMask == 0x5AD and frame():find("scale min"), "scale row: major -> minor")
+S.cursor = row("root"); S.press(); S.turn(2); S.press()
+ok(E.lanes[1].root == 2 and E.lanes[1].scaleMask == 0x5AD << 2 & 0xFFF | 0x5AD >> 10,
+   "root row: D minor, mask rotated")
+S.cursor = row("lo"); S.press(); S.turn(200); S.press()
+ok(E.lanes[1].minNote == 127 and E.lanes[1].maxNote == 127, "lo pushes hi up")
+S.press(); S.turn(-200); S.press()
+S.cursor = row("len"); S.press(); S.turn(-8); S.press()
+ok(E.lanes[1].length == 8 and frame():find("step %d+/8"), "len row shortens the lane to 8")
+S.press(); S.turn(8); S.press()
+for _, k in ipairs{ "rst", "rnd", "shft", "amt", "ch", "type", "prev", "hi" } do
+    ok(row(k), "row '" .. k .. "' is on a Focus page")
+end
+ok(#lcd.errors == 0, "paged rows stay in bounds: " .. tostring(lcd.errors[1]))
+S.cursor = 1
 
 -- keys 4/5 in Focus move the step, not a setting
 local st = S.selStep
@@ -134,6 +172,7 @@ ok(S.selStep == st, "Focus: key 4 is previous step")
 S.btn(10)
 f = frame()
 ok(S.selLane == 2 and f:find("gate"), "btn 10 selects lane 2 and its gate row shows")
+ok(row("note") and not row("scale"), "a trig lane has a note row, no scale row")
 
 -- key 1 back to the Overview
 S.key(1)

@@ -73,7 +73,7 @@ local loaded, order = {}, {}
 local oldreq = require
 local FILES = { seq3 = "dist/seq3.lua", seq3e = "dist/seq3e.lua",
                 seq3ui = "dist/seq3ui.lua", seq3s = "dist/seq3s.lua",
-                seq3h = "dist/seq3h.lua", seq3x = "dist/seq3x.lua",
+                seq3h = "dist/seq3h.lua", seq3x = "dist/seq3x.lua", seq3f = "dist/seq3f.lua",
                 seq3p = "dist/seq3p.lua", seq3l = "dist/seq3l.lua" }
 require = function(n)
     if loaded[n] then return loaded[n] end
@@ -166,8 +166,11 @@ ok(PRESS.mode == 0, "button events force momentary mode (bmo 0), never toggle")
 local Scr = loaded.seq3s.screen
 local function view() if Scr.focus ~= nil then return Scr.focus end return Scr.screen end
 local v0 = view()
+local lanesGui = Scr.focus ~= nil
+ok(loaded.seq3f == nil, "the first press does not compile the Focus rows (seq3f)")
 run(1, 3, PRESS); run(1, 3, RELEASE)
 ok(v0 == nil or view() ~= v0, "one press + release toggles the view exactly once")
+ok(not lanesGui or loaded.seq3f ~= nil, "entering Focus compiles seq3f (lane GUI)")
 run(1, 3, PRESS); run(1, 3, RELEASE)
 run(13, 8, el13)
 ok(#lcd.errors == 0, "every draw used real, in-bounds LCD calls"

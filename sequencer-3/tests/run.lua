@@ -264,7 +264,7 @@ do
     end
 
     -- Saved settings only: playback state and derived fields are excluded.
-    local SKIP = { position=1, emit=1, pendingReset=1, fired=1, divCount=1,
+    local SKIP = { position=1, emit=1, pendingReset=1, fired=1, divCount=1, yDivCount=1,
                    activeNote=1, noteOffIn=1, width=1, height=1,
                    scaleMask=1 }
     local ARRAYS = { pitch=1, velocity=1, stepLength=1, gate=1 }
@@ -456,6 +456,70 @@ do
     for _ = 1, 20000 do Engine.onPulse() end
     local after = collectgarbage("count")
     ok(after - before < 1.0, string.format("pulse path allocates < 1 KB (grew %.2f KB)", after - before))
+end
+
+-- ------------------------------------------------- lane -> lane routing ---
+
+-- Lane 1 (trig, 16ths) fires on its active steps; lane 2 advances on them.
+local function routed(setup)
+    Engine.init{ lanes = 2 }
+    local a, b = Engine.lanes[1], Engine.lanes[2]
+    a.type = "trig"; a.advanceSource = Sources.TRANSPORT_SIXTEENTH
+    for k = 1, 16 do a.gate[k] = (k % 4 == 1) and 1 or 0 end   -- every 4th 16th
+    setup(b)
+    Engine.onStart()
+    return a, b
+end
+
+do
+    local _, b = routed(function(b) Engine.setAdvanceSource(2, "lane.1") end)
+    ok(b.advanceSource == Sources.LANE_FIRST, "\"lane.1\" parses to LANE_FIRST")
+    Engine.onPulse()
+    ok(b.position == 1, "start: lane 1's step-1 emit does not cascade into lane 2")
+    for _ = 2, 24 do Engine.onPulse() end          -- through pulse 24: a 16th steps 2,3,4,5
+    ok(b.position == 2, "lane 2 advanced once, on lane 1's active step 5 (got "
+       .. b.position .. ")")
+    for _ = 1, 24 do Engine.onPulse() end
+    ok(b.position == 3, "lane 2 follows lane 1's hits, same pulse")
+end
+
+do
+    local _, b = routed(function(b) b.advanceSource = Sources.LANE_FIRST; b.division = 2 end)
+    for _ = 1, 96 do Engine.onPulse() end          -- lane 1 hits at 24/48/72/96
+    ok(b.position == 3, "division counts lane triggers (4 hits / 2 = 2 steps)")
+end
+
+do  -- X on a lane, Y on a quarter triplet: divisions no longer share a counter
+    local _, b = routed(function(b)
+        Lane.setDims(b, "4x4")
+        b.xAdvanceSource = Sources.LANE_FIRST
+        Engine.setYAdvanceSource(2, "transport.quarterTriplet")
+        b.division = 2
+    end)
+    for _ = 1, 96 do Engine.onPulse() end
+    -- X: 4 hits / 2 = 2 steps; Y: pulses 16..96 = 6 triplets / 2 = 3 rows
+    ok(b.position == 3 * 4 + 2 + 1, "X and Y divide independently (got " .. b.position .. ")")
+end
+
+do
+    Engine.init{ lanes = 1 }
+    local l = Engine.lanes[1]
+    Engine.setAdvanceSource(1, "transport.eighthTriplet")
+    Engine.onStart()
+    for _ = 1, 24 do Engine.onPulse() end
+    ok(l.position == 4, "eighth triplet: three steps per quarter")
+    Engine.setAdvanceSource(1, "transport.dottedEighth")
+    ok(l.advanceSource == 10 and Sources.name(10) == "transport.dottedEighth",
+       "dotted eighth round-trips its name")
+end
+
+do  -- routed lanes stay off the allocator
+    routed(function(b) b.advanceSource = Sources.LANE_FIRST end)
+    for _ = 1, 500 do Engine.onPulse() end
+    collectgarbage("collect"); collectgarbage("collect")
+    local before = collectgarbage("count")
+    for _ = 1, 20000 do Engine.onPulse() end
+    ok(collectgarbage("count") - before < 1.0, "lane-routed pulse path allocates < 1 KB")
 end
 
 print(string.format("sequencer-3 tests: %d passed, %d failed", pass, fail))

@@ -6,6 +6,7 @@
 //
 //   GUI (default):  START: seq3 -> seq3e -> seq3ui -> ensure/demo -> status
 //                   view + 96 pulses; FIRST PRESS: seq3s (screen) -> key + draw
+//                   -> seq3f (lane GUI Focus rows, when built) -> edit
 //                   -> seq3x + Shred + Random -> 96 more pulses
 //                   -> seq3p (persist) + save a slot -> free-heap probe
 //   --headless:     seq3 -> seq3e -> seq3h -> ensure -> 96 pulses -> report
@@ -22,7 +23,7 @@
 // Exit 0 when every stage passes, 1 when one fails (OOM or error).
 
 import { chromium } from 'playwright';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 
 const args = process.argv.slice(2);
 const headless = args.includes('--headless');
@@ -134,11 +135,13 @@ if (headless) {
     add(stage('key+draw', 'RX.key(1) RX.ui(LCD)'));
     if (shot) add(stage('real-lcd', REAL_LCD));
     snap('overview', '');
+    // the Focus rows are their own bundle (lane GUI): compiled on first Focus
+    if (existsSync(new URL(DIST + 'seq3f.lua', import.meta.url).pathname)) stream('seq3f');
     snap('focus', 'RX.key(1)');
     snap('focus-trig', 'RX.btn(10)');
     snap('back', 'RX.key(1)');
     // edit a step pitch through the encoder (Focus / cursor rows): no bundle
-    add(stage('edit', 'RX.key(1) for i=1,5 do RX.turn(1) end RX.press() RX.turn(3) RX.press() RX.key(1) RX.ui(LCD)'));
+    add(stage('edit', 'RX.key(1) RX.turn(1) RX.press() RX.turn(3) RX.press() RX.key(1) RX.ui(LCD)'));
     stream('seq3x');
     add(stage('shred', 'RX.key(7) RX.ui(LCD)'));
     add(stage('random', 'RX.key(3) RX.ui(LCD)'));

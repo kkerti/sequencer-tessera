@@ -60,7 +60,8 @@ Adapters
 - **Headless first.** No screen/GUI in seq-3. The Grid VSN1 control interface
   comes later, built against the action API, out of scope for now.
 - **Lanes-only**, 4 lanes. Matrix navigation with X/Y advance sources mapped to
-  transport taps (e.g. `transport.quarter` on X, `transport.sixteenth` on Y).
+  transport taps or other lanes (e.g. `lane.1` on X, `transport.quarterTriplet`
+  on Y).
 - **Action API** for all control; adapters are thin.
 - **4 lanes**, implement `Note` first, then Mod/Trig/Gate/Gamut.
 - **M1 "Mac loop":** Ableton sends MIDI clock -> engine advances a lane -> Note
@@ -80,7 +81,9 @@ Adapters
 - Internal resolution is 24 PPQN; one `onPulse` per pulse. External MIDI clock
   (default when present) and the internal timer share it.
 - The transport derives taps from a position counter: `transport.whole` = 96
-  pulses, `.half` = 48, `.quarter` = 24, `.eighth` = 12, `.sixteenth` = 6.
+  pulses, `.half` = 48, `.quarter` = 24, `.eighth` = 12, `.sixteenth` = 6;
+  triplets `.quarterTriplet` 16, `.eighthTriplet` 8, `.sixteenthTriplet` 4;
+  dotted `.dottedQuarter` 36, `.dottedEighth` 18.
 - Per-lane `advanceSource` + `division`; multi-dim lanes use separate
   `xAdvanceSource`/`yAdvanceSource`. X and Y wrap independently. Reset is
   deferred to the next advance. Stop freezes position.
@@ -95,9 +98,17 @@ Adapters
 - **Lane types (cut 2026-10-04):** Note and Trig only. Trig plays `midiNote` on
   active steps for the step's `stepLength` (long = a gate). Mod and Gate were
   folded in; modulation is a chromatic Note lane that an FH-2 turns into CV.
-- **Sources (cut 2026-10-04):** transport taps only. Lane->lane routing,
-  external MIDI sources (`external.N`), value addressing and the Mac
-  `io/midi_in` mapping were cut for device RAM; they are in git history.
+- **Sources (cut 2026-10-04, partly restored the same day):** transport taps
+  (straight, triplet, dotted) and lane->lane triggers (`lane.N`: the lane
+  played a note). External MIDI sources (`external.N`), value addressing and
+  the Mac `io/midi_in` mapping stay cut; they are in git history. With only
+  even clock taps, division duplicated the tap choice and a power-of-two
+  matrix collapsed to linear playback; lane triggers are the irregular input
+  that X/Y and division were designed for (MD2's `Out 1-4`, its Voice preset).
+- **Lane record = exactly 32 fields, all set in `Lane.new`.** Past 32 the hash
+  part doubles (~750 B a lane), and a key inserted at runtime into a full hash
+  part rehashes on the pulse path. So `activeNote` is `false` when idle, never
+  `nil`, and lane fire flags live in `engine.fired[]`, not on the lane.
 - **Random generation (cut 2026-10-04):** Shred (one step) and `randomize`
   (every step, key 3) replace the Gamut / Euclid / live generators.
 - **Presets:** 24 Lua-chunk files under `presets/`, loaded on demand. Saving

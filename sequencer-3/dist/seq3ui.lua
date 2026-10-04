@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
+local B={edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",lane_focus="seq3f",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -18,7 +18,7 @@ local Lane   = require("lane")
 local M = {}
 function M.demo()
 Engine.init{ lanes = 4, channel = 1 }
-local QUARTER, EIGHTH, SIXTEENTH = 3, 4, 5
+local QUARTER, EIGHTH, SIXTEENTH, QTRIPLET, LANE2 = 3, 4, 5, 6, 12
 local melody = { 60, 62, 64, 67, 69, 67, 64, 62, 60, 64, 67, 72, 71, 67, 64, 60 }
 local bass = { 36, 36, 43, 36, 41, 41, 39, 43 }
 local a, b, c, d = Engine.lanes[1], Engine.lanes[2], Engine.lanes[3], Engine.lanes[4]
@@ -31,10 +31,10 @@ d.velocity[i] = (i % 2 == 0) and 110 or 70
 d.stepLength[i] = 2
 end
 for i = 1, 8 do c.pitch[i] = bass[i]; c.stepLength[i] = 10 end
-a.advanceSource = QUARTER
-b.type = "trig"; b.division = 4; b.advanceSource = QUARTER
-Lane.setDims(b, "4x4")
-c.length = 8; c.advanceSource = EIGHTH
+Lane.setDims(a, "4x4"); a.xAdvanceSource = EIGHTH; a.yAdvanceSource = QTRIPLET
+b.type = "trig"; Lane.setDims(b, "5x3")
+b.xAdvanceSource = SIXTEENTH; b.yAdvanceSource = QUARTER
+c.length = 8; c.advanceSource = LANE2
 c.rawScaleMask, c.scaleMask = 0, 0
 d.type = "trig"; d.midiNote = 42; d.advanceSource = SIXTEENTH
 Engine.onStart()

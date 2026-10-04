@@ -1,5 +1,47 @@
 # dist/ — seq-3 on the Grid VSN1
 
+## v16 (2026-10-04): lane routing, triplets, every lane setting on screen
+
+`sh tools/make_dist.sh --gui=lanes` now writes **eight** files: the seven
+before plus **`seq3f.lua`** (the Focus rows). Upload all of them, then the
+`seq3 core` profile (the profile itself is unchanged).
+
+- **Sources:** triplet (1/4T, 1/8T, 1/16T) and dotted (1/4., 1/8.) taps, and
+  **L1..L4**: advance when that lane plays a note (a Trig lane on its active
+  steps). This gives div and the X/Y matrix an irregular input again; with
+  only even clock taps, a 4x4 lane played exactly like 16x1. Route a lower
+  lane into a higher one: the reverse lands one pulse (1/24 beat) late.
+- **Division:** X and Y count separately (a divided Y used to eat X's counts
+  and garble the walk).
+- **Focus rows** (every lane setting, 10 to a page; the encoder scrolls):
+  `step pitch|gate vel dur div`, `adv|xadv len|yadv`, `scale root lo hi`
+  (note) or `note` (trig), `type dims ch`, `prev` (16x1), `rst rnd shft amt`.
+  Scales: chr maj min dor phr lyd mix hmin pmaj pmin. `lo`/`hi` are also the
+  Shred/Random range. `dur` = the step's note length in pulses.
+- **Start demo:** L1 melody 4x4 (X 1/8, Y 1/4T), L2 trig 5x3 (X 1/16, Y 1/4),
+  L3 bass advanced by L2's hits, L4 hats on 1/16. Same channels as before.
+- **Lane record kept at 32 fields** (`activeNote` is `false`, fire flags in
+  `engine.fired`): 33 fields doubled every lane's hash part (+3 KB), and a
+  runtime key insert into the full part allocated on every note.
+
+wasm ladder (lane GUI):
+
+| stage | v15 (re-run today) | v16 |
+|---|---|---|
+| start + demo | 92.0 | 93.1 |
+| first press (seq3s compiled) | 108.8 | **106.0** (Overview only) |
+| first Focus (seq3f compiled) | — | 117.9 |
+| edit | 110.5 | 118.0 |
+| Shred (seq3x) | 113.3 | FAIL (harness OOM) |
+| save (seq3p) | FAIL (harness OOM) | — |
+
+v15 already failed in the harness at save when re-run today (README above
+recorded a pass: the harness drifts by a few KB). v16 fails one stage earlier,
+at Shred. The harness has ~20 KB less than the device, so a FAIL proves
+nothing; **on the device, try Focus -> edit -> Shred -> save in that order**
+and report where (if anywhere) it dies. Largest single bundle is now 6.0 KB
+(was 8.0 KB), so each lazy compile peak is smaller than in v15.
+
 ## v15 (2026-10-04): lane GUI — Overview + Focus
 
 `sh tools/make_dist.sh --gui=lanes` puts `src/device/lane_screen.lua` in

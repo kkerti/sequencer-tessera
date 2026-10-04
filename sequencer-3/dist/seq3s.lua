@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
+local B={device_boot="seq3ui",edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",lane_focus="seq3f",midi_rx="seq3ui",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -16,17 +16,10 @@ R["screen"]=(function()
 local RX     = require("midi_rx")
 RX.ensure()
 local Engine = require("engine")
-local Lane   = require("lane")
 local S = { focus = false, selLane = 1, selStep = 1, cursor = 1, editing = false,
 gcur = 1, gedit = false, slot = 1, status = "-", dirtyFlag = true, partial = true }
 local lastPos = { 0, 0, 0, 0 }
 local Persist
-local NOTE_NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
-local TYPES = { "note", "trig" }
-local DIMS  = { "16x1", "8x2", "5x3", "4x3", "4x4" }
-local HEAD = 5
-local STEP_ROWS = { note = { "pitch", "vel", "len" }, trig = { "gate", "vel", "len" } }
-local FIRST = { "type", "dims", "div", "ch", "step" }
 local GEN   = { "run", "slot", "save", "load", "draw" }
 local BG, WELL = { 0, 0, 0 }, { 40, 40, 48 }
 local WHITE, GREY = { 235, 235, 235 }, { 120, 120, 130 }
@@ -39,31 +32,15 @@ end
 local function clamp(v, lo, hi)
 if v < lo then return lo elseif v > hi then return hi end return v
 end
-local function rowKey(i)
-local steps = STEP_ROWS[lane().type]
-if i <= HEAD then return FIRST[i] end
-i = i - HEAD
-return steps[i]
+local F
+local function focus()
+if not F then F = require("lane_focus")(S, { lane = lane, used = used, clamp = clamp }) end
+return F
 end
-local function rowCount() return HEAD + #STEP_ROWS[lane().type] end
-local function cycle(list, v, d)
-local idx = 1
-for i = 1, #list do if list[i] == v then idx = i end end
-return list[((idx - 1 + d) % #list) + 1]
-end
-local function value(k)
-local l, s = lane(), S.selStep
-if k == "type" or k == "dims" then return l[k] end
-if k == "div" then return l.division end
-if k == "ch" then return l.channel end
-if k == "step" then return s .. "/" .. used(l) end
-if k == "pitch" then
-local p = l.pitch[s]
-return NOTE_NAMES[(p % 12) + 1] .. (p // 12 - 1)
-end
-if k == "vel" then return l.velocity[s] end
-if k == "len" then return l.stepLength[s] .. "t" end
-return l.gate[s] == 1 and "on" or "off"
+local function reclamp()
+if F then F.build() end
+S.selStep = clamp(S.selStep, 1, used(lane()))
+S.dirtyFlag = true
 end
 local function gvalue(k)
 if k == "run" then return Engine.running and "on" or "off" end
@@ -78,22 +55,6 @@ Persist.prefix = "s"
 end
 return Persist
 end
-local function apply(k, d)
-local n, l, s = S.selLane, lane(), S.selStep
-if k == "type" then l.type = cycle(TYPES, l.type, d)
-elseif k == "dims" then Lane.setDims(l, cycle(DIMS, l.dims, d))
-elseif k == "div" then l.division = clamp(l.division + d, 1, 16)
-elseif k == "ch" then l.channel = clamp(l.channel + d, 1, 16)
-elseif k == "step" then S.selStep = ((s - 1 + d) % used(l)) + 1
-elseif k == "pitch" then l.pitch[s] = clamp(l.pitch[s] + d, 0, 127)
-elseif k == "vel" then l.velocity[s] = clamp(l.velocity[s] + d * 2, 1, 127)
-elseif k == "len" then l.stepLength[s] = clamp(l.stepLength[s] + d, 1, 96)
-elseif k == "gate" then l.gate[s] = 1 - l.gate[s]
-end
-S.selStep = clamp(S.selStep, 1, used(lane()))
-S.cursor = clamp(S.cursor, 1, rowCount())
-S.dirtyFlag = true
-end
 local function gapply(k, d)
 if k == "run" then
 if Engine.running then Engine.onStop() else Engine.onStart() end
@@ -102,8 +63,7 @@ elseif k == "save" then S.status = persist().saveSlot(S.slot) and "ok" or "er"
 elseif k == "load" then S.status = persist().loadSlot(S.slot) and "ok" or "er"
 elseif k == "draw" then S.partial = not S.partial
 end
-S.selStep = clamp(S.selStep, 1, used(lane()))
-S.dirtyFlag = true
+reclamp()
 end
 function S.touch() S.dirtyFlag = true end
 local function cellRect(i, l, s)
@@ -161,13 +121,7 @@ end
 local function drawFocus(lcd)
 local l = lane()
 for s = 1, l.width * l.height do cell(lcd, S.selLane, l, s, true) end
-for i = 1, rowCount() do
-local sel = i == S.cursor
-local k = rowKey(i)
-local x, y = (i <= 4) and 4 or 164, 122 + ((i - 1) % 4) * 19
-lcd:draw_text_fast((sel and (S.editing and ">" or "-") or " ") .. k .. " " .. value(k),
-x, y, 16, sel and WHITE or GREY)
-end
+focus().rows(lcd, WHITE, GREY)
 end
 function S.draw(lcd)
 local lanes = Engine.lanes
@@ -198,12 +152,9 @@ function S.turn(d)
 if not S.focus then
 if S.gedit then gapply(GEN[S.gcur], d); return end
 S.selLane = ((S.selLane - 1 + d) % #Engine.lanes) + 1
-apply("", 0)
-elseif S.editing then
-apply(rowKey(S.cursor), d)
+reclamp()
 else
-S.cursor = ((S.cursor - 1 + d) % rowCount()) + 1
-S.dirtyFlag = true
+focus().turn(d)
 end
 end
 function S.press()
@@ -213,7 +164,7 @@ if k == "slot" then S.gedit = not S.gedit; S.dirtyFlag = true
 else gapply(k, 1) end
 end
 local function prevNext(d)
-if S.focus then apply("step", d); return end
+if S.focus then focus().edit("step", d); return end
 S.gcur = ((S.gcur - 1 + d) % #GEN) + 1
 S.gedit = false
 S.dirtyFlag = true
@@ -221,7 +172,9 @@ end
 function S.key(i)
 if i == 0 then gapply("run", 1)
 elseif i == 1 then
-S.focus = not S.focus; S.editing = false; S.gedit = false; S.dirtyFlag = true
+S.focus = not S.focus; S.editing = false; S.gedit = false
+if S.focus then focus() end
+reclamp()
 elseif i == 4 then prevNext(-1)
 elseif i == 5 then prevNext(1)
 elseif i == 3 then Engine.randomize(S.selLane); S.dirtyFlag = true
@@ -231,7 +184,7 @@ end
 function S.btn(i)
 if i >= 9 and i - 8 <= #Engine.lanes then
 S.selLane = i - 8
-apply("", 0)
+reclamp()
 end
 end
 return S

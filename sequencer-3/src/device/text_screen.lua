@@ -16,6 +16,7 @@
 local RX     = require("midi_rx")
 RX.ensure()                               -- chain + demo if no clock byte yet
 local Engine = require("engine")
+local Lane   = require("lane")
 
 local S = { selLane = 1, selStep = 1, cursor = 1, editing = false,
     slot = 1, status = "-", dirtyFlag = true }
@@ -88,15 +89,17 @@ end
 
 local function apply(k, d)
     local n, l, s = S.selLane, lane(), S.selStep
-    if k == "type" then Engine.setType(n, cycle(TYPES, l.type, d))
-    elseif k == "dims" then Engine.setDimensions(n, cycle(DIMS, l.dims, d))
-    elseif k == "div" then Engine.setDivision(n, l.division + d)
-    elseif k == "ch" then Engine.setChannel(n, l.channel + d)
+    -- Lane fields are written DIRECTLY, clamped here: the engine's setters
+    -- live in a lazy bundle, and editing must not compile one.
+    if k == "type" then l.type = cycle(TYPES, l.type, d)
+    elseif k == "dims" then Lane.setDims(l, cycle(DIMS, l.dims, d))
+    elseif k == "div" then l.division = clamp(l.division + d, 1, 16)
+    elseif k == "ch" then l.channel = clamp(l.channel + d, 1, 16)
     elseif k == "step" then S.selStep = ((s - 1 + d) % used(l)) + 1
-    elseif k == "pitch" then Engine.setPitch(n, s, l.pitch[s] + d)
-    elseif k == "vel" then Engine.setVelocity(n, s, l.velocity[s] + d * 2)
-    elseif k == "len" then Engine.setStepLength(n, s, l.stepLength[s] + d)
-    elseif k == "gate" then Engine.setGate(n, s, (l.gate[s] + 1) % 2)
+    elseif k == "pitch" then l.pitch[s] = clamp(l.pitch[s] + d, 0, 127)
+    elseif k == "vel" then l.velocity[s] = clamp(l.velocity[s] + d * 2, 1, 127)
+    elseif k == "len" then l.stepLength[s] = clamp(l.stepLength[s] + d, 1, 96)
+    elseif k == "gate" then l.gate[s] = 1 - l.gate[s]
     elseif k == "run" then
         if Engine.running then Engine.onStop() else Engine.onStart() end
     elseif k == "slot" then S.slot = clamp(S.slot + d, 1, 24)

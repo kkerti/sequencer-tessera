@@ -16,7 +16,7 @@
 // device; a FAIL proves nothing about it. The `free` stage measures the real
 // free heap after the run (1 KB allocations until refusal).
 //
-// Usage: node seq3mem.mjs [--headless] [--verbose]
+// Usage: node seq3mem.mjs [--headless] [--verbose] [--shot <prefix>]
 // Requires: python3 -m http.server 8080 running from the repo root.
 //
 // Exit 0 when every stage passes, 1 when one fails (OOM or error).
@@ -27,6 +27,10 @@ import { readFileSync } from 'fs';
 const args = process.argv.slice(2);
 const headless = args.includes('--headless');
 const verbose = args.includes('--verbose');
+// --shot <prefix>: also render the screen for real (through the harness's
+// ggd* primitives) and save canvas PNGs at a few states: <prefix>-*.png
+const shotIx = args.indexOf('--shot');
+const shot = shotIx >= 0 ? (args[shotIx + 1] || 'seq3') : null;
 const CHUNK = 600;     // raw source bytes per loadScript (2 KB cap incl. preamble)
 const DIST = '../sequencer-3/dist/';
 
@@ -95,6 +99,16 @@ const PROBE = stage('free', 'local t,n={},0 pcall(function() for i=1,200 do t[i]
 const plan = [];
 const sizes = {};
 function add(code) { plan.push([code, code.match(/print\("(ST [^ ]+)/)[1]]); }
+// A real-pixel LCD over the harness primitives; draw_rectangle (outline) is
+// four lines. Only built with --shot, so the memory ladder is unchanged.
+const REAL_LCD = `REAL={draw_rectangle_filled=function(_,a,b,c,d,k) ggdrf(0,a,b,c,d,k) end,
+draw_rectangle=function(_,a,b,c,d,k) ggdl(0,a,b,c,b,k) ggdl(0,c,b,c,d,k) ggdl(0,a,d,c,d,k) ggdl(0,a,b,a,d,k) end,
+draw_text_fast=function(_,t,x,y,z,k) ggdft(0,t,x,y,z,k) end,draw_swap=function() ggdsw(0) end}`;
+function snap(name, code) {
+    if (!shot) return;
+    add(stage('shot:' + name, code + ' local S=UI and __L.seq3s and __L.seq3s.screen if S then S.touch() end RX.ui(REAL)'));
+    plan.push(['@shot', `${shot}-${name}.png`]);
+}
 function stream(name) { const b = bundleCalls(name); sizes[name] = b.bytes; plan.push(...b.calls); }
 
 add(PRELUDE);
@@ -118,6 +132,13 @@ if (headless) {
     // first control press: the screen bundle
     stream('seq3s');
     add(stage('key+draw', 'RX.key(1) RX.ui(LCD)'));
+    if (shot) add(stage('real-lcd', REAL_LCD));
+    snap('overview', '');
+    snap('focus', 'RX.key(1)');
+    snap('focus-trig', 'RX.btn(10)');
+    snap('back', 'RX.key(1)');
+    // edit a step pitch through the encoder (Focus / cursor rows): no bundle
+    add(stage('edit', 'RX.key(1) for i=1,5 do RX.turn(1) end RX.press() RX.turn(3) RX.press() RX.key(1) RX.ui(LCD)'));
     stream('seq3x');
     add(stage('shred', 'RX.key(7) RX.ui(LCD)'));
     add(stage('random', 'RX.key(3) RX.ui(LCD)'));
@@ -149,6 +170,12 @@ async function run() {
     const send = code => page.evaluate(c => Module.ccall('loadScript', 'void', ['string', 'string'], [c, '']), code);
     let failed = null, peak = 0;
     for (const [code, tag] of plan) {
+        if (code === '@shot') {
+            await page.waitForTimeout(400);
+            await (await page.$('#canvas')).screenshot({ path: tag });
+            console.log('shot', tag);
+            continue;
+        }
         let line = null;
         for (let attempt = 0; attempt < 4 && line === null; attempt++) {
             const p = new Promise(resolve => { waiting = { tag: tag + (tag.startsWith('CD') ? '' : ' '), resolve }; });
@@ -178,7 +205,7 @@ async function run() {
     console.log('');
     console.log(`max resident ${peak.toFixed(1)} KB` + (free === null ? '' : `, free heap after the run ~${free} KB`));
     if (failed) { console.log('FAIL at ' + failed); process.exit(1); }
-    console.log(headless ? 'PASS (headless ladder)' : 'PASS (text-GUI ladder)');
+    console.log(headless ? 'PASS (headless ladder)' : 'PASS (GUI ladder)');
 }
 
 run().catch(e => { console.error(e); process.exit(1); });

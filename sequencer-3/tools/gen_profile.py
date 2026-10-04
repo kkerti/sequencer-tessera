@@ -144,16 +144,23 @@ HL_SETUP = (
 # off the pulse path so Engine.onPulse stays allocation-free.
 HL_TIMER = ('--[[@cb]] if RX then RX.report() end '
             'print("seq3 mem KB: " .. collectgarbage("count"))')
+# Button events fire on press AND release (seen on device, v15: every action
+# ran twice). Each button event therefore sets momentary 0/127 mode itself
+# (set_event replaces the template's @sbc setup; key 7's was TOGGLE mode) and
+# acts only when the state is 127 = pressed — seq-1/seq-2's proven guard.
+BTN = '--[[@sbc]] self:bmo(0)self:bmi(0)self:bma(127)'
+PRESSED = 'if self:bst()==127 then '
+
 # A key press arms the sequence with no DAW attached.
-HL_KEY = "--[[@cb]] L().key()"
+HL_KEY = BTN + "--[[@cb]] " + PRESSED + "L().key() end"
 
 
 def press_cb(call):
     """A control press. With a lazy setup the press is also a load trigger, so
     it goes through L(); with the eager setup RX already exists."""
     if SETUP_MODE == "eager":
-        return f"--[[@cb]] if RX then {call} end"
-    return f"--[[@cb]] L() if RX then {call} end"
+        return f"{BTN}--[[@cb]] {PRESSED}if RX then {call} end end"
+    return f"{BTN}--[[@cb]] {PRESSED}L() if RX then {call} end end"
 
 
 # --- element 255, event 6: timer — RAM diagnostic ---------------------------
@@ -329,8 +336,8 @@ def main():
              "timer prints one line per lane. Upload seq3.lua + seq3e.lua + "
              "seq3h.lua.")
             if HEADLESS else
-            ("seq-3 v12 (setup=" + SETUP_MODE + "): nothing required at setup; "
-             "lazy bundles; slot save/load in Config.")),
+            ("seq-3 v15 (setup=" + SETUP_MODE + "): staged start, one bundle "
+             "per event; buttons act on press only; screen in seq3s.")),
         "fileName": ("seq3 headless.json" if HEADLESS else "seq3 core.json"),
         "createdAt": now, "modifiedAt": now,
         "isEditable": True, "syncStatus": "local",

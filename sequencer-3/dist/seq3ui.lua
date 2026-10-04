@@ -1,6 +1,6 @@
 local R={}
 local _host=require
-local B={edit="seq3x",engine="seq3e",headless="seq3h",lane="seq3",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
+local B={edit="seq3l",engine="seq3e",headless="seq3h",lane="seq3",ops="seq3x",persist="seq3p",preset="seq3l",scales="seq3",screen="seq3s",seq_data="seq3h",source_names="seq3p",sources="seq3",transport="seq3"}
 local C={}
 local function require(n)
  local r=R[n] if r~=nil then return r end
@@ -17,18 +17,26 @@ local Engine = require("engine")
 local Lane   = require("lane")
 local M = {}
 function M.demo()
-Engine.init{ lanes = 2, channel = 1 }
-local QUARTER = 3
+Engine.init{ lanes = 4, channel = 1 }
+local QUARTER, EIGHTH, SIXTEENTH = 3, 4, 5
 local melody = { 60, 62, 64, 67, 69, 67, 64, 62, 60, 64, 67, 72, 71, 67, 64, 60 }
-local a, b = Engine.lanes[1], Engine.lanes[2]
+local bass = { 36, 36, 43, 36, 41, 41, 39, 43 }
+local a, b, c, d = Engine.lanes[1], Engine.lanes[2], Engine.lanes[3], Engine.lanes[4]
 for i = 1, 16 do
 a.pitch[i] = melody[i]
 a.velocity[i] = 70 + (i % 4) * 15
 b.gate[i] = (i * 7) % 3 ~= 0 and 1 or 0
+d.gate[i] = (i % 4 ~= 1) and 1 or 0
+d.velocity[i] = (i % 2 == 0) and 110 or 70
+d.stepLength[i] = 2
 end
+for i = 1, 8 do c.pitch[i] = bass[i]; c.stepLength[i] = 10 end
 a.advanceSource = QUARTER
 b.type = "trig"; b.division = 4; b.advanceSource = QUARTER
 Lane.setDims(b, "4x4")
+c.length = 8; c.advanceSource = EIGHTH
+c.rawScaleMask, c.scaleMask = 0, 0
+d.type = "trig"; d.midiNote = 42; d.advanceSource = SIXTEENTH
 Engine.onStart()
 end
 return M
@@ -104,12 +112,12 @@ SCR = require("screen")
 print("seq3: screen ok")
 return SCR
 end
-function M.key(i)    local s = loadSCR(); s.key(i) end
-function M.btn(i)    local s = loadSCR(); s.btn(i) end
-function M.press()   local s = loadSCR(); s.press() end
+function M.key(i)    if SCR then SCR.key(i) else loadSCR() end end
+function M.btn(i)    if SCR then SCR.btn(i) else loadSCR() end end
+function M.press()   if SCR then SCR.press() else loadSCR() end end
 function M.turn(d)
 if d ~= 0 then
-local s = loadSCR(); s.turn(d)
+if SCR then SCR.turn(d) else loadSCR() end
 end
 end
 function M.ui(lcd)

@@ -97,6 +97,17 @@ print = function(...) printed[#printed + 1] = table.concat({ ... }, " ") end
 local sent = {}
 function midi_send(ch, st, p1, p2) sent[#sent + 1] = { ch = ch, st = st } end
 
+-- A button element: the device fires ev3 on press (state 127) AND release (0).
+local function button(state)
+    local b = { state = state }
+    function b:bmo(m) self.mode = m end
+    function b:bmi() end
+    function b:bma() end
+    function b:bst() return self.state end
+    return b
+end
+local PRESS, RELEASE = button(127), button(0)
+
 local LcdMock = dofile("tests/lcd_mock.lua")
 local lcd = LcdMock.new()
 local el255, el13 = {}, lcd                  -- `self` per element
@@ -144,9 +155,20 @@ ok(lcd.calls == c1, "status view does not repaint an unchanged frame")
 
 -- ---- the first control press compiles the screen, and only that -------------
 local before = nLoaded()
-run(1, 3, {})                                -- keyswitch 1
+run(1, 3, RELEASE)                           -- a release must do nothing
+ok(nLoaded() == before, "a button RELEASE does nothing (no double action)")
+run(1, 3, PRESS)                             -- keyswitch 1
 ok(loaded.seq3s ~= nil and nLoaded() == before + 1,
    "first key press compiles ONLY seq3s (" .. table.concat(order, ",") .. ")")
+ok(PRESS.mode == 0, "button events force momentary mode (bmo 0), never toggle")
+-- key 1 = view toggle on the lane GUI (focus) and the colour GUI (screen);
+-- the text GUI has one view, so it has nothing to toggle
+local Scr = loaded.seq3s.screen
+local function view() if Scr.focus ~= nil then return Scr.focus end return Scr.screen end
+local v0 = view()
+run(1, 3, PRESS); run(1, 3, RELEASE)
+ok(v0 == nil or view() ~= v0, "one press + release toggles the view exactly once")
+run(1, 3, PRESS); run(1, 3, RELEASE)
 run(13, 8, el13)
 ok(#lcd.errors == 0, "every draw used real, in-bounds LCD calls"
    .. (#lcd.errors > 0 and (" -- first: " .. lcd.errors[1]) or ""))
@@ -162,7 +184,7 @@ do
     order = {}
     RX, LS, UI = nil, nil, nil
     run(255, 0, el255)
-    run(0, 3, {})                            -- keyswitch 0: stage 1
+    run(0, 3, PRESS)                         -- keyswitch 0: stage 1
     run(255, 6, el255); run(255, 6, el255)   -- timer: stages 2, 3
     ok(RX ~= nil and loaded.seq3s == nil, "key press + timer bring the chain up without the screen")
 end

@@ -10,9 +10,9 @@ runtime, no per-file boot cost).
   dist/seq3.lua       core chain: sources, scales, lane, transport, engine
   dist/seq3ui.lua     boot + midi_rx (what app start compiles, with seq3/seq3e)
   dist/seq3s.lua      the screen (text or colour), on the first control press
-  dist/seq3x.lua      lazy editing: setters + shred / randomize / zero / rotate
+  dist/seq3x.lua      lazy ops: shred / randomize / zero / rotate
   dist/seq3p.lua      lazy save: source names, persist
-  dist/seq3l.lua      lazy load: preset (loadPreset / copy)
+  dist/seq3l.lua      lazy load: setters (edit) + preset (loadPreset / copy)
 
 The profile's setup requires seq3 then seq3ui and fills the demo — mirroring
 seq-2's working setup (14.8 KB eager) — with grxm/rtmrx armed at setup.
@@ -71,10 +71,12 @@ SCREEN = [
 ]
 if "--gui=text" in sys.argv:
     SCREEN = [("screen", "src/device/text_screen.lua")]
-# Editing: the engine's setters (edit) + Shred / Random / Zero / rotate (ops).
-# Compiled on the first edit or performance op, never at app start.
+# --gui=lanes: Overview (all lane strips) + Focus (one lane's grid + the text
+# screen's key/value rows) in one module, same name, same profile.
+if "--gui=lanes" in sys.argv:
+    SCREEN = [("screen", "src/device/lane_screen.lua")]
+# Performance ops: Shred / Random / Zero / rotate. Compiled on the first one.
 OPS = [
-    ("edit",      "src/core/edit.lua"),
     ("ops",       "src/core/ops.lua"),
 ]
 # Save / load, split by trigger like OPS: with the text GUI resident the wasm
@@ -84,7 +86,10 @@ PERSIST = [
     ("source_names", "src/core/source_names.lua"),
     ("persist",   "src/core/persist.lua"),
 ]
+# The engine's setters (edit) ride with preset: applying a slot is the only
+# device path that calls them (the screens write lane fields directly).
 LOAD = [
+    ("edit",      "src/core/edit.lua"),
     ("preset",    "src/core/preset.lua"),
 ]
 

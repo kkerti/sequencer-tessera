@@ -270,9 +270,11 @@ Euclid, live generation, preset 06. Tests: 73 checks.
 Start (first MIDI byte or key) compiles `seq3` + `seq3e` + `seq3ui` =
 midi_rx + demo, at most one bundle per callback (staged `L()`, the timer
 finishes a started load). The screen (`seq3s`) compiles on the first control
-press. The setters (`edit.lua`, in `seq3x`) compile on the first edit. Device
-start code must therefore never call an `Engine.set*`: write lane fields
-directly (`device_boot.demo`, `seq_data.apply`). `tests/boot_sim.lua` runs
+press. The setters (`edit.lua`) live in the load bundle `seq3l`: the
+screens, the start demo and the headless sequence all write lane fields
+directly (clamping themselves), so only applying a slot/preset calls a
+setter on the device. Device code must not call `Engine.set*` on a hot or
+start path. `tests/boot_sim.lua` runs
 the real profile scripts from the JSON and pins all of this.
 
 ## Feature cut, measured in the wasm (2026-10-04)

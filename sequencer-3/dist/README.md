@@ -1,5 +1,56 @@
 # dist/ — seq-3 on the Grid VSN1
 
+## v15 (2026-10-04): lane GUI — Overview + Focus
+
+`sh tools/make_dist.sh --gui=lanes` puts `src/device/lane_screen.lua` in
+`seq3s` (same seven files, same profile).
+
+- **Overview:** one 16-cell strip per lane, with a `1 N` / `/div` label.
+  Note cells are pitch bars scaled to the lane's own pitch span; trig cells
+  are filled on active steps. The white bar marks the playhead and the
+  outline marks the selected step. The encoder selects the lane, press opens
+  Focus.
+- **Focus:** the selected lane's steps as a grid in its own dims (16x1 ..
+  4x4), plus the text screen's key/value rows in two columns. The encoder
+  moves the cursor; press toggles edit (run/save/load fire directly).
+- **Keys:** 1 Overview <-> Focus · 0 run/stop · 4/5 prev/next step ·
+  3 Random · 6/7 Zero/Shred · 2 partial/full redraw · btns 9-12 lane.
+- **Redraw:** a full repaint on edits and view changes. A playhead move
+  repaints only the two cells involved (partial), which assumes `draw_swap`
+  keeps the framebuffer (unconfirmed on the device). **If moving playheads
+  flicker, press key 2** for full repaints, and tell me which mode works.
+- The press that loads the screen only loads it (no action).
+- **Editing compiles nothing:** the screens write lane fields directly and
+  clamp them themselves. The engine's setters (`edit.lua`) moved to `seq3l`,
+  next to `preset`, since applying a slot is their only device caller.
+  `seq3x` is back to Shred/Random/Zero (1.4 KB).
+
+**v15.1 (after the first device run):**
+- **Buttons acted twice:** the device fires the button event on press AND
+  release, and `set_event` had replaced the template's mode setup. Every
+  button event now sets momentary mode (`bmo(0)`) and acts only on
+  `bst()==127`. `boot_sim` drives press + release and checks a single action.
+- **Four lanes at start:** melody (quarters), 4x4 trig (quarters/4), 8-step
+  bass (eighths) and hats (16ths, note 42). Costs 3.5 KB (wasm start 92.0 KB).
+- **Draw-call budget:** a 4-lane Overview was 126 calls, and the harness
+  dropped the frame's tail past ~110, so the device may queue draws the same
+  way. Now there is one background strip per lane and only active cells are
+  painted: Overview 66 calls, Focus 48 (`lane_sim` asserts <= 90).
+
+**v15.2: Overview = general settings, Focus = lane settings.** The
+Overview has a settings bar (`run`, `slot`, `save`, `load`, `draw`). Keys
+4/5 step through it, the encoder press edits `slot` or fires the others, and
+turning changes the value while editing (otherwise it selects the lane). In
+Focus, keys 4/5 stay prev/next step. Key 2's redraw toggle became the `draw`
+setting (P partial / F full), and key 1 alone switches views. Focus keeps
+only lane rows (type, dims, div, ch, step + the step's values), which leaves
+room for more lane settings.
+
+wasm ladder (lane GUI): start 88.5 · screen 104.8 · edit 104.9 · Shred
+106.8 · 96 pulses 107.3 · **save 114.6 KB, PASS**: the first build whose save
+passes in the wasm. `node grid-wasm/seq3mem.mjs --shot <prefix>` also renders
+the real screen to PNGs.
+
 ## v14 (2026-10-04): app start compiles only what start needs
 
 v13 still blinked and restarted the module when it started. On the first
@@ -215,13 +266,14 @@ profile is kept as `seq3 core.json.v7-backup` in the configs folder.
 
 | file | bytes | contents | when it loads |
 |---|---|---|---|
-| `seq3.lua` | 6353 | sources, scales, transport, lane | first trigger |
-| `seq3e.lua` | 7412 | engine | first trigger |
-| `seq3ui.lua` | 7634 (`--gui=text`) | device_boot, midi_rx, text_screen | first trigger |
-| `seq3h.lua` | 2948 | headless: seq_data, headless (instead of seq3ui) | first trigger |
-| `seq3x.lua` | 1440 | ops (shred / randomize / zero / rotate) | first Shred / Random / Zero |
-| `seq3p.lua` | 3625 | source_names, persist | first save / load |
-| `seq3l.lua` | 2800 | preset (loadPreset / copy) | first load |
+| `seq3.lua` | 5581 | sources, scales, transport, lane | app start, stage 1 |
+| `seq3e.lua` | 5144 | engine (pulse path, no setters) | app start, stage 2 |
+| `seq3ui.lua` | 3069 | device_boot (demo), midi_rx | app start, stage 3 |
+| `seq3s.lua` | 7432 (`--gui=lanes`) | the screen: lane_screen / text_screen / screen+menu | first control press |
+| `seq3h.lua` | ~2900 | headless: seq_data, headless (instead of seq3ui) | headless start |
+| `seq3x.lua` | 1452 | ops (shred / randomize / zero / rotate) | first Shred / Random / Zero |
+| `seq3p.lua` | 3637 | source_names, persist | first save / load |
+| `seq3l.lua` | 5511 | edit (setters), preset (loadPreset / copy) | first load (or any Engine.set*) |
 
 Nothing at all loads at setup.
 
@@ -235,9 +287,9 @@ Nothing at all loads at setup.
    - `dist/seq3e.lua`
    - `dist/seq3ui.lua`
    - `dist/seq3s.lua`  (lazy — the screen, on the first control press)
-   - `dist/seq3x.lua`  (lazy — must be present for edits, Shred / Random / Zero)
+   - `dist/seq3x.lua`  (lazy — must be present for Shred / Random / Zero)
    - `dist/seq3p.lua`  (lazy — must be present for slot save / load)
-   - `dist/seq3l.lua`  (lazy — must be present for slot load)
+   - `dist/seq3l.lua`  (lazy — must be present for slot load: setters + preset)
 3. Load the refreshed **seq3 core** profile (`dist/seq3 core.json`).
    Setup is now **zero requires** — just the loader + `rtmrx_cb`.
    The screen stays dark until the first MIDI byte or key press: that is

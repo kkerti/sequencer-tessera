@@ -87,7 +87,7 @@ ok(xLoads == 0 and pLoads == 0, "requiring the eager pair pulls no lazy bundle")
 -- 3. the profile setup path: RX.ensure() fills the demo
 RX.ensure()
 ok(engine.running, "demo starts the engine")
-ok(#engine.lanes == 2, "demo boots 2 lanes")
+ok(#engine.lanes == 4, "demo boots 4 lanes")
 ok(xLoads == 0 and pLoads == 0, "boot + demo pull no lazy bundle")
 
 -- 4. clock + notes out (send = midi_send stand-in)
@@ -111,10 +111,15 @@ local lcd = LcdMock.new()
 RX.key(1) RX.btn(10) RX.turn(1) RX.btn(9) RX.ui(lcd)
 -- (the colour GUI may already edit while navigating; the text GUI does not)
 ok(pLoads == 0, "screen + navigation pull no persist bundle")
--- editing a value goes through the setters, which live in the editing bundle
+-- the screens edit lane fields directly: no bundle for editing
 RX.press() RX.turn(1) RX.press() RX.key(0) RX.key(1)
 RX.ui(lcd)
-ok(xLoads == 1 and pLoads == 0, "the first edit pulls the editing bundle seq3x, nothing else")
+-- (lane / text screens write fields directly; the colour screen uses setters)
+local colour = io.open("dist/seq3s.lua"):read("a"):find('R%["menu"%]') ~= nil
+ok(pLoads == 0 and (colour or lLoads == 0), "GUI edits pull no setter / persist bundle")
+-- the engine's setters themselves live in the load bundle seq3l
+engine.setPitch(1, 1, 61)
+ok(lLoads == 1 and engine.state(1).pitch[1] == 61, "an Engine.set* call pulls seq3l (setters)")
 ok(lcd.calls > 20, "controls + draw run (" .. lcd.calls .. " lcd calls)")
 ok(#lcd.errors == 0, "Overview/Focus/Config draw only with real, in-bounds LCD calls"
    .. (#lcd.errors > 0 and (" -- first: " .. lcd.errors[1]) or ""))
@@ -160,12 +165,11 @@ do
     engine.setType(2, "trig")
     for i = 1, 16 do engine.setGate(2, i, i % 2) end
     ok(Persist.saveSlot(7), "saveSlot writes through the bundle")
-    ok(lLoads == 0, "save does NOT pull the load bundle seq3l")
 
     engine.setPitch(1, 1, 60)
     for i = 1, 16 do engine.setGate(2, i, 0) end
     ok(Persist.loadSlot(7), "loadSlot reads through the bundle")
-    ok(lLoads == 1, "load pulls seq3l exactly once")
+    ok(lLoads == 1, "seq3l is loaded once and cached")
     ok(engine.state(1).pitch[1] == 71, "recalled pitch (got " .. engine.state(1).pitch[1] .. ")")
     local g = 0
     for i = 1, 16 do g = g + engine.state(2).gate[i] end

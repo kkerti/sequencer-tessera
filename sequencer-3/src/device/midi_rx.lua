@@ -109,12 +109,14 @@ local function loadSCR()
     return SCR
 end
 
-function M.key(i)    local s = loadSCR(); s.key(i) end
-function M.btn(i)    local s = loadSCR(); s.btn(i) end
-function M.press()   local s = loadSCR(); s.press() end
+-- The press that loads the screen only loads it: acting on it too would,
+-- e.g., flip the view the user has not seen yet.
+function M.key(i)    if SCR then SCR.key(i) else loadSCR() end end
+function M.btn(i)    if SCR then SCR.btn(i) else loadSCR() end end
+function M.press()   if SCR then SCR.press() else loadSCR() end end
 function M.turn(d)
     if d ~= 0 then
-        local s = loadSCR(); s.turn(d)
+        if SCR then SCR.turn(d) else loadSCR() end
     end
 end
 
